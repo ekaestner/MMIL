@@ -52,9 +52,12 @@ if strcmpi(fcfg.end_dir{1}(end-9:end),'continuous')
         tot_fle_adc = tot_fle(string_find(tot_fle,'_ADC'));
         tot_fle_aux = tot_fle(string_find(tot_fle,'_AUX'));
     
-        open_ephys_get_session_info([fcfg.in_dir{1} '/' fcfg.cln_fld{iCL} '/']);
+        ttt = open_ephys_get_session_info([fcfg.in_dir{1} '/' fcfg.cln_fld{iCL} '/']);
         
-        for iCH = 1:numel(tot_fle_chn);  lod_dta(iCH,:) = load_open_ephys_data([fcfg.in_dir{1} '/' fcfg.cln_fld{iCL} '/' tot_fle_chn{iCH}]); end
+        for iCH = 1:numel(tot_fle_chn);  
+           chn_nme{iCH} = ; 
+        end
+            ...lod_dta(iCH,:) = load_open_ephys_data([fcfg.in_dir{1} '/' fcfg.cln_fld{iCL} '/' tot_fle_chn{iCH}]); end
         
     end
 end
