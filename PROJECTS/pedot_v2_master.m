@@ -5,7 +5,7 @@ prj_dat_hld = '/space/mdeh4/1/halgdev/projects/mmilanguage/Pedot2/';
 %%
 sbj_nme_hld = mmil_readtext([prj_dat_hld '/' 'clerical' '/' 'subjects']);
 
-for sbj_num = 1%:numel(sbj_nme_hld);
+for sbj_num = 3%:numel(sbj_nme_hld);
         
     cfg = [];
     
