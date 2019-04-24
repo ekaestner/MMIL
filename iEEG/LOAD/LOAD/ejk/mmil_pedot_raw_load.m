@@ -70,13 +70,18 @@ if strcmpi(fcfg.end_dir{1}(end-9:end),'continuous')
         for iCH = 1:numel(tot_fle_chn); lod_dta(iCH,:) = load_open_ephys_data([fcfg.in_dir{1} '/' fcfg.cln_fld{iCL} '/' tot_fle_chn{iCH}]); end
         for iCH = 1:numel(tot_fle_adc); adc_dta(iCH,:) = load_open_ephys_data([fcfg.in_dir{1} '/' fcfg.cln_fld{iCL} '/' tot_fle_adc{iCH}]); end
         for iCH = 1:numel(tot_fle_aux); aux_dta(iCH,:) = load_open_ephys_data([fcfg.in_dir{1} '/' fcfg.cln_fld{iCL} '/' tot_fle_aux{iCH}]); end
-               
+        
+        mta_dta = mmil_readtext([fcfg.in_dir{1} '/' fcfg.cln_fld{iCL} '/' 'settings.xml'],['\t']);
+        mta_dta = mta_dta{string_find(mta_dta,{'SampleRateString'})};
+        mta_dta_str = strfind(mta_dta,'SampleRateString="')+numel('SampleRateString="'); mta_dta_end = strfind(mta_dta,' kS/s"');
+        frq_smp = str2num(mta_dta(mta_dta_str:mta_dta_end))*1000;
+        
         dta_hld{iCL}.data     = lod_dta;
         dta_hld{iCL}.trg_chn  = adc_dta;
         dta_hld{iCL}.idx      = zeros(size(lod_dta,1),1);
         dta_hld{iCL}.file     = tot_fle_chn{iCL};
         dta_hld{iCL}.idx_name = cellfun(@(x) x(5:end-11),tot_fle_chn,'uni',0)';
-        dta_hld{iCL}.fs       = 20000; % HARDCODED NOT GREAT :(
+        dta_hld{iCL}.fs       = frq_smp; % HARDCODED NOT GREAT :(
         dta_hld{iCL}.time     = 1:size(lod_dta,2);
         dta_hld{iCL}.imp      = []; % ??????????????????????
         dta_hld{iCL}.cond     = fcfg.cln_fld{iCL};
@@ -91,9 +96,11 @@ for iF = 1:numel(fcfg.cln_fld)
     
     trg_chn{iF} = dta_hld{iF}.trg_chn;
     
-    dsfact = 20;
+    dsfact = dta_hld{iCL}.fs / 1000;
     anti_alias_factor = 2.5;
     filter_order = 4;
+    
+    cont_data.dsfact = dta_hld{iCL}.fs / 1000;
     
     %% Change to fieldtrip format
     cont_data.fsample    = dta_hld{iF}.fs;

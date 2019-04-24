@@ -3,8 +3,6 @@ function mmil_pedot_load_v2(fcfg)
 %% Initial Load
 if ~exist(fcfg.out_pth); mkdir(fcfg.out_pth); end
 
-fcfg.dsfact = 20;
-
 %% Load
 if ~exist([fcfg.prj_dat_hld '/' 'clerical' '/' 'raw_data' '/' fcfg.sbj_nme '_downsample.mat'])  
     [out_dat,trg_chn] = mmil_pedot_raw_load(fcfg);    
@@ -30,12 +28,12 @@ if ~exist([fcfg.prj_dat_hld '/' 'clerical' '/' 'trialfun_output' '/' fcfg.sbj_nm
     cfg.trialfun = trl_fun{1};
     cfg.prj_dat_hld  = fcfg.prj_dat_hld;
     cfg.trialfun_add = trialf_add;
-    cfg.dsfact       = fcfg.dsfact;
+    cfg.dsfact       = out_dat.(out_dat.data_name{1}).dsfact;
     cfg.dataset      = trg_chn;
     cfg.minduration  = 0.500;
     cfg.pre          = epc_tme(1)-1;
     cfg.pos          = epc_tme(2)+1;
-    cfg.Fs          = out_dat.(out_dat.data_name{1}).fsample*cfg.dsfact;
+    cfg.Fs          = out_dat.(out_dat.data_name{1}).fsample*out_dat.(out_dat.data_name{1}).dsfact;
     cfg.time        = out_dat.(out_dat.data_name{1}).time{1};
     trl = ft_pedot_trialfun(cfg);
         
