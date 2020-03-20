@@ -35,7 +35,7 @@ if ~exist([fcfg.prj_dat_hld '/' 'clerical' '/' 'trialfun_output' '/' fcfg.sbj_nm
     cfg.pos          = epc_tme(2)+1;
     cfg.Fs          = out_dat.(out_dat.data_name{1}).fsample*out_dat.(out_dat.data_name{1}).dsfact;
     cfg.time        = out_dat.(out_dat.data_name{1}).time{1};
-    trl = ft_pedot_trialfun(cfg);
+    trl = mmil_pedot_trialfun(cfg);
         
     save([fcfg.prj_dat_hld '/' 'clerical' '/' 'trialfun_output' '/' fcfg.sbj_nme '.mat'],'trl');
     
@@ -49,6 +49,12 @@ cfg.trl = trl;
 ped_dat = ft_func(@ft_redefinetrial,cfg,out_dat);
 
 clear out_dat
+
+cfg = [];
+cfg.str_nme  = 'ped_dat';
+cfg.save     = 'yes';
+cfg.filename = [fcfg.out_pth '/' fcfg.sbj_nme '_overall_data_epoched_only.mat'];
+ft_func([],cfg,ped_dat);
 
 %% Examine Data for Noise - Downsampled
 beg_plt_spc = mmil_load_subj_info([fcfg.prj_dat_hld '/' 'clerical' '/' 'sbj_inf' '/' fcfg.sbj_nme],'beg_plt_spc'); beg_plt_spc = beg_plt_spc{1};
@@ -215,6 +221,9 @@ if numel(cmb) > 1
     ped_dat = mmil_combine_data2(cfg,ped_dat);
 end
 
+hld_dat = ped_dat;
+ped_dat = hld_dat;
+
 %% Preliminary Plots
 ped_dat.(ped_dat.data_name{2}).cfg.alt_eve.trialinfo = ped_dat.(ped_dat.data_name{2}).trialinfo;
 ped_dat.(ped_dat.data_name{2}).cfg.alt_lab.label = ped_dat.(ped_dat.data_name{2}).label;
@@ -226,14 +235,14 @@ cfg.alt_eve   = 'trialinfo';
 cfg.plt_dim   = [1 1];
 cfg.type      = 'chan';
 
-eve_plt     = unique(ped_dat.(ped_dat.data_name{2}).trialinfo);
+eve_plt     = 1:3; %unique(ped_dat.(ped_dat.data_name{2}).trialinfo);
 
 col_hld = distinguishable_colors(numel(eve_plt));
-for iC = 1:size(col_hld,1); 
-    lne_col_plt{iC} = col_hld(iC,:); 
+for iC = 1:size(col_hld,1);
+    lne_col_plt{iC} = col_hld(iC,:);
     cnd_nme_plt{iC} = ['eve' num2str(iC)];
 end
-    
+
 leg_pos_plt = 1:numel(cnd_nme_plt);
 
 v_lne_plt     = [0];
@@ -264,6 +273,60 @@ cfg.outdir     = [fcfg.prj_dat_hld '/' 'epoch_data' '/' 'plot_explore' '/' fcfg.
 cfg.prefix     = [ped_dat.data_name{2}] ;
 
 mmil_ieeg_sensor_plot_v5(cfg)
+
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+if any(unique(ped_dat.(ped_dat.data_name{2}).trialinfo)==11)
+    
+    ped_dat.(ped_dat.data_name{2}).cfg.alt_eve.trialinfo = ped_dat.(ped_dat.data_name{2}).trialinfo;
+    ped_dat.(ped_dat.data_name{2}).cfg.alt_lab.label = ped_dat.(ped_dat.data_name{2}).label;
+    
+    cfg = [];
+    
+    cfg.dat       = {ped_dat.(ped_dat.data_name{2})};
+    cfg.alt_eve   = 'trialinfo';
+    cfg.plt_dim   = [1 1];
+    cfg.type      = 'chan';
+    
+    eve_plt     = 11:14; %unique(ped_dat.(ped_dat.data_name{2}).trialinfo);
+    
+    col_hld = distinguishable_colors(numel(eve_plt));
+    for iC = 1:size(col_hld,1);
+        lne_col_plt{iC} = col_hld(iC,:);
+        cnd_nme_plt{iC} = ['eve' num2str(iC)];
+    end
+    
+    leg_pos_plt = 1:numel(cnd_nme_plt);
+    
+    v_lne_plt     = [0];
+    v_lne_col_plt = {rgb('black')};
+    v_lne_wdt_plt = [1];
+    
+    cfg.eve       = eve_plt';
+    
+    cfg.std_err         = 1;
+    cfg.lnstyle.col_ord = lne_col_plt;
+    cfg.cnd_nme         = cnd_nme_plt;
+    cfg.leg_pos         = leg_pos_plt;
+    
+    cfg.x_lim       = [-0.300 1.000];
+    cfg.y_lim       = 'maxmin';
+    cfg.v_lne       = v_lne_plt;
+    cfg.v_lne_col   = v_lne_col_plt;
+    cfg.v_lne_wdt   = v_lne_wdt_plt;
+    cfg.axe_fnt_sze = 10;
+    cfg.axe_lne_sze = 1.5;
+    cfg.ttl_lne_sze = 20;
+    cfg.ttl_num     = 0;
+    
+    cfg.print      = 1;
+    cfg.nofig      = 1;
+    cfg.print_type = 'png';
+    cfg.outdir     = [fcfg.prj_dat_hld '/' 'epoch_data' '/' 'plot_explore' '/' fcfg.sbj_nme '/' 'channels' '/' ped_dat.data_name{2} '_broca'];
+    cfg.prefix     = [ped_dat.data_name{2}] ;
+    
+    mmil_ieeg_sensor_plot_v5(cfg)
+    
+end
 
 %% Save
 cfg = [];
