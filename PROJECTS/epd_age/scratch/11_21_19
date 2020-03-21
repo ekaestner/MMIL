@@ -1,0 +1,13 @@
+clear; clc;
+
+dta_loc = '/home/mmilmcdRSI/MetaData/MCD_Phenotypes/SurfGroupAvgs/output_n116/';
+dta_fle = 'CortMD_diff_tval_HC_Language & memory-sm313-lh.mgh';
+
+dta_out = '/home/ekaestne/PROJECTS/OUTPUT/mri_srf_cls/';
+dta_lhs = 'CortMD_diff_tval_HC_LanguageMemory-sm313-lh.mgh';
+dta_rhs = 'CortMD_diff_tval_HC_LanguageMemory-sm313-rh.mgh';
+
+pvl_dir = '';
+pvl_fle = '';
+
+pvl_chs = .01;

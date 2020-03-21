@@ -1,0 +1,12 @@
+sve_loc = '/home/ekaestne/gitrep/MMIL/PROJECTS/XS/legend';
+sel_lbl = { 'language'  'speech'       'sensorimotor_other' 'visual'      'mirror'     'visualspeech' 'auditory'  'visual'   'bimodal' };
+col     = { rgb('cyan') rgb('purple')  rgb('light purple')  rgb('orange') rgb('black') rgb('white')   rgb('blue') rgb('red') rgb('green') };
+nsl_col = {'white'};
+
+%% Balls
+pcfg = [];
+pcfg.out_dir = sve_loc;
+pcfg.sel_lbl = sel_lbl;
+pcfg.col     = col;
+pcfg.nsl_col = nsl_col;
+mmil_loc_dot(pcfg)
