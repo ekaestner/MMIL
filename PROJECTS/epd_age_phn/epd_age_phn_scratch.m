@@ -1,20 +1,21 @@
-jhn_dta_loc = '/home/jxrao/Desktop/Lab/surface_map/data/R_Output/';
+clear; clc;
+
+jhn_dta_loc = '/home/ekaestne/PROJECTS/EXTERNAL/R_Output/';% '/home/jxrao/Desktop/Lab/surface_map/data/R_Output/';
 
 plt_out = '/home/ekaestne/PROJECTS/OUTPUT/epd_age_phn';
 
 low_rng_num = [ -0.01 nan ];
 hgh_rng_num = [ -0.25 nan ];
-
 pvl_chs = .05;
 smt_stp = 176;
 deg_fre = 79;
 pvl_cls = .05;
 
 %% Cluster threshold
-srf_hld = fs_read_surf('/home/mmilmcd/data/FSRECONS/fsaverage/surf/rh.pial');
+srf_hld = fs_read_surf('/home/ekaestne/PROJECTS/EXTERNAL/Misc/fsaverage/surf/rh.pial'); %fs_read_surf('/home/mmilmcd/data/FSRECONS/fsaverage/surf/rh.pial');
 srf_chr = fs_calc_triarea(srf_hld);
 
-ttt = fs_load_mgh('/space/syn09/1/data/MMILDB/MCD_RSI/fsurf/FSURF_epd_ucsf013_fmri_141119_20141119.101553_1/analysis/thickness-sphere-sm2819-lh.mgz');
+ttt = fs_load_mgh('/home/ekaestne/PROJECTS/EXTERNAL/Misc/thickness-sphere-sm2819-lh.mgz'); % fs_load_mgh('/space/syn09/1/data/MMILDB/MCD_RSI/fsurf/FSURF_epd_ucsf013_fmri_141119_20141119.101553_1/analysis/thickness-sphere-sm2819-lh.mgz');
 bad_ind = find(ttt==0);
 gdd_ind = 1:numel(ttt);
 gdd_ind(bad_ind) = [];
@@ -41,7 +42,7 @@ cl_nme = num2str(round(cls_thr));
 
 
 %% Quick Check Surface Map Plots
-plt_nme = { 'TLE-MND_HC' 'TLE-MND_HC_wisconsin' };
+plt_nme = { 'TLE-MND_HCall_HC' 'TLE-MND_HC' 'TLE-MND_HC_wisconsin' };
 smt_stp = { '176' '313' };
 
 for iSM = 1:numel(smt_stp)
@@ -61,8 +62,10 @@ for iSM = 1:numel(smt_stp)
         % Initial Plot
         pcfg = [];
         
+        pcfg.hme_wrk = 1;
+        
         pcfg.out_dir     = plt_out;
-        pcfg.out_pre_fix = [ 'estmean_diff' '_' plt_nme{iPL} '_' 'sm' smt_stp{iSM}];
+        pcfg.out_pre_fix = [ 'estmean_diff' '_' plt_nme{iPL} '_' 'sm' smt_stp{iSM} '_home'];
         
         pcfg.plt_dta = { men_dff_lhs' men_dff_rhs' };
         
@@ -78,7 +81,7 @@ for iSM = 1:numel(smt_stp)
         fcfg.pvl_thr = pvl_chs;
         fcfg.cls_thr = cls_thr; % mm^2
         fcfg.fsr_sbj = 'fsaverage';
-        fcfg.fsr_dir = '/home/mmilmcd/data/FSRECONS/';
+        fcfg.fsr_dir = '/home/ekaestne/PROJECTS/EXTERNAL/Misc'; %'/home/mmilmcd/data/FSRECONS/';
         fcfg.hms     = 'lh';
         pvl_lhs_cls = ejk_surface_pvalue_cluster( fcfg , pvl_lhs );
         
@@ -98,8 +101,10 @@ for iSM = 1:numel(smt_stp)
         %
         pcfg = [];
         
+        pcfg.hme_wrk = 1;
+        
         pcfg.out_dir     = plt_out;
-        pcfg.out_pre_fix = [ 'estmean_diff' '_' plt_nme{iPL} '_' 'sm' smt_stp{iSM} '_' 'cluster' ];
+        pcfg.out_pre_fix = [ 'estmean_diff' '_' plt_nme{iPL} '_' 'sm' smt_stp{iSM} '_' 'cluster_home' ];
         
         pcfg.plt_dta = { men_dff_lhs_cls' men_dff_rhs_cls' };
         

@@ -29,6 +29,7 @@
 function GraphLinePlot(cfg)
 
 if ~isfield(cfg,'plt_fig'); cfg.plt_fig = 0; end
+if ~isfield(cfg,'sig_loc'); cfg.sig_loc = 'top'; end
 
 %% GROUP PLOT
 if cfg.grp_plt
@@ -52,12 +53,23 @@ if cfg.grp_plt
             end
             set(gca,'ylim',[0 ylm_max]);
         else
-            ylm_max = cfg.ylm(2) + ( cfg.ylm(2) * .125 );
-            set(gca,'ylim',[cfg.ylm(1) ylm_max]);
+            if strcmpi(cfg.sig_loc,'top')
+                ylm_max = cfg.ylm(2) + ( cfg.ylm(2) * .125 );
+                set(gca,'ylim',[cfg.ylm(1) ylm_max]);
+            elseif strcmpi(cfg.sig_loc,'bottom')
+                  set(gca,'ylim',[cfg.ylm(1) cfg.ylm(2)]);                
+            end
         end
         
         if size(cfg.grp_dta.dta{iC}{1},1)==1
-            ylm_cel = max([cfg.grp_dta.dta{iC}{:}])+(max([cfg.grp_dta.dta{iC}{:}]) * [.025:.025:.125]);
+            if strcmpi(cfg.sig_loc,'top')
+                ylm_cel = max([cfg.grp_dta.dta{iC}{:}])+(max([cfg.grp_dta.dta{iC}{:}]) * [.025:.025:.125]);
+            elseif strcmpi(cfg.sig_loc,'bottom')
+                rng_hld = cfg.ylm(2) - cfg.ylm(1);
+                rng_hld_dmc = (rng_hld * .2) / 4;
+                rng_hld_dmc_max = cfg.ylm(1) + (rng_hld * .2);
+                ylm_cel = cfg.ylm(1)+rng_hld_dmc:rng_hld_dmc:rng_hld_dmc_max;
+            end
         elseif size([cfg.grp_dta.dta{1}],1)>1
             ylm_max_hld = cat(1,cfg.grp_dta.dta{:});
             ylm_max_hld(ylm_max_hld==inf) = [];
@@ -95,7 +107,7 @@ if cfg.grp_plt
                         pvl_max = prctile(dff_hst,100-(cfg.pvl_lvl/2)*100);
                         
                         if dff_act<pvl_min || pvl_max<dff_act
-                            scatter(cfg.bin_cut(iBC),ylm_cel(iSG),150,cfg.grp_col(cmp_loc,:),'o','filled','MarkerEdgeColor',rgb('light grey'),'LineWidth',2);
+                            scatter(cfg.bin_cut(iBC),ylm_cel(iSG),250,cfg.grp_col(cmp_loc,:),'o','filled','MarkerEdgeColor',rgb('light grey'),'LineWidth',3);
                         end
                     end
                 end
@@ -113,11 +125,11 @@ if cfg.grp_plt
                     for iBC = 1:numel(cfg.bin_cut)
                         if cfg.grp_dta.dta{iC}{cmp_loc}(iBC) < pct_plt(2,iBC) || ...
                                 pct_plt(1,iBC) < cfg.grp_dta.dta{iC}{cmp_loc}(iBC)
-                            scatter(cfg.bin_cut(iBC),ylm_cel(iSG),250,rgb('dark grey'),'o','filled'); hold on;
+                            scatter(cfg.bin_cut(iBC),ylm_cel(iSG),450,rgb('dark grey'),'o','filled'); hold on;
                             if isfield(cfg,'grp_col_hgh_lgh')
-                                scatter(cfg.bin_cut(iBC),ylm_cel(iSG),150,cfg.grp_col{iC}{cmp_loc},'o','filled','MarkerEdgeColor',cfg.grp_col_hgh_lgh(cmp_loc,:),'LineWidth',1.5);
+                                scatter(cfg.bin_cut(iBC),ylm_cel(iSG),300,cfg.grp_col{iC}{cmp_loc},'o','filled','MarkerEdgeColor',cfg.grp_col_hgh_lgh{iC}{cmp_loc},'LineWidth',2);
                             else
-                                scatter(cfg.bin_cut(iBC),ylm_cel(iSG),150,cfg.grp_col{iC}{cmp_loc},'o','filled');
+                                scatter(cfg.bin_cut(iBC),ylm_cel(iSG),300,cfg.grp_col{iC}{cmp_loc},'o','filled');
                             end
                         end
                     end
@@ -138,7 +150,7 @@ if cfg.grp_plt
             if size(cfg.grp_dta.dta{1},1)==1
                 plot(cfg.bin_cut,cfg.grp_dta.dta{iC}{iP},'Color',rgb('dark grey'),'LineWidth',7.75);
                 if isfield(cfg,'grp_col_hgh_lgh')
-                    plot(cfg.bin_cut,cfg.grp_dta.dta{iC}{iP},'Color',cfg.grp_col_hgh_lgh(plt_loc(iP),:),'LineWidth',6.5);
+                    plot(cfg.bin_cut,cfg.grp_dta.dta{iC}{iP},'Color',cfg.grp_col_hgh_lgh{iC}{iP},'LineWidth',6.5);
                 end
                 leg(iP) = plot(cfg.bin_cut,cfg.grp_dta.dta{iC}{iP},'Color',cfg.grp_col{iC}{iP},'LineWidth',4.25);
             elseif size(cfg.grp_dta.dta{1},1)>1
@@ -146,7 +158,7 @@ if cfg.grp_plt
                 
                 plot(cfg.bin_cut,dta_hld,'Color',rgb('dark grey'),'LineWidth',7.75);
                 if isfield(cfg,'grp_col_hgh_lgh')
-                    plot(cfg.bin_cut,dta_hld,'Color',cfg.grp_col_hgh_lgh(plt_loc(iP),:),'LineWidth',6.5);
+                    plot(cfg.bin_cut,dta_hld,'Color',cfg.grp_col_hgh_lgh{iC}{plt_loc(iP)},'LineWidth',6.5);
                 end
                 leg(iP) = plot(cfg.bin_cut,dta_hld,'Color',cfg.grp_col(plt_loc(iP),:),'LineWidth',4.25);
             end
@@ -163,20 +175,26 @@ if cfg.grp_plt
                     
                     xvl_hld = (((cfg.bin_cut(iBC)+0.4) - (cfg.bin_cut(iBC)-0.4)) .* rand(1,size(cfg.grp_dta.dta{iP},1))) + (cfg.bin_cut(iBC)-0.4);
                     scatter(xvl_hld,cfg.grp_dta.dta{iP}(:,iBC),75,rgb('black'),'o','filled')
-                    scatter(xvl_hld,cfg.grp_dta.dta{iP}(:,iBC),65,cfg.grp_col_hgh_lgh(plt_loc(iP),:),'o','filled')
+                    scatter(xvl_hld,cfg.grp_dta.dta{iP}(:,iBC),65,cfg.grp_col_hgh_lgh{iC}{plt_loc(iP)},'o','filled')
                     scatter(xvl_hld,cfg.grp_dta.dta{iP}(:,iBC),50,cfg.grp_col(plt_loc(iP),:),'o','filled')
                     
                 end
             end
         end
         
+        %
+        axe_hld = gca;
+        axe_hld.LineWidth = 3;
+        
         % Legend
-        if ~cfg.plt_fig
+        if ~cfg.plt_fig && isfield(cfg,'leg_loc')
             lob = legend(leg,cfg.grp_nme{iC},'Location',cfg.leg_loc,'FontSize',20);
             lne_lob = findobj(lob,'type','line');
             set(lne_lob,'linewidth',100);
             legend('boxoff')
         end
+        
+        clear leg;
         
         % Title
         ylabel(mmil_spec_char(cfg.ttl,{'_'}))
@@ -339,7 +357,7 @@ end
 %% Surface Plot
 if isfield(cfg,'reg_srf_plt') && cfg.reg_srf_plt
     
-    plt_loc = {{[0.0 0.6 0.4 0.4] [0.0 0.2 0.4 0.4] [0.0 0.0 0.4 0.2]} {[0.4 0.6 0.4 0.4] [0.4 0.2 0.4 0.4] [0.4 0.0 0.4 0.2]}};    
+    plt_loc = {{[0.0 0.6 0.4 0.4] [0.0 0.2 0.4 0.4] [0.0 0.0 0.4 0.2]} {[0.4 0.6 0.4 0.4] [0.4 0.2 0.4 0.4] [0.4 0.0 0.4 0.2]}};
     
     for iGO = 1:numel(cfg.grp_ovr)
         
@@ -348,21 +366,31 @@ if isfield(cfg,'reg_srf_plt') && cfg.reg_srf_plt
         sph     = {'lh'  'rh'};
         sph_vew = {'lat' 'med' };
         
-        % Load Surface %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        if ~strcmpi( cfg.fsr_nme , 'fsaverage' )
-            sbj_dir_lst = dir(sprintf('%s/FSURF_*',cfg.fsr_dir));
-            sbj_dir_lst = regexp({sbj_dir_lst.name},['FSURF_' cfg.fsr_nme '.+_1$'],'match'); sbj_dir_lst = [sbj_dir_lst{:}];
+        % Load Surface
+        % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%'
+        if isfield(cfg,'hme_wrk') && cfg.hme_wrk==1
+            srf_brn{1} = fs_read_surf([ '/home/ekaestne/PROJECTS/EXTERNAL/Misc/fsaverage' '/' 'surf' '/' 'lh.pial']);
+            srf_brn{1}.surf_brain.coords = srf_brn{1}.vertices;
+            srf_brn{1}.surf_brain.faces = srf_brn{1}.faces;
+            srf_brn{2} = fs_read_surf([ '/home/ekaestne/PROJECTS/EXTERNAL/Misc/fsaverage' '/' 'surf' '/' 'rh.pial']);
+            srf_brn{2}.surf_brain.coords = srf_brn{2}.vertices;
+            srf_brn{2}.surf_brain.faces = srf_brn{2}.faces;
         else
-            sbj_dir_lst = dir(sprintf('%s/*',cfg.fsr_dir));
-            sbj_dir_lst = regexp({sbj_dir_lst.name},['' cfg.fsr_nme],'match'); sbj_dir_lst = [sbj_dir_lst{:}];
+            if ~strcmpi( cfg.fsr_nme , 'fsaverage' )
+                sbj_dir_lst = dir(sprintf('%s/FSURF_*',cfg.fsr_dir));
+                sbj_dir_lst = regexp({sbj_dir_lst.name},['FSURF_' cfg.fsr_nme '.+_1$'],'match'); sbj_dir_lst = [sbj_dir_lst{:}];
+            else
+                sbj_dir_lst = dir(sprintf('%s/*',cfg.fsr_dir));
+                sbj_dir_lst = regexp({sbj_dir_lst.name},['' cfg.fsr_nme],'match'); sbj_dir_lst = [sbj_dir_lst{:}];
+            end
+            
+            srf_brn{1} = fs_read_surf([ cfg.fsr_dir '/' sbj_dir_lst{:} '/' 'surf' '/' 'lh.pial']);
+            srf_brn{1}.surf_brain.coords = srf_brn{1}.vertices;
+            srf_brn{1}.surf_brain.faces = srf_brn{1}.faces;
+            srf_brn{2} = fs_read_surf([ cfg.fsr_dir '/' sbj_dir_lst{:} '/' 'surf' '/' 'rh.pial']);
+            srf_brn{2}.surf_brain.coords = srf_brn{2}.vertices;
+            srf_brn{2}.surf_brain.faces = srf_brn{2}.faces;
         end
-        
-        srf_brn{1} = fs_read_surf([ cfg.fsr_dir '/' sbj_dir_lst{:} '/' 'surf' '/' 'lh.pial']);
-        srf_brn{1}.surf_brain.coords = srf_brn{1}.vertices;
-        srf_brn{1}.surf_brain.faces = srf_brn{1}.faces;
-        srf_brn{2} = fs_read_surf([ cfg.fsr_dir '/' sbj_dir_lst{:} '/' 'surf' '/' 'rh.pial']);
-        srf_brn{2}.surf_brain.coords = srf_brn{2}.vertices;
-        srf_brn{2}.surf_brain.faces = srf_brn{2}.faces;
         
         % Data Setup
         dta_reg_hld{1} = cellfun(@(x) x(string_find(cfg.thk_nme,'lhs'),:),cfg.grp_dta.dta_reg{iGO},'uni',0);
@@ -373,11 +401,11 @@ if isfield(cfg,'reg_srf_plt') && cfg.reg_srf_plt
         
         % Colorbar
         top_pct = 1;
-        col{1} = rgb('orange');
-        col{2} = rgb('neon red');
-        col{3} = rgb('red');
-        col{4} = rgb('dark red');
-        col{5} = rgb('medium grey')-0.15;
+        col{1} = rgb('medium grey')-0.15;%rgb('orange');
+        col{2} = rgb('medium grey')-0.15;%rgb('neon red');
+        col{3} = rgb('medium grey')-0.15;%rgb('red');
+        col{4} = rgb('medium grey')-0.15;%rgb('dark red');
+        col{5} = rgb('medium grey')-0.15;%
         col{6} = rgb('dark blue');
         col{7} = rgb('blue');
         col{8} = rgb('bright blue');
@@ -387,115 +415,121 @@ if isfield(cfg,'reg_srf_plt') && cfg.reg_srf_plt
             col_map = [col_map ; [linspace(col{iC}(1),col{iC+1}(1),ceil(1000*top_pct/(numel(col)-1)))' linspace(col{iC}(2),col{iC+1}(2),ceil(1000*top_pct/(numel(col)-1)))' linspace(col{iC}(3),col{iC+1}(3),ceil(1000*top_pct/(numel(col)-1)))']; ];
         end
         col_map = flipud(col_map);
-           
+        
         for iCM = 1:numel( cfg.cmp_nme{iGO} )
             
-            % Plot
-            fig_hld(1) = figure('Visible','off','Position',[0 0 1920 1080]);
+            ejk_chk_dir( [ cfg.sve_loc{iGO} '/' cfg.sve_nme{iGO} '_' cfg.cmp_nme{iGO}{iCM} ] )
             
-            cmp_loc = find( strcmpi( cfg.grp_nme{iGO} , cfg.cmp_nme{iGO}{iCM} ) );
-            
-            for iH = 1:numel(sph)
+            for iBC = 1:numel(cfg.bin_cut)
+                % Plot
+                fig_hld(1) = figure('Visible','off','Position',[0 0 1920 1080]);
                 
-                % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-                [~,albl,~]=fs_read_annotation([ cfg.prj_dir '/' 'DATA' '/' cfg.sbj_nme '/' 'ROIs' '/' sph{iH} '.aparc'  cfg.prc_nme '.annot']);
-                albl_hld = albl;
-                albl = cellfun( @(x) mmil_spec_char( x , {'-'}) , albl , 'uni' , 0 );
-                pct_hld = [albl num2cell(nan(size(albl,1),1))];
-                                                
-                for iF = 1:size(pct_hld,1)
+                cmp_loc = find( strcmpi( cfg.grp_nme{iGO} , cfg.cmp_nme{iGO}{iCM} ) );
+                
+                for iH = 1:numel(sph)
                     
-                    roi_loc = find(strcmpi( cfg.thk_nme , [ sph{iH} 's' '_'  pct_hld{iF,1} ] ));
+                    % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+                    [~,albl,~]=fs_read_annotation([ cfg.prj_dir '/' 'DATA' '/' cfg.sbj_nme '/' 'ROIs' '/' sph{iH} '.aparc'  cfg.prc_nme '.annot']);
+                    albl_hld = albl;
+                    albl = cellfun( @(x) mmil_spec_char( x , {'-'}) , albl , 'uni' , 0 );
+                    pct_hld = [albl num2cell(nan(size(albl,1),1))];
                     
-                    con_hld = nanmean( squeeze(cfg.grp_dta.con_spr_reg{iGO}( : , roi_loc , cfg.reg_col )),2);
-                    dta_hld = nanmean( cfg.grp_dta.dta{iGO}{cmp_loc}( roi_loc , cfg.reg_col ));
-                    
-                    if ~isempty(roi_loc)
+                    for iF = 1:size(pct_hld,1)
                         
-                        pct_plt(1) = prctile( con_hld , 100-((cfg.pvl_lvl/2)*100));
-                        pct_plt(2) = prctile( con_hld , (cfg.pvl_lvl/2)*100);
+                        roi_loc = find(strcmpi( cfg.thk_nme , [ sph{iH} 's' '_'  pct_hld{iF,1} ] ));
                         
-                        if pct_plt(1) < dta_hld || ...
-                           pct_plt(2) > dta_hld
+                        con_hld = nanmean( squeeze(cfg.grp_dta.con_spr_reg{iGO}( : , roi_loc , iBC )),2); % cfg.reg_col
+                        dta_hld = nanmean( cfg.grp_dta.dta{iGO}{cmp_loc}( roi_loc , iBC )); % cfg.reg_col
+                        
+                        if ~isempty(roi_loc)
                             
-                            men_roi = nanmean( con_hld );
-                            std_roi = nanstd( con_hld );
-                            pct_hld{iF,2} = ( dta_hld - men_roi ) / std_roi;
+                            pct_plt(1) = prctile( con_hld , 100-((cfg.pvl_lvl/2)*100));
+                            pct_plt(2) = prctile( con_hld , (cfg.pvl_lvl/2)*100);
+                            
+                            if pct_plt(1) < dta_hld || ...
+                                    pct_plt(2) > dta_hld
+                                
+                                men_roi = nanmean( con_hld );
+                                std_roi = nanstd( con_hld );
+                                pct_hld{iF,2} = ( dta_hld - men_roi ) / std_roi;
+                                
+                            else
+                                
+                                pct_hld{iF,2} = 0;
+                                
+                            end
                             
                         else
-                            
-                            pct_hld{iF,2} = 0;
-                            
+                            pct_hld{iF,2} = nan;
                         end
+                    end
+                    
+                    pct_hld( cell2mat(pct_hld(:,2))>5 , 2 )  = {10};
+                    pct_hld( cell2mat(pct_hld(:,2))<-5 , 2 ) = {-10};
+                    
+                    pct_hld(:,2) = num2cell( (cell2mat(pct_hld(:,2)) / 23) + .5);
+                    
+                    pct_hld(:,1) = albl_hld;
+                    
+                    % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+                    if isfield(cfg,'reg_inc_plt') && ~isempty(cfg.reg_inc_plt)
+                        iIN = ismember(pct_hld(:,1),unique(cellfun(@(x) x(4:end),cfg.reg_inc_plt,'uni',0)) );
+                        pct_hld = pct_hld(iIN,:);
+                    end
+                    
+                    for iSP = 1:numel(sph_vew)
                         
-                    else
-                        pct_hld{iF,2} = nan;
+                        if cfg.plt_fig; fig_hld(1) = figure('Visible','off','Position',[0 0 1920 1080]); end
+                        
+                        pcfg = [];
+                        
+                        pcfg.surf_brain  = srf_brn{iH};
+
+                        pcfg.aparc       = [ cfg.prj_dir '/' 'DATA' '/' cfg.sbj_nme '/' 'ROIs' '/' sph{iH} '.aparc'  cfg.prc_nme '.annot'];
+                        
+                        pcfg.sph         = sph{iH};
+                        pcfg.sph_vew     = sph_vew{iSP};
+                        
+                        pcfg.label       = 0;
+                        pcfg.radius      = [];
+                        pcfg.alpha       = 1;
+                        
+                        pcfg.non_ele     = [];
+                        pcfg.sve_img     = 0; % ###
+                        
+                        pcfg.axe_hnd = axes('OuterPosition',plt_loc{iH}{iSP},'visible','off','Parent',fig_hld(1));
+                        
+                        pcfg.fig_hdl = fig_hld(1);
+                        
+                        pcfg.col_map = col_map;
+                        
+                        pcfg.tbl_pct = cell2mat(pct_hld(:,2)) ./ top_pct;
+                        pcfg.tbl_pct(isnan(pcfg.tbl_pct)) = 0;
+                        
+                        pcfg.tbl_loc = strcat('lhs_',pct_hld(:,1));
+                        
+                        pcfg.top_pct = 1;
+                        
+                        nyu_plot2(pcfg);
+                        
                     end
                 end
                 
-                pct_hld( cell2mat(pct_hld(:,2))>5 , 2 )  = {10};
-                pct_hld( cell2mat(pct_hld(:,2))<-5 , 2 ) = {-10};
+                % Add Colorbar
+                axes('OuterPosition',[.05 .05 .9 .05],'visible','off')
+                colormap(col_map)
+                clb = colorbar('south','Position',[.05 .05 .9 .05]);
+                clb.TickLength = 0;
+                clb.TickLabels = cellfun(@num2str,num2cell(roundsd(linspace(-5,5,11),2)),'uni',0);
+                ylabel(clb,cfg.ttl,'FontSize',20)
                 
-                pct_hld(:,2) = num2cell( (cell2mat(pct_hld(:,2)) / 23) + .5);
+                % Save
+                print(gcf,[ cfg.sve_loc{iGO} '/' cfg.sve_nme{iGO} '_' cfg.cmp_nme{iGO}{iCM} '/' cfg.sve_nme{iGO} '_' 'region_surface_plot' '_' cfg.cmp_nme{iGO}{iCM} '_' 'density' num2str(cfg.bin_cut(iBC)) '.png'],'-dpng','-r200')
+                close all
                 
-                pct_hld(:,1) = albl_hld;
-                
-                % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-                if isfield(cfg,'reg_inc_plt') && ~isempty(cfg.reg_inc_plt)
-                    iIN = ismember(pct_hld(:,1),unique(cellfun(@(x) x(4:end),cfg.reg_inc_plt,'uni',0)) );
-                    pct_hld = pct_hld(iIN,:);
-                end
-                
-                for iSP = 1:numel(sph_vew)
-                    
-                    if cfg.plt_fig; fig_hld(1) = figure('Visible','off','Position',[0 0 1920 1080]); end
-                    
-                    pcfg = [];
-                    
-                    pcfg.surf_brain  = srf_brn{iH};
-                    pcfg.aparc       = [ cfg.prj_dir '/' 'DATA' '/' cfg.sbj_nme '/' 'ROIs' '/' sph{iH} '.aparc'  cfg.prc_nme '.annot'];
-                    
-                    pcfg.sph         = sph{iH};
-                    pcfg.sph_vew     = sph_vew{iSP};
-                    
-                    pcfg.label       = 0;
-                    pcfg.radius      = [];
-                    pcfg.alpha       = 1;
-                    
-                    pcfg.non_ele     = [];
-                    pcfg.sve_img     = 0; % ###
-                    
-                    pcfg.axe_hnd = axes('OuterPosition',plt_loc{iH}{iSP},'visible','off','Parent',fig_hld(1));
-                    
-                    pcfg.fig_hdl = fig_hld(1);
-                    
-                    pcfg.col_map = col_map;
-                    
-                    pcfg.tbl_pct = cell2mat(pct_hld(:,2)) ./ top_pct;
-                    pcfg.tbl_pct(isnan(pcfg.tbl_pct)) = 0;
-                    
-                    pcfg.tbl_loc = strcat('lhs_',pct_hld(:,1));
-                    
-                    pcfg.top_pct = 1;
-                    
-                    nyu_plot2(pcfg);
-                    
-                end
-            end
-                       
-            % Add Colorbar
-            axes('OuterPosition',[.05 .05 .9 .05],'visible','off')
-            colormap(col_map)
-            clb = colorbar('south','Position',[.05 .05 .9 .05]);
-            clb.TickLength = 0;
-            clb.TickLabels = cellfun(@num2str,num2cell(roundsd(linspace(-5,5,11),2)),'uni',0);
-            ylabel(clb,cfg.ttl,'FontSize',20)
-            
-            % Save
-            print(gcf,[ cfg.sve_loc{iGO} '/' cfg.sve_nme{iGO} '_' 'region_surface_plot' '_' cfg.cmp_nme{iGO}{iCM} '.png'],'-dpng','-r200')
-            close all
-            
+            end            
         end
+        
     end
 end
 

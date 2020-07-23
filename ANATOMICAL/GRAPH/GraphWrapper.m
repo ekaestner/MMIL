@@ -127,6 +127,8 @@ for iGL = 1:numel(cfg.gbl_mes_nme)
     fcfg.sve_loc = out_dir;
     fcfg.sve_nme = sve_nme;
     
+    fcfg.hme_wrk = 1;
+    
     GraphLinePlot(fcfg)
     
     %
