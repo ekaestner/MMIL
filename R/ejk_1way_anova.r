@@ -55,7 +55,7 @@ for ( iG in 1:length(grp_var_nme) )
   equ_txt = as.formula( paste( dep_var_nme[1], ' ~ ', grp_var_nme[iG], sep='') )
   pwc = plt_dta %>% tukey_hsd( equ_txt )
   
-  par_wse_nme = levels(plt_dta[[grp_var_nme[2]]])
+  par_wse_nme = levels(plt_dta[[grp_var_nme[1]]])
   
   par_wse_num = length(par_wse_nme)
   par_wse_num = (par_wse_num*(par_wse_num-1)) / 2
