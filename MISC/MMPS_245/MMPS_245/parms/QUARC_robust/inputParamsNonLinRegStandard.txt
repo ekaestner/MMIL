@@ -1,0 +1,166 @@
+///////////////////////////////////////////////////////////////////
+// 
+// Input Parameters File For "Mri_Register". The Only
+// Requirements In Writing a file like this are that a variable name
+// should be the first string in a line (the name may be preceded by
+// white space), followed by another string (doesn't matter what,
+// e.g., "="), followed by the value, and optionally followed by
+// another string or strings -- useful for documentation. Only one
+// parameter per line. Non-parameter lines will either be comment
+// lines (whose first non white-space characters must be "//") white
+// space lines, or empty lines. If a "//" immediately follows the 
+// whitesapce after the "=", that is a comment marker, and the
+// variable is default-initialized, or initialized from the command
+// line.
+// 
+//////////////////////////////////////////////////////////////////////
+
+//subjectListFile                   = //PROBABLY WILL NEVER BE USED AGAIN
+
+
+/////////////////////////////////////////////////////////////////////////////
+/// Specify input files, output directory, and operations to be performed ///
+
+standardizeIntensities = 0 // If affine reg to baseline has already standardized the later time points to orig.mgz, then set to 0.
+registerROI         = 0
+roi                 = [ 53 54 ] // array of ROIs to focuse on as a unit.
+
+restart = 0 // 0|1 switch
+restartDxFileName = // dx.mgz
+restartDyFileName = // dy.mgz
+restartDzFileName = // dz.mgz
+
+rescale = 0 // 0|1 switch
+rescaleFac = 1.0
+
+subjectImageFileName                = // /space/pogo1/4/holland/work/results/jackie/tp1/MPR1.mgh
+subjectMaskImageFileName            = // /space/pogo1/4/holland/work/results/jackie/tp1/mask.mgz
+subjectAsegImageFileName            = 
+targetImageFileName                 = // /space/pogo1/4/holland/work/results/jackie/tp1/MPR2.mgh
+targetMaskImageFileName             = // /space/pogo1/4/holland/work/results/jackie/tp1/mask.mgz
+
+standardIntensityCDFMaskedFile      = standardIntensityCDF_MASKED_255.txt
+standardIntensityCDFNotMaskedFile   = standardIntensityCDF_NO_MASK_255.txt
+
+                                      // If outDirFullPath is not explicitly specified, it will be set to 
+                                      // outDirParentPath + '/' + outDirNamePrefix + subjectName
+                                      // Commandline values superseded all. See usage() or inputParams.cpp.
+outDirFullPath                      = /space/pogo1/4/holland/work/results/jackie/tp1_MPR1_MPR2_To5Blur_1500
+outDirParentPath                    = // /Space/Pogo2/1/Holland/Register/Results
+outDirNamePrefix                    = // Mriprocessed_
+
+rigidReg                            = 0 (1|0) Note, voxStepRigidRegMultScale used here
+rigidRegFinesse                     = 0 (1|0) Note, voxStepAffineReg used here
+affineReg                           = 0 (1|0) Note, voxStepAffineReg used here
+nonlinearReg                        = 1 (1|0) Note, voxStepNonlinReg used here
+principalComponentAnalysis          = 0 (1|0) Note, voxStepPCA used here
+
+averageAffRegdImage            = 0
+differenceAffRegdImage         = 0
+
+resampledImageSuffix           = _mappedToTarget.mgz
+
+
+//////////////////////
+/// Rescale Images ///
+
+rescaleToTarget             = 0        (0|1: 1 ==> rescale width, height, depth, voxel x-, y-, and z-size of all other images to those of target)
+rescaleWidth                = 256      512      (if rescaleToTarget==0, then rescale ALL images to these values)
+rescaleHeight               = 256      512      
+rescaleDepth                = 256      512      
+rescaleXsize                = 1.0      0.5      (mm)
+rescaleYsize                = 1.0      0.5      
+rescaleZsize                = 1.0      0.5      
+
+
+///////////////////////////////
+/// Common numerical values ///
+
+maskThreshold               = 0.1      (valid target voxels have a mask probability greater or equal to this) 0.05 0.001
+differential_VoxOrRas       = 1.0      (mm if used on RAS; fraction of voxel dimension if used on voxels)
+
+
+///////////////////////////////////////////////////
+/// Rigidbody Registration of subject to target ///
+
+voxStepRigidRegMultScale    = 4
+scales                      = [ 83 49 27 16 9 5 1 ] (White space separation. And note the space after '[' and before ']')
+translationMin              = 0.1      (mm)         ( > 0 !!) 0.5
+rotationMin                 = 0.1      (degrees)    ( > 0 !!) 0.5
+maxNumParamsChanges         = 1        (1 is usually good. Allow only up to this many translation and/or rotation changes at a time)
+rigidRegMatrixOutFilePrefix = rigidRegMatrix
+rigidRegFinesseMethod       = cgGSL                 (Note, voxStepAffineReg used here)
+cgMethodRigidReg            = direct
+maxCGIterationsRRF          = 64
+rigidRegMatrixFile          = 
+                              // Read in this matrix if it already exists, instead of recalculating
+
+
+////////////////////////////////////////////////
+/// Affine Registration of subject to target ///
+
+voxStepAffineReg            = 4        (used for rigidRegFinesse and affineReg)
+kernelWidthMaxSubjectAR     = 7        (pixel width of Gaussian kernel for blurring. Keep it an odd number >= 3, or 0)
+kernelWidthMaxTargetAR      = 7        (these kernel values are used for rigidRegFinesse and affineReg)
+kernelWidthStepAR           = 8        (an even number)
+affineRegMethod             = cgGSL
+cgMethodAffineReg           = direct
+cgTolAffineReg              = 2.0e-3   (See GSL manual: specifies accuracy of line minimization ~cos(theta))
+cgEpsAbsAffineReg           = 1.0e-2   (See GSL manual: specifies norm of gradient for convergence) 1.0e-2
+cgStepSizeAffineReg         = 0.5      (See GSL manual: size of the first trial step)
+affineRegMatrixOutFilePrefix = affineRegMatrix
+affineRegMatrixFile         = 
+                              // Read in this matrix if it already exists, instead of recalculating
+
+
+//////////////////////////////////////////////////////////
+/// Nonlinear reg of subject to target (solve Hessian) ///
+
+useMaskNonLinReg            = 1
+lambdaMaskMin               = 0.1     // 0.0 <= lambdaMaskMin <= 1.0: mask value used in setupHessian() will be MAX(mask[voxel], lambdaMaskMin
+voxStepNonlinReg            = 1
+nonlinFlowNumMax            = 1
+
+kernelWidthSubjectNR        = [ 9 ]  // Pixel width of Gaussian kernel for blurring. Odd numbers >= 3, or 0.
+kernelWidthTargetNR         = [ 9 ]
+
+enforceDecrease             = 1       // 0|1 switch to control exit condition from bicgstabc()
+bicgstabErrFac              = 160.0
+bicgstabTol                 = 1.0e-8
+bicgstabMaxIter             = 128
+
+hessianErrorMax             = 1.0e-3
+
+lambda0                     = 1.0     0.14176731        // Coefficiennt of difference term in bicgstab cost fn.
+lambda1Min                  = 1.0e3   // 3.0e3 2.0e3 1.0e3	Coefficiennt of displacement norm (size) term in bicgstab cost fn. > 0.
+lambda1Max                  = 1.0e3   // 3.0e3 2.0e3 1.0e3
+lambda2Min                  = 6.0e3   // 4.0e3 3.0e3 1.5e3	Coefficient of gradient term in cost function. > 0.  1.5e3 to 2.5e3 is good.
+lambda2Max                  = 6.0e3   // 4.0e3 3.0e3 1.5e3
+lambda2Decrement            = 0.0e3   // 0.4e3
+
+sincInterp                  = 1       // 0 ==> trilinear (default), !0 ==> sinc
+
+
+/////////////////////////////////////////////////////////////////////////////////////
+/// Intensity normalization of subject wrt target by nonlinear reg of target to subject (solve Hessian) ///
+
+nonlinFlowNumRenormIntensity = 0    Set with "-nnorm" on command line. Used as a switch AND value! Not used for registerROI=1.
+numFlowStepsForSingleINorm = 1      May want to have this larger than nonlinFlowNumRenormIntensity when NOT restarting.
+numINormIterations = 1              Or, if not restarting, can set numINormIterations = 0.
+beginFlowStepAggressiveINorm = 1000 DEAD PARAM!
+numAggressiveINormIterations = 1    0
+applyINormBeforeReg = 1             Switch
+
+useMaskINorm = 1
+voxStepINorm = 1  2
+kernelWidthINorm = 7
+lambda0INorm = 1.0              0.14176731
+lambda1INorm = 0.0		Should be 0.0 if  useMaskINorm = 0.
+lambda2INorm = 1.0e5		40000.0
+hessianErrorMaxINorm = 0.1      1.0e-4
+bicgstabTolINorm = 1.0e-9
+bicgstabMaxIterINorm = 128
+
+correctOutlierVoxels = 0	switch
+maxIntensityDiffPrimary = 100.0
+maxIntensityDiffSecondary = 50.0

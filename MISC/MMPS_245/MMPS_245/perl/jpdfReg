@@ -1,0 +1,54 @@
+#!/usr/bin/perl
+
+$exeReg       = "reg";
+$exeBroadMask = "brainMaskFromSeg";
+
+use Getopt::Long;
+
+if ( @ARGV > 0 ) {
+    GetOptions('t=s' => \$T,       # Target image: T1 structural.
+               's=s' => \$S,       # Source image (to be rigidbody reg'd to target): T2 diffusion.
+               'm=s' => \$mask,    # Target brain mask
+               'd=s' => \$outDir); # Where to write output (OPTIONAL).
+    print "T1     is $T\n";
+    print "T2     is $S\n";
+    print "mask   is $mask\n";
+}
+
+if ( !defined $T || !defined $S || !defined $mask ) {
+    die "Usage:\nE.g., to reg T1 to T2:\njpdfReg -t T1.mgz -s T2.mgz -m maskT1.mgz -d outDirectory\n";
+}
+
+if( !-e $T || !-e $S || !-e $mask ) {
+    die "Essential stuff missing. Exiting...\n";
+}
+
+if( defined $outDir ) {
+    if( !-d $outDir ) {
+	$cmd = "mkdir -p $outDir";
+	`$cmd`;
+    }
+}
+
+if( !defined $outDir ) {
+    $outDir = "./";
+}
+print "outDir is $outDir\n";
+
+$maskBroadName = "maskBroad.mgz";
+$maskBroad     = "$outDir/$maskBroadName";
+
+print "Broadening mask...\n";
+$cmd = "$exeBroadMask $mask $maskBroad";
+`$cmd`; # Broaden mask.
+$cmd = "$exeBroadMask $maskBroad $maskBroad";
+`$cmd`; # Broaden it again.
+
+if( !-e $maskBroad ) {
+    die "$maskBroad was not made! Exiting...\n";
+}
+
+print "Doing JPDF-reg...\n";
+$regflags = "-rr -jpr -jpbrrMultScale -sinc";
+$cmd = "$exeReg $regflags -t $T -s $S -tm $maskBroad -od $outDir";
+`$cmd`;

@@ -1,0 +1,648 @@
+#!/bin/csh -f
+#
+# ppge4
+#
+# Pre-process GE DICOM files and then calls epidwarp4.ucsd to perform unwarping
+# 
+#
+# Requires: FSL tools from fMRIB 
+#           AFNI tools from NIH
+#           dicomrx from cfmriweb.ucsd.edu/fmap/dicomrx
+#
+# Calls:  epidewarp3.ucsd and dicomrx
+#
+# What this script does:
+#  1) Creates NIFTI from DICOM files. 
+#  2) Determines echo times from DICOM headers
+#  3) Converts field map DICOM to NIFTI
+#  4) Generates complex AVW volumes and magnitudes for masking
+#  5) Determine EPI dwell time from DICOM header
+#  6) Converts EPI DICOM files to NIFTI
+#  7) Calls epidewarp4.ucsd to unwarp the files
+#
+# New capabilities:
+#  1. multiple coils
+#
+# Version History
+#  1.0 040727 TTL initial version
+#      040926 TTL adding comments, checking into CVS. 
+#      040927 TTL adding option not to merge  EPI AVW volume on input
+#  2.0 040928 TTL adding (1) AFNI BRIK output option
+#                        (2) option to disable EPI AVW output volume creation
+#  3.0 040929 TTL motion correction options added.
+#  3.1 041001 TTL added nocleanup option
+#  3.2 041015 TTL added phswap option
+#  3.3 050413 GTB added fmap option
+#  3.4 050505 GTB added briktype option
+#  3.5 061605 GTB added NIFTI support
+#  3.6 092705 KL  added Rx info to the output hdr
+#  3.7 011006 GTB added nogzip option, and a flexible postfix specification 
+#  3.8 081506 KL  corrected mismatch of nifti header information by using 
+#                 avwcpgeom in multiple places. Ohterwise dewarping won't be correct. 
+#  3.9 040507 KL  added support for multiple coils. added option for ncoil and nphase. 
+# 3.10 042607 KL  added matrix size check. In case of size conflicts, fm is resampled to match
+#                 the size of the data. 
+# 3.11 042707 KL  removed -TR option. now extract TR from dicom header (0018,0080). 
+# Send Comments/Questions to kunlu@ucsd.edu, ttliu@ucsd.edu or giedrius@salk.edu
+
+set VERSION = '$Id$';
+set inputargs = ($argv);
+set DateStr = "`date '+%y%m%d%H%M'`"
+
+
+set dir1 = (); 
+set dir2 = (); 
+set instem = ();
+set tediff = ();
+set tmpdir = 'tmp';
+set outstem = ();
+set TR = ();
+set merge_in = 1;
+set domask = 1;
+set dobrik = 0;
+set unwarpdir = ();
+set domoco = 1;
+set refnum = ();
+set docleanup = 1;
+
+set ncl=-1;
+set nphase = 8;
+set betf=0.5;
+set reps = 0;
+set nslices = 0;
+set cleanup = 1;
+set PrintHelp = 0;
+set dopmask = 1;
+set dofmask = 1;
+set dounwrap = 1;
+set dogzip = 1;
+set fmap = ();
+set postfix = '.nii.gz';
+
+if($#argv == 0) goto usage_exit;
+set n = `echo $argv | grep version | wc -l` 
+if($n != 0) then
+  echo $VERSION
+  exit 0;
+endif
+set n = `echo $argv | grep help | wc -l` 
+if($n != 0) then
+  set PrintHelp = 1;
+  goto usage_exit;
+endif
+
+goto parse_args;
+parse_args_return:
+
+
+goto check_params;
+check_params_return:
+
+
+## Get/Create tmp directory ##
+mkdir -p $tmpdir
+if( ! -e $tmpdir) then
+  echo "ERROR: cannot find tmp dir $tmpdir"
+  exit 1;
+endif 
+# rm -rf $tmpdir/*
+
+
+set curdir = `pwd`;
+
+echo " "
+echo " Grabbing TE1 and TE2 Data"
+echo ""
+
+# convert to NIFTI format
+echo $d1
+echo $d2
+
+# determine # field map files
+set nfiles = `ls -1 $curdir/$d1/i* | wc -l`
+echo $nfiles
+
+#determine number of recerivers used
+if ( $ncl == -1 ) then
+    set f1 = `ls $d1/i*.1`
+    set l1 = `dicom2 -t1 $f1 | grep 0018,1250`
+    set l1  = `echo "$l1" | awk -F[ '{print $2}'`
+    set coil  = `echo "$l1" | awk -F] '{print $1}'`
+    switch($coil)
+
+    case "8HRBRAIN":
+      set ncl=8
+      breaksw
+    case "BODY":
+      set ncl=1
+      breaksw
+    default:
+      echo ERROR: COIL $coil is unrecognized. 
+      echo ERROR: Please specify -ncoil
+      exit 1
+      breaksw
+    endsw
+    echo "INFO: $coil coil detected - use $ncl receiver(s)" 
+else
+    echo "INFO: Use $ncl receivers as user specified" 
+endif
+   
+if ($ncl>1) then
+@ cntd = ($ncl + 1) * 4
+else
+@ cntd = 4
+endif
+
+# assuming mag,ph,re,im
+@ cnt = 1
+while ($cnt <= $ncl)
+set re_te1 = re_te1_cl$cnt$postfix
+set im_te1 = im_te1_cl$cnt$postfix
+set re_te2 = re_te2_cl$cnt$postfix
+set im_te2 = im_te2_cl$cnt$postfix
+
+@ cnt0 = ($cnt - 1) * 4 + 3
+cd $curdir/$d1/
+set cmd= (to3d -prefix $re_te1 `count -digits 1 -root 'i*.' $cnt0 $nfiles $cntd`)
+# echo $cmd 
+$cmd
+if($status) exit 1;
+@ cnt0 = ($cnt - 1) * 4 + 4
+set cmd= (to3d -prefix $im_te1 `count -digits 1 -root 'i*.' $cnt0 $nfiles $cntd`)
+# echo $cmd 
+$cmd
+if($status) exit 1;
+
+mv *$postfix $curdir/$tmpdir
+
+@ cnt0 = ($cnt - 1) * 4 + 3
+cd $curdir/$d2/
+set cmd=(to3d -prefix $re_te2 `count -digits 1 -root 'i*.' $cnt0 $nfiles $cntd`)
+# echo $cmd 
+$cmd 
+if($status) exit 1;
+
+@ cnt0 = ($cnt - 1) * 4 + 4
+set cmd = (to3d -prefix $im_te2 `count -digits 1 -root 'i*.' $cnt0 $nfiles $cntd`)
+# echo $cmd 
+$cmd 
+if($status) exit 1;
+
+mv *$postfix $curdir/$tmpdir
+
+@ cnt = $cnt + 1
+end
+
+# make combined magnitude images of te1 for masking purpose later.
+cd $curdir/$d1/
+set mag_te1 = mag_te1$postfix
+
+@ cnt0 = ($ncl - 1) * 4 + 1
+
+set cmd=(to3d -prefix $mag_te1 `count -digits 1 -root 'i*.' $cnt0 $nfiles $cntd`)
+echo $cmd
+$cmd 
+if($status) exit 1;
+mv $mag_te1 $curdir/$tmpdir
+
+cd $curdir
+
+
+# determine echo times
+if ( $tediff == "auto" ) then
+    set f1 = `ls $d1/i*.1`
+    set l1 = `dicom2 -t1 $f1 | grep 0018,0081`
+    set l1  = `echo "$l1" | awk -F[ '{print $2}'`
+    set te1  = `echo "$l1" | awk -F] '{print $1}'`
+    
+    set f1 = `ls $d2/i*.1`
+    set l1 = `dicom2 -t1 $f1 | grep 0018,0081`
+    set l1  = `echo "$l1" | awk -F[ '{print $2}'`
+    set te2  = `echo "$l1" | awk -F] '{print $1}'`
+    
+    set tediff = ` echo " 1000.0*($te2 - $te1) " | bc -l`; 
+    echo "INFO: tediff = $tediff usec" 
+endif
+
+# weighted mean method
+# calculate conjugate product
+@ cnt =1
+while ($cnt <= $ncl)
+
+echo "processing coil"{$cnt}
+3dcalc -a $tmpdir/re_te2_cl$cnt$postfix -b $tmpdir/im_te2_cl$cnt$postfix -c $tmpdir/re_te1_cl$cnt$postfix -d $tmpdir/im_te1_cl$cnt$postfix -expr "(a*c+b*d)/1000" -prefix $tmpdir/re_dph_cl{$cnt}$postfix
+
+
+3dcalc -a $tmpdir/re_te2_cl$cnt$postfix -b $tmpdir/im_te2_cl$cnt$postfix -c $tmpdir/re_te1_cl$cnt$postfix -d $tmpdir/im_te1_cl$cnt$postfix -expr "(-a*d+b*c)/1000" -prefix $tmpdir/im_dph_cl{$cnt}$postfix
+
+@ cnt = $cnt + 1
+end
+
+# summation
+echo "Combine $ncl coil(s) ... "
+
+avwmaths $tmpdir/re_dph_cl1$postfix -mul 0 $tmpdir/re_dph$postfix
+avwmaths $tmpdir/im_dph_cl1$postfix -mul 0 $tmpdir/im_dph$postfix
+@ cnt =1
+while ($cnt <= $ncl)
+avwmaths $tmpdir/re_dph$postfix -add $tmpdir/re_dph_cl{$cnt}$postfix $tmpdir/re_dph$postfix
+avwmaths $tmpdir/im_dph$postfix -add $tmpdir/im_dph_cl{$cnt}$postfix $tmpdir/im_dph$postfix
+@ cnt = $cnt + 1
+end
+
+
+
+
+# generate complex AVW volumes of the conjugate product
+set cp_dph = $tmpdir/cp_dph$postfix
+avwcomplex -complex  $tmpdir/re_dph$postfix $tmpdir/im_dph$postfix $cp_dph
+
+
+#Also make up an AFNI brik to act as a geometric parent for to3d later on
+set nslices = `avwinfo $tmpdir/$mag_te1 | awk '{if($1 == "dim3") print $2}'`
+set gp = $tmpdir/$mag_te1
+
+#determine EPI dwell time
+set f1 = `ls $epidir/*.1 `
+set l1 = `dicom2 -t1 $f1 | grep 0043,102C`
+set l1  = `echo "$l1" | awk -F[ '{print $2}'`
+set dwell  = `echo "$l1" | awk -F] '{print $1}'`
+echo ""
+echo "INFO: EPI dwell time = $dwell usec"
+
+set dratio = `echo "scale = 10; $dwell/$tediff " | bc -l `
+echo " "
+echo "INFO: dratio = $dratio "
+
+set l1 = `dicom2 -t1 $f1 | grep 0018,0080`
+set l1  = `echo "$l1" | awk -F[ '{print $2}'`
+set TR  = `echo "$l1" | awk -F] '{print $1}'`
+echo ""
+echo "INFO: EPI TR = $TR msec"
+echo ""
+
+echo "Creating NIFTI for EPI DICOM"
+#note: use the find command since ls i* may not work when the number
+#      of DICOM files is to large (depending on system defaults)
+
+cd $curdir/$epidir
+
+#KL added "sort" since "find" arranges file by the time stamp,
+#and the time stamp is often reset duing data transfer. 
+find . -type f -name 'i*' | sort > $curdir/$tmpdir/flist
+set f1 = `cat $curdir/$tmpdir/flist | wc -l`
+set nreps =  ` echo " $f1 / $nslices " | bc -l`
+
+echo $f1 $nreps $nslices
+
+to3d -prefix epivol$postfix -time:zt $nslices $nreps $TR alt+z -@ < $curdir/$tmpdir/flist
+
+mv epivol$postfix $curdir/$tmpdir
+cd $curdir
+
+
+# Check matrix size and resample fmap data if needed (KL):
+set matfm = `avwinfo $tmpdir/$mag_te1 | awk '{if($1 == "dim1") print $2}; {if($1 == "dim2") print $2}; {if($1 == "dim3") print $2}'`
+
+
+set matepi = `avwinfo $tmpdir/epivol$postfix | awk '{if($1 == "dim1") print $2}; {if($1 == "dim2") print $2}; {if($1 == "dim3") print $2}'`
+
+
+if (($matfm[1] != $matepi[1]) || ($matfm[2] != $matepi[2]) || ($matfm[3] != $matepi[3])) then
+echo "**************************** WARNING ****************************************"
+echo "WARNING: fieldmap data ($matfm) does not match the functional data ($matepi) !"
+echo "Resampling the fieldmaps to ($matepi) ... "
+echo "*****************************************************************************"
+
+set cmd=(3dresample -master  $tmpdir/epivol$postfix -prefix $tmpdir/mag_te1_rs$postfix -inset $tmpdir/$mag_te1)
+echo $cmd
+$cmd
+
+set gp = $tmpdir/mag_te1_rs$postfix 
+
+set cmd=(3dresample -master  $gp -prefix $tmpdir/re_dph_rs$postfix -inset $tmpdir/re_dph$postfix)
+echo $cmd
+$cmd
+
+set cmd=(3dresample -master  $gp -prefix $tmpdir/im_dph_rs$postfix -inset $tmpdir/im_dph$postfix)
+echo $cmd
+$cmd
+
+set cp_dph = $tmpdir/cp_dph_rs$postfix
+avwcomplex -complex  $tmpdir/re_dph_rs$postfix $tmpdir/im_dph_rs$postfix $cp_dph
+
+else
+echo "check ... fieldmap data ($matfm) matches the functional data ... OK"
+endif
+
+echo "ppge done"
+echo "calling epidewarp4.ucsd"
+
+
+# call epidewarp now
+    set cmd = (epidewarp4.ucsd --mag $gp --dph $cp_dph --epi $tmpdir/epivol$postfix \
+               --tediff $tediff  --esp $dwell  --vsm $tmpdir/vsm$postfix --exfdw $tmpdir/ex$postfix \
+               --epidw $outstem$postfix --nocleanup --postfix $postfix --nphase $nphase --betf $betf)
+
+if ($domask) then
+      set cmd = "$cmd --outmask";
+endif
+
+if ($domoco == 0) then
+     set cmd = "$cmd --nomoco";
+endif
+
+if($#refnum > 0 ) then
+    set cmd = "$cmd --refnum $refnum"
+endif
+
+if($#unwarpdir > 0 ) then
+    set cmd = "$cmd --unwarpdir $unwarpdir"
+endif
+
+if($#fmap > 0 ) then
+    set cmd = "$cmd --fmap $fmap"
+endif
+
+echo $cmd
+
+$cmd
+  
+
+if ($#fmap > 0 ) then
+  avwcpgeom $gp $fmap$postfix 
+endif
+
+#avwmerge unwarped volumes together
+
+    if($domask) then
+    avwmerge -t $outstem$postfix `find $tmpdir/muavwepi*$postfix`
+    else
+    avwmerge -t $outstem$postfix `find $tmpdir/uavwepi*$postfix`
+    endif
+    #copy orignal epi header to the dewarped epi since fugue does 
+    #not always preserve the head correctly -KL
+    avwcpgeom $tmpdir/epivol$postfix $outstem$postfix
+
+
+
+
+if($docleanup) then
+  if ($domoco == 1) then 
+    mv  $tmpdir/*par $outstem.par
+  endif
+  
+  echo "Deleting files in $tmpdir"
+  rm -rf $tmpdir
+endif
+
+#add Rx info to the dataset header KL
+set f1 = `ls $epidir/*.1`
+set ff=`which dicomrx`
+if (-e "$ff") then
+   dicomrx -brik $outstem$postfix $f1
+endif
+
+exit 0;
+
+
+parse_args:
+set cmdline = ($argv);
+while( $#argv != 0 )
+
+  set flag = $argv[1]; shift;
+
+  switch($flag)
+
+    case "-d1":
+      if ( $#argv == 0) goto arg1err;
+      set d1 = $argv[1]; shift;
+      breaksw
+
+    case "-d2":
+      if ( $#argv == 0) goto arg1err;
+      set d2 = $argv[1]; shift;
+      breaksw
+
+
+    case "-i":
+      if ( $#argv == 0) goto arg1err;
+      set epidir = $argv[1]; shift;
+      breaksw
+
+    case "-o":
+      if ( $#argv == 0) goto arg1err;
+      set outstem = $argv[1]; shift;
+      breaksw
+
+    case "-TR":
+       echo "ERROR: flag $flag is obsolete!"
+       exit 1
+
+    case "-tmpdir":
+      if ( $#argv == 0) goto arg1err;
+      set tmpdir = $argv[1]; shift;
+      breaksw
+
+    case "-tediff":
+      if ( $#argv == 0) goto arg1err;
+      set tediff = $argv[1]; shift;
+      breaksw
+
+    
+    case "-nomask":
+      set domask = 0;
+      breaksw
+
+    case "-nobrik":
+      set dobrik = 0;
+      breaksw
+
+    case "-nomoco":
+      set domoco = 0;
+      breaksw
+
+    case "-nocleanup":
+      set docleanup = 0;
+      breaksw
+
+    case "-nogzip":
+      set postfix = '.nii';
+      breaksw
+
+    case "-fmap":
+      if ( $#argv == 0) goto arg1err;
+      set fmap = $argv[1]; shift;
+      breaksw
+
+    case "-refnum":
+      if ( $#argv == 0) goto arg1err;
+      set refnum = $argv[1]; shift;
+      breaksw
+
+
+    case "-unwarpdir":
+      if ( $#argv == 0) goto arg1err;
+      set unwarpdir = $argv[1]; shift;
+      breaksw
+    
+    case "-ncoil":
+      if ( $#argv == 0) goto arg1err;
+      set ncl = $argv[1]; shift;
+      breaksw
+    
+    case "-nphase":
+      if ( $#argv == 0) goto arg1err;
+      set nphase = $argv[1]; shift;
+      breaksw
+
+   case "-betf":
+      if ( $#argv == 0) goto arg1err;
+      set betf = $argv[1]; shift;
+      breaksw
+
+    default:
+      echo ERROR: Flag $flag unrecognized. 
+      echo $cmdline
+      exit 1
+      breaksw
+  endsw
+
+end
+
+goto parse_args_return;
+############--------------##################
+
+############--------------##################
+check_params:
+
+  if($#d1 == 0) then
+    echo "ERROR: must specify a TE1 directory"
+    exit 1;
+  endif
+
+  if ( ! -e $d1) then
+    echo "ERROR: $d1 does not exist!"
+    exit 1;
+  endif
+
+
+  if($#d2 == 0) then
+    echo "ERROR: must specify a TE2 directory"
+    exit 1;
+  endif
+
+
+  if ( ! -e $d2) then
+    echo "ERROR: $d does not exist!"
+    exit 1;
+  endif
+
+
+  if($#epidir == 0) then
+    echo "ERROR: must specify an input EPI directory"
+    exit 1;
+  endif
+
+
+  if ( ! -e $epidir) then
+    echo "ERROR: $epidir does not exist!"
+    exit 1;
+  endif
+
+
+  if($#outstem == 0) then
+    echo "ERROR: must specify an output stem"
+    exit 1;
+  endif
+
+
+  if($ncl == 0) then
+    echo "ERROR: number of coil cannot be zero"
+    exit 1;
+  endif
+
+  if($nphase == 0) then
+    echo "ERROR: number of phase splits cannot be zero"
+    exit 1;
+  endif
+
+ #if($betf <= 0 || $betf >= 1) then
+ #   echo "ERROR: Value of betf must be between 0 and 1"
+ #   exit 1;
+ #endif
+
+  if($#tediff == 0) then
+    echo "INFO: tediff set to auto"
+    set tediff = 'auto'
+  endif
+
+
+goto check_params_return;
+############--------------##################
+
+############--------------##################
+arg1err:
+  echo "ERROR: flag $flag requires one argument"
+  exit 1
+############--------------##################
+
+
+usage_exit:
+    echo "Name"
+    echo "     ppge4  - preprocesses GE DICOM FILES for unwarping and then"
+    echo "              calls epidewarp4.ucsd"
+    echo ""
+    echo "System requirements"
+    echo "     AFNI - AFNI_2006 and up, 32bit version"
+    echo "     FSL  - FSL3.2 and up, FSLOUTPUTTYPE = NIFTI_GZ (or NIFTI if use -nogzip option)"
+    echo ""
+    echo "Synopsis"
+    echo "     ppge4 -d1 <TE1 data dir> -d2 <TE2 data dir> -i<EPI dir> -o <outstem> -tmpdir <tmpdir> [<options>]"
+    echo ""
+    echo "Required Arguments"
+    echo "     -d1 <TE1 data dir>"
+    echo "     -d2 <TE2 data dir>"
+    echo "     -i <input EPI data dir>"
+    echo "     -o <outstem>"
+    echo "     Environment variable FSLOUTPUTTYPE need to be set to NIFTI_GZ or NIFTI "
+    echo "     (use -nogzip option if NIFTI)"
+    echo ""
+    echo "Optional Arguments"
+    echo "     -tmpdir <tmpdir>:   temporary file directory; default: <current directory>/tmp "
+    echo "     -tediff <tediff>:   TE difference [us]; default: auto"
+    echo "     -unwarpdir <dir>:   unwarping direction = x / y / z / x- / y- / z-, default = y"
+    echo "     -avwvol         :   enables AVW output volume creation"
+    echo "     -fmap           :   enables field map output volume creation"
+    echo "     -nomask         :   disables brain masking of output EPI volume" 
+    echo "     -nomoco         :   disables motion correction of EPI prior to unwarping"
+    echo "     -refnum <refnum>:   Reference image number [0,nframes-1] for motion correction, default is middle image in a series"
+    echo "     -nocleanup      :   disables removal of temporary files"
+    echo "     -ncoil          :   number of receivers used to acquire fieldmap (needed only when using coils other than BODY and 8HRBRAIN)" 
+    echo "     -nphase         :   number of phase split in phase unwrapping (default =8)" 
+    echo "     -betf         :   fractional intensity threshold for BET (0->1) (default =0.5)" 
+    echo "     -nogzip         :   don't gzip NIFTI files" 
+    echo "" 
+    echo "Outputs"
+    echo "     <outstem> - unwarped volume filename stem" 
+    echo ""
+    echo "Version"
+    echo "     "$VERSION
+    echo ""
+    echo "Credits"
+    echo "     avw tools are part of the FSL library" 
+    echo ""
+    echo "Reporting Bugs"
+    echo "     Report bugs to kunlu@ucsd.edu"
+    echo ""
+
+
+
+  if($PrintHelp) \
+  cat $0 | awk 'BEGIN{prt=0}{if(prt) print $0; if($1 == "BEGINHELP") prt = 1 }'
+
+exit 1;
+
+
+#---- Everything below here is printed out as part of help -----#
+BEGINHELP

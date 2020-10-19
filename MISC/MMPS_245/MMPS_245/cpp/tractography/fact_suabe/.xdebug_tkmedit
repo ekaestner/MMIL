@@ -1,0 +1,10 @@
+tkmedit started: Tue Jun 26 20:32:23 2007
+
+	tkmedit -f fiber_23_mask.mgh -aux ./out_fiber_23_mask.mgh 
+
+$Id: tkmedit.c,v 1.256 2005/09/09 21:12:40 kteich Exp $ $Name:  $
+Set user home dir to /space/pogo1/1/suabe/work/tractography/morisrc/new
+Set subject home dir to fiber_23_mask.mgh
+Using interface file /home/sw/packages/freesurfer/RH3-x86_32/lib/tcl/tkmedit.tcl
+Tcl: Successfully parsed tkmedit.tcl
+Tcl: Successfully parsed tkm_functional.tcl

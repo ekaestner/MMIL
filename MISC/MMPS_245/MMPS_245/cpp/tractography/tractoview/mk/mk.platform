@@ -1,0 +1,14 @@
+#IRIX
+ifeq ($(HOSTTYPE), irix)
+   include ${MK_DIR}/mk.irix
+endif
+
+#LiNUX
+ifeq ($(HOSTTYPE), linux)
+   include ${MK_DIR}/mk.gnu
+endif
+
+# Win32
+ifeq ($(HOSTTYPE), Win32)
+   include ${MK_DIR}/mk.win32
+endif

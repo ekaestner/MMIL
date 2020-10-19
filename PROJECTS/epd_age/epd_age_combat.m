@@ -160,6 +160,20 @@ vol_roi_nme = vol_roi_nme(:,[1:32 34:end]);
 vol_dta_use = vol_dta_use(:,[1:32 34:end]);
 vol_dta_com_bat = vol_dta_com_bat(:,[1:32 34:end]);
 
+% Save data out
+% find(strcmpi(fcfg.dta_nme,'rhs_postcentral'))
+ind_out = [ 80 95 5 39 32 66 15 49 6 40 8 42 14 48 29 63 23 57 21 55];
+
+out_dta = [ {'sbj_nme'} fcfg.dta_nme(ind_out)' ; epd_sbj_nme num2cell(com_bat_epd_dta(:,ind_out)) ];
+for iC = 2:3
+    out_dta(2:end,iC)     = num2cell( cell2mat(out_dta(2:end,iC)) ./ com_bat_epd_dta(:,end) );
+end
+
+cell2csv('/home/ekaestner/Dropbox/McDonald Lab/Erik/Projects/McDLab/epd_age/submission/Brain/Reviews/ComBat/ComBat_ROIs.csv', out_dta)
+
+out_grp = [ {'sbj_nme'} grp_roi_nme(1:end-1) ; grp_sbj_nme grp_dta(:,1:2) ];
+cell2csv('/home/ekaestner/Dropbox/McDonald Lab/Erik/Projects/McDLab/epd_age/submission/Brain/Reviews/ComBat/ComBat_ROIs_groups.csv', out_grp)
+
 %% ANCOVA original data - Omnibus
 % Thickness %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 fcfg = [];

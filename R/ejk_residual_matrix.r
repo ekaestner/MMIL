@@ -2,9 +2,9 @@ ejk_residual_matrix <- function( dta_var_loc,
                              cov_loc,
                              out_put_loc ) {
   
-  #dta_var_loc = '/home/ekaestner/Downloads/Braintest/residuals/dta_var.mat'
-  #cov_loc     = '/home/ekaestner/Downloads/Braintest/residuals/cov_var.mat'
-  #out_put_loc = '/home/ekaestner/Downloads/Braintest/residuals/'  
+  dta_var_loc = '/home/ekaestner/Downloads/Braintest/residuals/dta_var.mat'
+  cov_loc     = '/home/ekaestner/Downloads/Braintest/residuals/cov_var.mat'
+  out_put_loc = '/home/ekaestner/Downloads/Braintest/residuals/'  
   
   library( R.matlab )
   
@@ -61,7 +61,7 @@ ejk_residual_matrix <- function( dta_var_loc,
   
 }
 
-#iV = 5
+#iV = 38
 #
 #rsd_plt_var = data.frame( org_dta=double(nrow(dta_var)),
 #                          rsd_dta=double(nrow(dta_var)),

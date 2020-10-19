@@ -1,0 +1,1640 @@
+#!/usr/bin/perl
+
+# Comment out next line to prevent redoing what has already been done.
+#$forceRedo   = "1";
+
+# Comment out for production job...
+#$QuickAndDirty = 1;
+
+$cleanup = 1;
+#$cleanup = undef;
+
+#$cleanupSpecial = 1;
+$cleanupSpecial = undef;
+
+$filterAll = 1;
+#$filterAll = undef;
+
+$inormRefine = "1";
+$nlrStandard = "1";
+$nlrFine     = "1";
+$nlrROI      = "1";
+#$invertDefField = "1";
+
+$commandDir = `pwd`;
+
+$bin       = "/home/holland/bin";          # Default. Override on cmd line
+$paramsDir = "/home/holland/ADNI/params"; # Default. Override on cmd line
+#$paramsDir = "/home/holland/ADNI/old/paramsRobustRerun04"; # Default. Override on cmd line
+$touchFile = ".complete";
+
+use Getopt::Long;
+
+if ( @ARGV > 0 ) {
+    GetOptions('b|t=s'	=> \$baseline,    # baseline or target
+	       'f|s=s'	=> \$followup,    # followup or source. Map followup to baseline.
+	       'a=s'	=> \$seg,         # aseg
+	       'asegPreReg=s' => \$asegPreReg,
+	       'invTransf=s'  => \$invTransf,
+	       'm=s'	=> \$mask,        # target mask
+	       'd=s'	=> \$outDir,
+	       'bin=s'	=> \$bin,
+	       'p=s'    => \$paramsDir,
+	       'c|cort' => \$cortexSeg,   # Just a flag, no argument.
+	       'force'  => \$forceRedo,   # Just a flag, no argument.
+	       'batch'  => \$batch,       # Just a flag, no argument.
+	       'batchDir=s'	=> \$batchDir,
+	       'jobTag=s'	=> \$jobTag,
+	       'subjID=s'       => \$subjID,
+	       'baselineTime=s' => \$baselineTime,
+	       'followupTime=s' => \$followupTime,
+	       'quick'          => \$QuickAndDirty);
+    print "baseline   is $baseline\n";
+    print "followup   is $followup\n";
+    print "seg        is $seg\n";
+    print "asegPreReg is $asegPreReg\n";
+    print "mask       is $mask\n";
+    print "outDir     is $outDir\n";
+    print "bin        is $bin\n";
+    print "paramsDir  is $paramsDir\n";
+    print "cortexSeg  is $cortexSeg\n";
+    print "forceRedo  is $forceRedo\n",        if( defined $forceRedo );
+    print "invTransf  is $invTransf\n",        if( defined $invTransf );
+    print "batch      is $batch\n",            if( defined $batch );
+    print "batchDir   is $batchDir\n",         if( defined $batchDir );
+    print "jobTag     is $jobTag\n",           if( defined $jobTag );
+    print "subjID     is $subjID\n",           if( defined $subjID );
+    print "baselineTime is $baselineTime\n",   if( defined $baselineTime );
+    print "followupTime is $followupTime\n",   if( defined $followupTime );
+    print "QuickAndDirty is $QuickAndDirty\n", if( defined $QuickAndDirty );
+}
+
+if ( !defined $baseline || !defined $followup || (!defined $seg && !defined $mask && !defined $asegPreReg) || !defined $outDir ) {
+    die "Need a segmentation file, or a mask if there is no seg file.\nUsage:
+quarc -b baseline.mgz -f followup.mgz -a aseg.mgz -m mask.mgz -d outDirectory
+         -bin binDir -p paramsDir -c -force -quick\n";
+}
+
+
+if( !-e $baseline || !-e $followup || ( !-e $seg && !-e $mask && !defined $asegPreReg ) ) {
+   #print "baseline   $baseline   missing\n" if( !-e $baseline );
+   #print "followup   $followup   missing\n" if( !-e $followup );
+   #print "seg        $seg        missing\n" if( !-e $seg );
+   #print "asegPreReg $asegPreReg missing\n" if( !-e $asegPreReg );
+   #print "mask       $mask       missing\n" if( !-e $mask && !-e $seg );
+   #print "Note: Need a segmentation file OR a mask if there is no seg file.\n";
+    
+    die "baseline   $baseline   missing\n" if( !-e $baseline );
+    die "followup   $followup   missing\n" if( !-e $followup );
+    die "seg        $seg        missing\n" if( !-e $seg             && ( !-e $seg && !-e $mask && !defined $asegPreReg ) );
+    die "asegPreReg $asegPreReg missing\n" if( !defined $asegPreReg && ( !-e $seg && !-e $mask && !defined $asegPreReg ) );
+    die "mask       $mask       missing\n" if( !-e $mask            && ( !-e $seg && !-e $mask && !defined $asegPreReg ) );
+   #die "Note: Need a segmentation file OR a mask if there is no seg file.\n";
+    die "$subjID: essential stuff missing.\n";
+}
+
+
+$_ = $baseline;     # Set the default $_ for matching against.
+if(/\.\w+$/) {      # Matches suffix, including ".", in $baseline, e.g., ".mgz".
+   #print "Matched: |$`<$&>$'|\n";
+    $baselineSuffix = $&;
+    if( $baselineSuffix eq ".mgh" ) {
+	$baselineUncompressed = "1";
+    }
+                    # Reset the default $_ for matching against:
+    $_ = $`;        # everything in $baseline before suffix (may include directory path).
+    if(/[^\/]+$/) { # Matches prefix of $baseline, i.e., with any directory path stripped.
+       #print "Matched: |$`<$&>$'|\n";
+	$baselinePrefix = $&;
+    } else {
+	$baselinePrefix = $_;
+    }
+} else {
+    die "Could not parse $baseline.\n";
+}
+
+$_ = $followup;     # Set the default $_ for matching against.
+if(/\.\w+$/) {      # Matches suffix, including ".", in $followup, e.g., ".mgz".
+   #print "Matched: |$`<$&>$'|\n";
+    $followupSuffix = $&;
+    if( $followupSuffix eq ".mgh" ) {
+	$followupUncompressed = "1";
+    }
+                    # Reset the default $_ for matching against:
+    $_ = $`;        # everything in $followup before suffix (may include directory path).
+    if(/[^\/]+$/) { # Matches prefix of $followup, i.e., with any directory path stripped.
+       #print "Matched: |$`<$&>$'|\n";
+	$followupPrefix = $&;
+    } else {
+	$followupPrefix = $_;
+    }
+} else {
+    die "Could not parse $followup.\n";
+}
+
+
+if( defined $QuickAndDirty ) {
+    $inormRefine = undef;
+    $nlrROI      = undef;
+}
+
+if( defined($nlrFine) ) {
+    $nlrStandard = "1";
+}
+if( defined($nlrROI) ) {
+    $nlrStandard = "1";
+    $nlrFine     = "1";
+}
+
+
+$exeReg       = "$bin/reg";
+$exeDvRev     = "$bin/dvRev";
+$exeROIdv     = "$bin/roiDv";
+$exeCortROIdv = "$bin/cortRoiDv";
+$exeMask      = "$bin/brainMaskFromSeg";
+$exeBroadMask = $exeMask;
+$exeApplyTransforms   = "$bin/applyTransforms";
+$exeApplyLocalScaling = "$bin/applyLocalScaling";
+$exeInvertDisplacementField = "$bin/invertDisplacementField";
+$exeAverageImage      = "$bin/averageImage";
+$exeSegMasks          = "$bin/segMasks";
+$exeInvertAffMatrix   = "$bin/invertAffMatrix";
+$exeRestrictImage2Mask = "$bin/restrictImage2Mask";
+
+if(defined $filterAll) {
+    die "$exeReg missing\n"                      if( !-e $exeReg );
+    die "$exeDvRev missing\n"                    if( !-e $exeDvRev );
+    die "$exeROIdv missing\n"                    if( !-e $exeROIdv );
+    die "$exeMask missing\n"                     if( !-e $exeMask );
+    die "$exeAverageImage missing\n"             if( !-e $exeAverageImage );
+    die "$exeSegMasks missing\n"                 if( !-e $exeSegMasks );
+    die "$exeApplyTransforms missing\n"          if( !-e $exeApplyTransforms );
+    die "$exeApplyLocalScaling missing\n"        if( !-e $exeApplyLocalScaling );
+    die "$exeInvertDisplacementField missing\n"  if( !-e $exeInvertDisplacementField );
+    die "$exeInvertAffMatrix missing\n"          if( !-e $exeInvertAffMatrix );
+    die "$exeRestrictImage2Mask missing\n"       if( !-e $exeRestrictImage2Mask );
+    
+    die "Executables do not exist.\n" if ( !-e $exeReg || !-e $exeDvRev || !-e $exeROIdv || !-e $exeMask || !-e $exeAverageImage || !-e $exeSegMasks ||
+					   !-e $exeApplyTransforms || !-e $exeApplyLocalScaling || !-e $exeInvertDisplacementField );
+}
+
+$headFilePrefix = "head";
+$headFileSuffix = ".mgz";
+$headFile       = "${headFilePrefix}$headFileSuffix";
+
+$maskFilePrefix = "mask";
+$maskFileSuffix = ".mgz";
+$maskFile       = "$maskFilePrefix$maskFileSuffix";
+
+$scaleFieldFile = "sf.mgz";
+
+$maskBroadFilePrefix = "maskBroad";
+$maskBroadFile       = "$maskBroadFilePrefix$maskFileSuffix";
+
+$baselineOutDir       = "target";
+$affRegDir            = "affReg";
+$iNormDir             = "inorm";
+$nonlinRegEstimateDir = "nonlinRegEstimate";
+$nonlinRegStandardDir = "nonlinRegStandard";
+$nonlinRegFineDir     = "nonlinRegFine";
+$nonlinRegROIDir      = "nonlinRegROI";
+$roiDvFile            = "ROIdv.csv";
+$roiDv2File           = "ROIdv2.csv";
+$roiDvAvgFile         = "ROIdvAvg.csv";
+$roiDvFileTxt         = "ROIdv.txt";
+$cortRoiDvFile        = "cortROIdv.csv";
+$cortRoiDv2File       = "cortROIdv2.csv";
+$cortRoiDvAvgFile     = "cortROIdvAvg.csv";
+
+$nflowEstimate = 4;
+$nflowStandard = 4;
+$nflowFine     = 5;  # 5, 7
+$nflowROI      = 7;
+$thresholdROIMask = 0.8;   # >=0, <=1. The larger the value, the smaller the mask.
+
+$inputParamsScale           = "$paramsDir/inputParamsScale.txt";
+$inputParamsFileINorm1      = "$paramsDir/inputParamsNormIntensities01.txt";
+$inputParamsFileINorm2      = "$paramsDir/inputParamsNormIntensities02.txt";
+$inputParamsFileRegEstimate = "$paramsDir/inputParamsNonLinRegEstimate.txt";
+$inputParamsFileRegStandard = "$paramsDir/inputParamsNonLinRegStandard.txt";
+$inputParamsFileRegFine     = "$paramsDir/inputParamsNonLinRegFine.txt";
+$inputParamsFileRegROI1     = "$paramsDir/inputParamsNonLinRegROI01.txt";
+$inputParamsFileRegROI2     = "$paramsDir/inputParamsNonLinRegROI02.txt";
+
+$baselineOutPDir       = "$outDir/$baselineOutDir";
+$affRegPDir            = "$outDir/$affRegDir";
+$iNormPDir             = "$outDir/$iNormDir";
+$nonlinRegEstimatePDir = "$outDir/$nonlinRegEstimateDir";
+$nonlinRegStandardPDir = "$outDir/$nonlinRegStandardDir";
+$nonlinRegFinePDir     = "$outDir/$nonlinRegFineDir";
+$nonlinRegROIPDir      = "$outDir/$nonlinRegROIDir";
+
+$followupAR = "$affRegPDir/$headFile";
+$scaleField = "$iNormPDir/$scaleFieldFile";
+
+$touchSF1 = "$iNormPDir/${touchFile}1";
+$touchSF2 = "$iNormPDir/${touchFile}2";
+
+
+$maskBroad    = "$baselineOutPDir/$maskBroadFile";
+$segMasks     = "$baselineOutPDir/segMasks.mgz";
+$brainSegMask = "$baselineOutPDir/brainSegMask.mgz";
+$arMatrix         = "$affRegPDir/affineRegMatrix.txt";
+$globalIScaleFile = "$affRegPDir/globalIScale.txt";
+
+$ROI1infix = "_44_53_54";  # See register/src/writeFullCorrectedVolumes.cpp
+$touchROI1 = "${nonlinRegROIPDir}/.touchROI${ROI1infix}";
+
+$ROI2infix = "_5_17_18";
+$touchROI2 = "${nonlinRegROIPDir}/.touchROI${ROI2infix}";
+
+$touchInvROI1 = "$invTransf/$nonlinRegROIDir/.touchROI${ROI1infix}";
+$touchInvROI2 = "$invTransf/$nonlinRegROIDir/.touchROI${ROI2infix}";
+
+
+
+
+##################################################################################################################################################################################
+# CLEAN UP. Not needed any more.
+$fileSizeMin = "0";  # Size in bytes
+$fileAge = "1";      # Use -M for modification age, -A for access age.
+#my $now = time; print "now: $now\n";
+
+if (defined $cleanupSpecial) {
+    
+    $baselineGIS     = "$baselineOutPDir/${headFilePrefix}$headFileSuffix";  # Delete at end.
+    $followupARGIS   = "$affRegPDir/${headFilePrefix}$headFileSuffix";     
+    $followupARINorm = "$iNormPDir/${headFilePrefix}$headFileSuffix";
+    
+    $cmd = "rm -rf $baselineGIS";
+    `$cmd`;
+    $cmd = "rm -rf $followupARGIS";
+    `$cmd`;
+    $cmd = "rm -rf $followupARINorm";
+    `$cmd`;
+
+    if( -d "$nonlinRegEstimatePDir" && -e "$nonlinRegStandardPDir/dv.mgz" ) {
+	$cmd = "rm -rf $nonlinRegEstimatePDir";
+	print "Executing: $cmd\n";
+	`$cmd`;
+    }
+}
+
+
+if (defined $cleanupSpecial) {
+if( -e "$nonlinRegStandardPDir/dv.mgz" && ( -s "$nonlinRegStandardPDir/dv.mgz" < $fileSizeMin || -M "$nonlinRegStandardPDir/dv.mgz" < -M "$nonlinRegStandardPDir/$roiDvFile" ) ) {
+    $cmd = "rm -f $nonlinRegStandardPDir/$roiDvFile";
+    print "Executing: $cmd\n";
+    `$cmd`;
+    #$tv =  -M "$nonlinRegStandardPDir/dv.mgz";
+    #$tR =  -M "$nonlinRegStandardPDir/$roiDvFile";
+    #die "tv: $tv \t tR: $tR \t $cmd\n";
+}
+if( -e "$nonlinRegFinePDir/dv.mgz" && ( -s "$nonlinRegFinePDir/dv.mgz" < $fileSizeMin || -M "$nonlinRegFinePDir/dv.mgz" < -M "$nonlinRegFinePDir/$roiDvFile" ) ) {
+    $cmd = "rm -f $nonlinRegFinePDir/$roiDvFile";
+    print "Executing: $cmd\n";
+    `$cmd`;
+}
+if( -e "$nonlinRegROIPDir/dv.mgz" && ( -s "$nonlinRegROIPDir/dv.mgz" < $fileSizeMin || -M "$nonlinRegROIPDir/dv.mgz" < -M "$nonlinRegROIPDir/$roiDvFile" ) ) {
+    $cmd = "rm -f $nonlinRegROIPDir/$roiDvFile";
+    print "Executing: $cmd\n";
+    `$cmd`;
+}
+
+if( -e "$nonlinRegStandardPDir/dv.mgz" && ( -s "$nonlinRegStandardPDir/dv.mgz" < $fileSizeMin || -M "$nonlinRegStandardPDir/dv.mgz" < -M "$nonlinRegStandardPDir/$cortRoiDvFile" ) ) {
+    $cmd = "rm -f $nonlinRegStandardPDir/$cortRoiDvFile";
+    print "Executing: $cmd\n";
+    `$cmd`;
+}
+if( -e "$nonlinRegFinePDir/dv.mgz" && ( -s "$nonlinRegFinePDir/dv.mgz" < $fileSizeMin || -M "$nonlinRegFinePDir/dv.mgz" < -M "$nonlinRegFinePDir/$cortRoiDvFile" ) ) {
+    $cmd = "rm -f $nonlinRegFinePDir/$cortRoiDvFile";
+    print "Executing: $cmd\n";
+    `$cmd`;
+}
+
+if( -e "$nonlinRegStandardPDir/dv2.mgz" && ( -s "$nonlinRegStandardPDir/dv2.mgz" < $fileSizeMin || -M "$nonlinRegStandardPDir/dv2.mgz" < -M "$nonlinRegStandardPDir/$roiDv2File" ) ) {
+    $cmd = "rm -f $nonlinRegStandardPDir/$roiDv2File";
+    print "Executing: $cmd\n";
+    `$cmd`;
+}
+if( -e "$nonlinRegFinePDir/dv2.mgz" && ( -s "$nonlinRegFinePDir/dv2.mgz" < $fileSizeMin || -M "$nonlinRegFinePDir/dv2.mgz" < -M "$nonlinRegFinePDir/$roiDv2File" ) ) {
+    $cmd = "rm -f $nonlinRegFinePDir/$roiDv2File";
+    print "Executing: $cmd\n";
+    `$cmd`;
+}
+if( -e "$nonlinRegROIPDir/dv2.mgz" && ( -s "$nonlinRegROIPDir/dv2.mgz" < $fileSizeMin || -M "$nonlinRegROIPDir/dv2.mgz" < -M "$nonlinRegROIPDir/$roiDv2File" ) ) {
+    $cmd = "rm -f $nonlinRegROIPDir/$roiDv2File";
+    print "Executing: $cmd\n";
+    `$cmd`;
+}
+
+if( -e "$nonlinRegStandardPDir/dv2.mgz" && ( -s "$nonlinRegStandardPDir/dv2.mgz" < $fileSizeMin || -M "$nonlinRegStandardPDir/dv2.mgz" < -M "$nonlinRegStandardPDir/$cortRoiDv2File" ) ) {
+    $cmd = "rm -f $nonlinRegStandardPDir/$cortRoiDv2File";
+    print "Executing: $cmd\n";
+    `$cmd`;
+}
+if( -e "$nonlinRegFinePDir/dv2.mgz" && ( -s "$nonlinRegFinePDir/dv2.mgz" < $fileSizeMin || -M "$nonlinRegFinePDir/dv2.mgz" < -M "$nonlinRegFinePDir/$cortRoiDv2File" ) ) {
+    $cmd = "rm -f $nonlinRegFinePDir/$cortRoiDv2File";
+    print "Executing: $cmd\n";
+    `$cmd`;
+}
+
+if( -e "$nonlinRegStandardPDir/dvAvg.mgz" && ( -s "$nonlinRegStandardPDir/dvAvg.mgz" < $fileSizeMin || -M "$nonlinRegStandardPDir/dvAvg.mgz" < -M "$nonlinRegStandardPDir/$roiDvAvgFile" ) ) {
+    $cmd = "rm -f $nonlinRegStandardPDir/$roiDvAvgFile";
+    print "Executing: $cmd\n";
+    `$cmd`;
+}
+if( -e "$nonlinRegFinePDir/dvAvg.mgz" && ( -s "$nonlinRegFinePDir/dvAvg.mgz" < $fileSizeMin || -M "$nonlinRegFinePDir/dvAvg.mgz" < -M "$nonlinRegFinePDir/$roiDvAvgFile" ) ) {
+    $cmd = "rm -f $nonlinRegFinePDir/$roiDvAvgFile";
+    print "Executing: $cmd\n";
+    `$cmd`;
+}
+if( -e "$nonlinRegROIPDir/dvAvg.mgz" && ( -s "$nonlinRegROIPDir/dvAvg.mgz" < $fileSizeMin || -M "$nonlinRegROIPDir/dvAvg.mgz" < -M "$nonlinRegROIPDir/$roiDvAvgFile" ) ) {
+    $cmd = "rm -f $nonlinRegROIPDir/$roiDvAvgFile";
+    print "Executing: $cmd\n";
+    `$cmd`;
+}
+
+if( -e "$nonlinRegStandardPDir/dvAvg.mgz" && ( -s "$nonlinRegStandardPDir/dvAvg.mgz" < $fileSizeMin || -M "$nonlinRegStandardPDir/dvAvg.mgz" < -M "$nonlinRegStandardPDir/$cortRoiDvAvgFile" ) ) {
+    $cmd = "rm -f $nonlinRegStandardPDir/$cortRoiDvAvgFile";
+    print "Executing: $cmd\n";
+    `$cmd`;
+}
+if( -e "$nonlinRegFinePDir/dvAvg.mgz" && ( -s "$nonlinRegFinePDir/dvAvg.mgz" < $fileSizeMin || -M "$nonlinRegFinePDir/dvAvg.mgz" < -M "$nonlinRegFinePDir/$cortRoiDvAvgFile" ) ) {
+    $cmd = "rm -f $nonlinRegFinePDir/$cortRoiDvAvgFile";
+    print "Executing: $cmd\n";
+    `$cmd`;
+}
+
+# CLEAN UP. Not needed any more.
+if ( (-e "$nonlinRegStandardPDir/$roiDvFile" || -e "$nonlinRegStandardPDir/$cortRoiDvFile") && !-e "$nonlinRegStandardPDir/dv.mgz" ) {
+    $cmd1 = "rm -f $nonlinRegStandardPDir/$roiDvFile     $nonlinRegStandardPDir/$cortRoiDvFile";
+    $cmd2 = "rm -f $nonlinRegStandardPDir/$roiDv2File    $nonlinRegStandardPDir/$cortRoiDv2File";
+    $cmd3 = "rm -f $nonlinRegStandardPDir/$roiDvAvgFile  $nonlinRegStandardPDir/$cortRoiDvAvgFile";
+    `$cmd1`;
+    `$cmd2`;
+    `$cmd3`;
+}
+elsif ( (-e "$nonlinRegStandardPDir/$roiDv2File" || -e "$nonlinRegStandardPDir/$cortRoiDv2File") && !-e "$nonlinRegStandardPDir/dv2.mgz" ) {
+    $cmd1 = "rm -f $nonlinRegStandardPDir/$roiDv2File    $nonlinRegStandardPDir/$cortRoiDv2File";
+    $cmd2 = "rm -f $nonlinRegStandardPDir/$roiDvAvgFile  $nonlinRegStandardPDir/$cortRoiDvAvgFile";
+    `$cmd1`;
+    `$cmd2`;
+}
+elsif ( (-e "$nonlinRegStandardPDir/$roiDvAvgFile" || -e "$nonlinRegStandardPDir/$cortRoiDvAvgFile") && !-e "$nonlinRegStandardPDir/dvAvg.mgz" ) {
+    $cmd1 = "rm -f $nonlinRegStandardPDir/$roiDvAvgFile  $nonlinRegStandardPDir/$cortRoiDvAvgFile";
+    `$cmd1`;
+}
+
+if ( (-e "$nonlinRegFinePDir/$roiDvFile" || -e "$nonlinRegFinePDir/$cortRoiDvFile") && !-e "$nonlinRegFinePDir/dv.mgz" ) {
+    $cmd1 = "rm -f $nonlinRegFinePDir/$roiDvFile    $nonlinRegFinePDir/$cortRoiDvFile";
+    $cmd2 = "rm -f $nonlinRegFinePDir/$roiDv2File   $nonlinRegFinePDir/$cortRoiDv2File";
+    $cmd3 = "rm -f $nonlinRegFinePDir/$roiDvAvgFile $nonlinRegFinePDir/$cortRoiDvAvgFile";
+    `$cmd1`;
+    `$cmd2`;
+    `$cmd3`;
+}
+elsif ( (-e "$nonlinRegFinePDir/$roiDv2File" || -e "$nonlinRegFinePDir/$cortRoiDv2File") && !-e "$nonlinRegFinePDir/dv2.mgz" ) {
+    $cmd1 = "rm -f $nonlinRegFinePDir/$roiDv2File";
+    $cmd2 = "rm -f $nonlinRegFinePDir/$roiDvAvgFile";
+    `$cmd1`;
+    `$cmd2`;
+}
+elsif ( (-e "$nonlinRegFinePDir/$roiDvAvgFile" || -e "$nonlinRegFinePDir/$cortRoiDvAvgFile") && !-e "$nonlinRegFinePDir/dvAvg.mgz" ) {
+    $cmd1 = "rm -f $nonlinRegFinePDir/$roiDvAvgFile";
+    `$cmd1`;
+}
+
+if ( -e "$nonlinRegROIPDir/$roiDvFile" && !-e "$nonlinRegROIPDir/dv.mgz" ) {
+    $cmd1 = "rm -f $nonlinRegROIPDir/$roiDvFile";
+    $cmd2 = "rm -f $nonlinRegROIPDir/$roiDv2File";
+    $cmd3 = "rm -f $nonlinRegROIPDir/$roiDvAvgFile";
+    `$cmd1`;
+    `$cmd2`;
+    `$cmd3`;
+}
+elsif ( -e "$nonlinRegROIPDir/$roiDv2File" && !-e "$nonlinRegROIPDir/dv2.mgz" ) {
+    $cmd1 = "rm -f $nonlinRegROIPDir/$roiDv2File";
+    $cmd2 = "rm -f $nonlinRegROIPDir/$roiDvAvgFile";
+    `$cmd1`;
+    `$cmd2`;
+}
+elsif ( -e "$nonlinRegROIPDir/$roiDvAvgFile" && !-e "$nonlinRegROIPDir/dvAvg.mgz" ) {
+    $cmd1 = "rm -f $nonlinRegROIPDir/$roiDvAvgFile";
+    `$cmd1`;
+}
+
+
+if( defined $invTransf &&
+    (-e "$invTransf/$nonlinRegStandardDir/dv2.mgz" || -e "$invTransf/$nonlinRegStandardDir/$roiDv2File" || -e "$invTransf/$nonlinRegStandardDir/$cortRoiDv2File") &&
+    -e "$nonlinRegStandardPDir/dv.mgz" ) {
+    if( (-M "$invTransf/$nonlinRegStandardDir/dv2.mgz" > -M "$nonlinRegStandardPDir/dv.mgz") ||
+	(-M "$invTransf/$nonlinRegStandardDir/$roiDv2File" > -M "$nonlinRegStandardPDir/dv.mgz") ||
+	(-M "$invTransf/$nonlinRegStandardDir/$cortRoiDv2File" > -M "$nonlinRegStandardPDir/dv.mgz")  ) {
+	$cmd1 = "rm -f $invTransf/$nonlinRegStandardDir/$roiDv2File     $invTransf/$nonlinRegStandardDir/$cortRoiDv2File";
+	$cmd2 = "rm -f $invTransf/$nonlinRegStandardDir/$roiDvAvgFile   $invTransf/$nonlinRegStandardDir/$cortRoiDvAvgFile";
+	$cmd3 = "rm -f $invTransf/$nonlinRegStandardDir/dv2.mgz";
+	$cmd4 = "rm -f $invTransf/$nonlinRegStandardDir/dvAvg.mgz";
+	`$cmd1`;
+	`$cmd2`;
+	`$cmd3`;
+	`$cmd4`;
+    }
+}
+
+if( defined $invTransf &&
+    (-e "$invTransf/$nonlinRegFineDir/dv2.mgz" || -e "$invTransf/$nonlinRegFineDir/$roiDv2File" || -e "$invTransf/$nonlinRegFineDir/$cortRoiDv2File") &&
+    -e "$nonlinRegFinePDir/dv.mgz" ) {
+    if( (-M "$invTransf/$nonlinRegFineDir/dv2.mgz" > -M "$nonlinRegFinePDir/dv.mgz") ||
+	(-M "$invTransf/$nonlinRegFineDir/$roiDv2File" > -M "$nonlinRegFinePDir/dv.mgz") ||
+	(-M "$invTransf/$nonlinRegFineDir/$cortRoiDv2File" > -M "$nonlinRegFinePDir/dv.mgz")  ) {
+	$cmd1 = "rm -f $invTransf/$nonlinRegFineDir/$roiDv2File    $invTransf/$nonlinRegFineDir/$cortRoiDv2File";
+	$cmd2 = "rm -f $invTransf/$nonlinRegFineDir/$roiDvAvgFile  $invTransf/$nonlinRegFineDir/$cortRoiDvAvgFile";
+	$cmd3 = "rm -f $invTransf/$nonlinRegFineDir/dv2.mgz";
+	$cmd4 = "rm -f $invTransf/$nonlinRegFineDir/dvAvg.mgz";
+	`$cmd1`;
+	`$cmd2`;
+	`$cmd3`;
+	`$cmd4`;
+    }
+}
+
+if( defined $invTransf && (-e "$invTransf/$nonlinRegROIDir/dv2.mgz" || -e "$invTransf/$nonlinRegROIDir/$roiDv2File") && -e "$nonlinRegROIPDir/dv.mgz" ) {
+    if( (-M "$invTransf/$nonlinRegROIDir/dv2.mgz" > -M "$nonlinRegROIPDir/dv.mgz") || (-M "$invTransf/$nonlinRegROIDir/$roiDv2File" > -M "$nonlinRegROIPDir/dv.mgz")  ) {
+	$cmd1 = "rm -f $invTransf/$nonlinRegROIDir/$roiDv2File";
+	$cmd2 = "rm -f $invTransf/$nonlinRegROIDir/$roiDvAvgFile";
+	$cmd3 = "rm -f $invTransf/$nonlinRegROIDir/dv2.mgz";
+	$cmd4 = "rm -f $invTransf/$nonlinRegROIDir/dvAvg.mgz";
+	`$cmd1`;
+	`$cmd2`;
+	`$cmd3`;
+	`$cmd4`;
+    }
+}
+
+
+if( defined $invTransf && -e "$invTransf/$nonlinRegStandardDir/dv.mgz" && -e "$invTransf/$nonlinRegStandardDir/dv2.mgz" ) {
+    if( (-M "$invTransf/$nonlinRegStandardDir/dv.mgz" < -M "$invTransf/$nonlinRegStandardDir/dv2.mgz") || (-M "$invTransf/$nonlinRegStandardDir/dv.mgz" < -M "$invTransf/$nonlinRegStandardDir/dvAvg.mgz") ) {
+	$cmd1 = "rm -f $invTransf/$nonlinRegStandardDir/dv2.mgz";
+	$cmd2 = "rm -f $invTransf/$nonlinRegStandardDir/dvAvg.mgz";
+	$cmd3 = "rm -f $invTransf/$nonlinRegStandardDir/$roiDv2File   $invTransf/$nonlinRegStandardDir/$cortRoiDv2File";
+	$cmd4 = "rm -f $invTransf/$nonlinRegStandardDir/$roiDvAvgFile $invTransf/$nonlinRegStandardDir/$cortRoiDvAvgFile";
+	`$cmd1`;
+	`$cmd2`;
+	`$cmd3`;
+	`$cmd4`;
+    }
+}
+if( defined $invTransf && -e "$invTransf/$nonlinRegFineDir/dv.mgz" && -e "$invTransf/$nonlinRegFineDir/dv2.mgz" ) {
+    if( (-M "$invTransf/$nonlinRegFineDir/dv.mgz" < -M "$invTransf/$nonlinRegFineDir/dv2.mgz") || (-M "$invTransf/$nonlinRegFineDir/dv.mgz" < -M "$invTransf/$nonlinRegFineDir/dvAvg.mgz") ) {
+	$cmd1 = "rm -f $invTransf/$nonlinRegFineDir/dv2.mgz";
+	$cmd2 = "rm -f $invTransf/$nonlinRegFineDir/dvAvg.mgz";
+	$cmd3 = "rm -f $invTransf/$nonlinRegFineDir/$roiDv2File   $invTransf/$nonlinRegFineDir/$cortRoiDv2File";
+	$cmd4 = "rm -f $invTransf/$nonlinRegFineDir/$roiDvAvgFile $invTransf/$nonlinRegFineDir/$cortRoiDvAvgFile";
+	`$cmd1`;
+	`$cmd2`;
+	`$cmd3`;
+	`$cmd4`;
+    }
+}
+if( defined $invTransf && -e "$invTransf/$nonlinRegROIDir/dv.mgz" && -e "$invTransf/$nonlinRegROIDir/dv2.mgz" ) {
+    if( (-M "$invTransf/$nonlinRegROIDir/dv.mgz" < -M "$invTransf/$nonlinRegROIDir/dv2.mgz") || (-M "$invTransf/$nonlinRegROIDir/dv.mgz" < -M "$invTransf/$nonlinRegROIDir/dvAvg.mgz") ) {
+	$cmd1 = "rm -f $invTransf/$nonlinRegROIDir/dv2.mgz";
+	$cmd2 = "rm -f $invTransf/$nonlinRegROIDir/dvAvg.mgz";
+	$cmd3 = "rm -f $invTransf/$nonlinRegROIDir/$roiDv2File";
+	$cmd4 = "rm -f $invTransf/$nonlinRegROIDir/$roiDvAvgFile";
+	`$cmd1`;
+	`$cmd2`;
+	`$cmd3`;
+	`$cmd4`;
+    }
+}
+} # END "if (defined $cleanupSpecial) {"
+
+##################################################################################################################################################################################
+
+
+
+################################################################################################################################################
+###################################### F I L T E R #############################################################################################
+################################################################################################################################################
+if ($filterAll) {
+    if ( !((!-e "$nonlinRegROIPDir/$roiDvFile" || !-e $touchROI1 || !-e $touchROI2 || defined $forceRedo) && defined $nlrROI && (-e $seg || -e $asegPreReg) ) &&
+	 
+	 !( defined $invTransf && (!-e "$invTransf/$nonlinRegROIDir/$roiDvAvgFile" || defined $forceRedo) && defined $nlrROI && -e $asegPreReg &&
+	    -e $touchInvROI1 && -e $touchInvROI2 &&
+	    -e "$invTransf/$baselineOutDir/segMasks.mgz" && -e "$invTransf/$baselineOutDir/brainSegMask.mgz" ) &&
+	 
+	 !( defined $invTransf && (!-e "$invTransf/$nonlinRegROIDir/$roiDv2File" || defined $forceRedo) && defined $nlrROI && -e $asegPreReg &&
+	    -e $touchInvROI1 && -e $touchInvROI2 &&
+	    -e "$invTransf/$baselineOutDir/segMasks.mgz" && -e "$invTransf/$baselineOutDir/brainSegMask.mgz" ) &&
+	 
+	 !( defined $invTransf && (!-e "$invTransf/$nonlinRegROIDir/dv2.mgz" || !-e "$invTransf/$nonlinRegROIDir/dvAvg.mgz" || defined $forceRedo)
+	    && -e $touchInvROI1 && -e $touchInvROI2
+	    && -e "$invTransf/$affRegDir/affineRegMatrix.txt" && -e "$invTransf/$nonlinRegROIDir/dv.mgz" && defined $nlrROI ) &&
+	 
+	 !( (!-e "$nonlinRegROIPDir/dv.mgz" || !-e $touchROI1 || !-e $touchROI2 || defined $forceRedo) && defined $nlrROI && (-e $seg || -e $asegPreReg) ) &&
+	 
+	 !( defined $cortexSeg && ( !-e "$nonlinRegFinePDir/$cortRoiDvFile" || defined $forceRedo ) && defined $nlrFine && -e $seg ) &&
+	 
+	 !( (!-e "$nonlinRegFinePDir/$roiDvFile" || defined $forceRedo) && defined $nlrFine && -e $seg ) &&
+	 
+	 !(( -e $asegPreReg && (!-e $asegFR || defined $forceRedo) ) &&
+	   ( -e $asegPreReg && -e $asegFR ) ) &&
+	 
+	 !( defined $invTransf && (!-e "$invTransf/$nonlinRegFineDir/$roiDvAvgFile" || defined $forceRedo) && defined $nlrFine && -e $asegPreReg &&
+	    -e "$invTransf/$baselineOutDir/segMasks.mgz" && -e "$invTransf/$baselineOutDir/brainSegMask.mgz" ) &&
+	 
+	 !( defined $invTransf && (!-e "$invTransf/$nonlinRegFineDir/$roiDv2File" || defined $forceRedo) && defined $nlrFine && -e $asegPreReg &&
+	    -e "$invTransf/$baselineOutDir/segMasks.mgz" && -e "$invTransf/$baselineOutDir/brainSegMask.mgz" ) &&
+	 
+	 !( defined $cortexSeg &&
+	    ( defined $invTransf && (!-e "$invTransf/$nonlinRegFineDir/$cortRoiDvAvgFile" || defined $forceRedo) && defined $nlrFine && -e $asegPreReg &&
+	      -e "$invTransf/$baselineOutDir/segMasks.mgz" && -e "$invTransf/$baselineOutDir/brainSegMask.mgz" ) )&&
+	 
+	 !( defined $cortexSeg &&
+	    ( defined $invTransf && (!-e "$invTransf/$nonlinRegFineDir/$cortRoiDv2File" || defined $forceRedo) && defined $nlrFine && -e $asegPreReg &&
+	      -e "$invTransf/$baselineOutDir/segMasks.mgz" && -e "$invTransf/$baselineOutDir/brainSegMask.mgz" ) ) &&
+	 
+	 !( defined $invTransf && (!-e "$invTransf/$nonlinRegFineDir/dv2.mgz" || !-e "$invTransf/$nonlinRegFineDir/dvAvg.mgz" || defined $forceRedo)
+	    && -e "$invTransf/$affRegDir/affineRegMatrix.txt" && -e "$invTransf/$nonlinRegFineDir/dv.mgz" && defined $nlrFine ) &&
+	 
+	 !( (!-e "$nonlinRegFinePDir/dv.mgz" || defined $forceRedo) && defined $nlrFine ) &&
+	 
+	 !( defined $cortexSeg && ( !-e "$nonlinRegStandardPDir/$cortRoiDvFile" || defined $forceRedo ) && defined $nlrStandard && -e $seg ) &&
+	 
+	 !( (!-e "$nonlinRegStandardPDir/$roiDvFile" || defined $forceRedo) && defined $nlrStandard && -e $seg ) &&
+	 
+	 !( defined $invTransf && (!-e "$invTransf/$nonlinRegStandardDir/$roiDvAvgFile" || defined $forceRedo) && defined $nlrStandard && -e $asegPreReg &&
+	    -e "$invTransf/$baselineOutDir/segMasks.mgz" && -e "$invTransf/$baselineOutDir/brainSegMask.mgz" ) &&
+	 
+	 !( defined $invTransf && (!-e "$invTransf/$nonlinRegStandardDir/$roiDv2File" || defined $forceRedo) && defined $nlrStandard && -e $asegPreReg &&
+	    -e "$invTransf/$baselineOutDir/segMasks.mgz" && -e "$invTransf/$baselineOutDir/brainSegMask.mgz" ) &&
+	 
+	 !( defined $cortexSeg &&
+	    (defined $invTransf && (!-e "$invTransf/$nonlinRegStandardDir/$cortRoiDvAvgFile" || defined $forceRedo) && defined $nlrStandard && -e $asegPreReg &&
+	     -e "$invTransf/$baselineOutDir/segMasks.mgz" && -e "$invTransf/$baselineOutDir/brainSegMask.mgz" ) )&&
+	 
+	 !( defined $cortexSeg &&
+	    (defined $invTransf && (!-e "$invTransf/$nonlinRegStandardDir/$cortRoiDv2File" || defined $forceRedo) && defined $nlrStandard && -e $asegPreReg &&
+	     -e "$invTransf/$baselineOutDir/segMasks.mgz" && -e "$invTransf/$baselineOutDir/brainSegMask.mgz" ) ) &&
+	 
+	 !( defined $invTransf && (!-e "$invTransf/$nonlinRegStandardDir/dv2.mgz" || !-e "$invTransf/$nonlinRegStandardDir/dvAvg.mgz" || defined $forceRedo)
+	    && -e "$invTransf/$affRegDir/affineRegMatrix.txt" && -e "$invTransf/$nonlinRegStandardDir/dv.mgz" && defined $nlrStandard ) &&
+	 
+	 !( (!-e "$nonlinRegStandardPDir/dv.mgz" || defined $forceRedo) && defined $nlrStandard ) &&
+	 
+	 !( (!-e "$nonlinRegEstimatePDir/dv.mgz" && !-e "$nonlinRegStandardPDir/dv.mgz")  || defined $forceRedo ) &&
+	 
+	 !( !-e $scaleField || !-e $touchSF1 || ($inormRefine && !-e $touchSF2) || defined $forceRedo) &&
+	 
+	 !( !-e $arMatrix || !-e $globalIScaleFile || defined $forceRedo ) &&
+	 
+	 #!( defined $invTransf && (!-e $mask || !-e $maskBroad || defined $forceRedo) ) &&
+	 
+	 !( ( !-e $segMasks || !-e $brainSegMask || defined $forceRedo ) && -e $seg) )
+    {
+	die "$subjID: Nothing to do.\n";
+    }
+} # END "if($filterAll) {"
+elsif( defined $cortexSeg ) {
+    if( !( defined $cortexSeg && ( !-e "$nonlinRegFinePDir/$cortRoiDvFile" || defined $forceRedo ) && defined $nlrFine && -e $seg ) &&
+	
+	!( defined $cortexSeg &&
+	   ( defined $invTransf && (!-e "$invTransf/$nonlinRegFineDir/$cortRoiDvAvgFile" || defined $forceRedo) && defined $nlrFine && -e $asegPreReg &&
+	     -e "$invTransf/$baselineOutDir/segMasks.mgz" && -e "$invTransf/$baselineOutDir/brainSegMask.mgz" ) )&&
+	
+	!( defined $cortexSeg &&
+	   ( defined $invTransf && (!-e "$invTransf/$nonlinRegFineDir/$cortRoiDv2File" || defined $forceRedo) && defined $nlrFine && -e $asegPreReg &&
+	     -e "$invTransf/$baselineOutDir/segMasks.mgz" && -e "$invTransf/$baselineOutDir/brainSegMask.mgz" ) ) &&
+	
+	!( defined $cortexSeg && ( !-e "$nonlinRegStandardPDir/$cortRoiDvFile" || defined $forceRedo ) && defined $nlrStandard && -e $seg ) &&
+	
+	!( defined $cortexSeg &&
+	   (defined $invTransf && (!-e "$invTransf/$nonlinRegStandardDir/$cortRoiDvAvgFile" || defined $forceRedo) && defined $nlrStandard && -e $asegPreReg &&
+	    -e "$invTransf/$baselineOutDir/segMasks.mgz" && -e "$invTransf/$baselineOutDir/brainSegMask.mgz" ) )&&
+	
+	!( defined $cortexSeg &&
+	   (defined $invTransf && (!-e "$invTransf/$nonlinRegStandardDir/$cortRoiDv2File" || defined $forceRedo) && defined $nlrStandard && -e $asegPreReg &&
+	    -e "$invTransf/$baselineOutDir/segMasks.mgz" && -e "$invTransf/$baselineOutDir/brainSegMask.mgz" ) ) )
+	
+    {
+	die "$subjID: Nothing to do.\n";
+    }
+}
+################################################################################################################################################
+################################################################################################################################################
+################################################################################################################################################
+
+
+if( !defined $batchDir ) {
+    $batchDir = $outDir;
+}
+
+if( !defined $jobTag ) {
+    $jobTag = "register";
+}
+
+$batchJobsDir = "$batchDir/batchJobs/$jobTag";
+if( ! -d $batchJobsDir ) {
+    $cmd = "mkdir -p $batchJobsDir";
+    `$cmd`;
+}
+
+$batchErrStdoDir = "$batchDir/batchReports/$jobTag";
+if( ! -d $batchErrStdoDir ) {
+    `mkdir -p $batchErrStdoDir`;
+}
+
+$jobstamp = undef;
+if( !defined $invTransf && defined $followupTime ) {
+    $jobstamp = $followupTime;
+}
+elsif ( defined $invTransf && defined $baselineTime ) {
+    $jobstamp = $baselineTime;
+}
+
+if( defined $subjID ) {
+    if( defined $jobstamp ) {
+	$jobName  = "R${subjID}_$jobstamp";
+    } else {
+	$jobName  = "R${subjID}";
+    }
+} else {
+    $subjID   = "$followupPrefix"; # "noname";
+    $jobName  = "regScript";
+}
+$jobFName = "$batchJobsDir/$jobName";
+`rm -f $batchErrStdoDir/$jobName*`;
+
+open JOBFILE, "> $jobFName"
+    or die "Cannot create $jobFName: $!";
+
+print JOBFILE "#!/bin/csh\n";
+print JOBFILE "#\$ -N $jobName\n";
+print JOBFILE "#\$ -hard -l h_vmem=6G\n";               # 8GB, 6BG, or 4GB per job
+print JOBFILE "#\$ -e $batchErrStdoDir/\$JOB_NAME\n";
+print JOBFILE "#\$ -o $batchErrStdoDir/\$JOB_NAME\n";
+print JOBFILE "#\$ -V\n";
+print JOBFILE "#\$ -cwd\n\n";
+print JOBFILE "date \n\n";
+
+#if(!defined $cortexSeg ) { # REMOVE!!
+
+if( defined($forceRedo) ) {
+    print JOBFILE "rm -rf $baselineOutPDir \n";
+    print JOBFILE "rm -rf $affRegPDir \n";
+    print JOBFILE "rm -rf $iNormPDir \n";
+    print JOBFILE "rm -rf $outDir/timeStamps \n";
+    print JOBFILE "rm -rf $outDir/nonlinReg* \n\n";
+}
+
+if( !-d "$outDir/timeStamps" || defined($forceRedo) ) {
+    print JOBFILE "mkdir -p $outDir/timeStamps \n";
+}
+
+if( defined $baselineTime ) {
+    $targetInfo = "$outDir/timeStamps/TARGET_${subjID}_${baselineTime}";
+    print JOBFILE "touch $targetInfo\n" if( !-e $targetInfo );
+}
+if( defined $followupTime ) {
+    $sourceInfo = "$outDir/timeStamps/SOURCE_${subjID}_${followupTime}";
+    print JOBFILE "touch $sourceInfo \n\n"  if( !-e $sourceInfo );
+}
+
+if( !-e $mask ) { # Either not supplied on command line, OR was supplied on cmd line but does not actually exists.
+    $useMaskFromSeg = 1;
+    $mask  = "$baselineOutPDir/$maskFile";                          # Make a new mask and call it this.
+}
+#$maskBroad = "$baselineOutPDir/$maskBroadFile";
+
+if( !-d "$baselineOutPDir" || defined($forceRedo) ) {
+    print JOBFILE "mkdir -p $baselineOutPDir \n\n";
+}
+
+$maskPreAR       = "$affRegPDir/maskPreAR.mgz";                     # In native space of source, where, for REVERSE, the segmentation lives.
+$maskBroadPreAR  = "$affRegPDir/maskBroadPreAR.mgz";
+if( !defined $invTransf && (!-e $mask || ($useMaskFromSeg && defined $forceRedo)) && -e $seg ) {
+    print JOBFILE "$exeMask \\\n $seg \\\n $mask \n\n";             # Make the new mask.
+}
+elsif ( defined $invTransf && (!-e $mask || ($useMaskFromSeg && defined $forceRedo)) && -e $asegPreReg ) {
+    print JOBFILE "mkdir -p $affRegPDir \n\n"  if ( !-d $affRegPDir );
+    print JOBFILE "$exeMask \\\n $asegPreReg \\\n $maskPreAR \n\n"; # Make the new mask...which then needs to be aff reg'd...
+}
+
+############################################################################################################
+############### A F F R E G   A N D   G L O B A L   N O R M A L I Z A T I O N ##############################
+############################################################################################################
+
+# Put masks in target space, where, for REVERSE, the segmentation does not live.
+if( defined $invTransf && (!-e $mask || !-e $maskBroad || defined $forceRedo) ) {
+    
+    if( !-e $maskBroadPreAR || defined $forceRedo ) {
+	print JOBFILE "$exeBroadMask \\\n $maskPreAR \\\n $maskBroadPreAR \n\n";
+    }
+    
+    print JOBFILE "$exeReg \\\n";
+    print JOBFILE " -rr -rrf -ar \\\n";
+    print JOBFILE " -ip $inputParamsScale \\\n";
+    print JOBFILE " -od $affRegPDir/tmp \\\n";
+    print JOBFILE " -t  $followup\\\n";  # SWAPPED!
+    print JOBFILE " -s  $baseline \\\n"; # SWAPPED!
+    print JOBFILE " -tm $maskBroadPreAR \n\n";
+    
+    # Aff reg masks
+    print JOBFILE "$exeApplyTransforms \\\n";
+    print JOBFILE " -f $maskPreAR \\\n";
+    print JOBFILE " -m $affRegPDir/tmp/affineRegMatrix.txt \\\n";
+    print JOBFILE " -inv \\\n";
+    print JOBFILE " -t $baseline \\\n";
+    print JOBFILE " -o $mask \n\n";
+    
+    print JOBFILE "$exeApplyTransforms \\\n";
+    print JOBFILE " -f $maskBroadPreAR \\\n";
+    print JOBFILE " -m $affRegPDir/tmp/affineRegMatrix.txt \\\n";
+    print JOBFILE " -inv \\\n";
+    print JOBFILE " -t $baseline \\\n";
+    print JOBFILE " -o $maskBroad \n\n";
+    
+    # Clean up.
+    print JOBFILE "rm -rf $affRegPDir/tmp \n\n";
+    #$infixTmp = "_AffReg";
+    #$baselineARtmp = "$affRegPDir/tmp/${baselinePrefix}$infixTmp$headFileSuffix";
+    #print JOBFILE "rm -f $baselineARtmp \n";
+    #print JOBFILE "rm -f $affRegPDir/tmp/rigidRegMatrix.txt \n";
+    #print JOBFILE "rm -f $affRegPDir/tmp/affineRegMatrix.txt \n\n";
+}
+
+#$arMatrix         = "$affRegPDir/affineRegMatrix.txt";
+#$globalIScaleFile = "$affRegPDir/globalIScale.txt";
+$baselineGIS      = "$baselineOutPDir/${headFilePrefix}$headFileSuffix";  # Delete at end.
+$followupARGIS    = "$affRegPDir/${headFilePrefix}$headFileSuffix";       # Delete at end.
+#if( !-e $arMatrix || !-e $globalIScaleFile || defined $forceRedo ) {
+if( !-e $arMatrix || defined $forceRedo ) {
+    
+    if( !defined $invTransf && (!-e $maskBroad || defined $forceRedo) ) {
+	print JOBFILE "$exeBroadMask \\\n $mask \\\n $maskBroad \n\n";
+    }
+    
+    print JOBFILE "$exeReg \\\n";
+    print JOBFILE " -rr -rrf -ar -sinc -standardizeI \\\n";
+    print JOBFILE " -ip $inputParamsScale \\\n";
+    print JOBFILE " -od $affRegPDir \\\n";
+    print JOBFILE " -s  $followup\\\n";
+    print JOBFILE " -t  $baseline \\\n";
+    print JOBFILE " -tm $maskBroad \n\n";
+    
+    # Clean up.
+    $infixTmp = "_TGlobalIntensityNorm";
+    $baselineGIStmp = "$affRegPDir/${baselinePrefix}$infixTmp$headFileSuffix";
+    print JOBFILE "mv $baselineGIStmp \\\n   $baselineGIS \n\n";
+    
+    $infixTmp = "_AffReg_GlobalIntensityNorm";
+    $followupARGIStmp = "$affRegPDir/${followupPrefix}$infixTmp$headFileSuffix";
+    print JOBFILE "mv $followupARGIStmp \\\n   $followupARGIS \n\n";
+    
+    $infixTmp = "_GlobalIntensityNorm";
+    print JOBFILE "rm -f $affRegPDir/${followupPrefix}$infixTmp$headFileSuffix \n\n";
+    
+    $infixTmp = "_AffReg";
+    $followupARtmp = "$affRegPDir/${followupPrefix}$infixTmp$headFileSuffix";
+    print JOBFILE "rm -f $followupARtmp \n\n";
+}
+elsif ( (-e $arMatrix && !-e $globalIScaleFile) || defined $forceRedo ) {
+    print JOBFILE "$exeReg \\\n";
+    print JOBFILE " -sinc -standardizeI \\\n";
+    print JOBFILE " -ip $inputParamsScale \\\n";
+    print JOBFILE " -s $followup \\\n";
+    print JOBFILE " -t $baseline \\\n";
+    print JOBFILE " -arMatrix $arMatrix \\\n";
+    print JOBFILE " -od $affRegPDir \\\n";
+    print JOBFILE " -tm $maskBroad \n\n";
+    
+    $infixTmp = "_TGlobalIntensityNorm";
+    $baselineGIStmp = "$affRegPDir/${baselinePrefix}$infixTmp$headFileSuffix";
+    print JOBFILE "mv $baselineGIStmp \\\n   $baselineGIS \n\n";
+    
+    $infixTmp = "_AffReg_GlobalIntensityNorm";
+    $followupARGIStmp = "$affRegPDir/${followupPrefix}$infixTmp$headFileSuffix";
+    print JOBFILE "mv $followupARGIStmp \\\n   $followupARGIS \n\n";
+    
+    $infixTmp = "_GlobalIntensityNorm";
+    print JOBFILE "rm -f $affRegPDir/${followupPrefix}$infixTmp$headFileSuffix \n\n";
+    
+    $infixTmp = "_AffReg";
+    $followupARtmp = "$affRegPDir/${followupPrefix}$infixTmp$headFileSuffix";
+    print JOBFILE "rm -f $followupARtmp \n\n";
+}
+else { # Read in and apply already-made $arMatrix and $globalIScaleFile
+    print JOBFILE "$exeReg \\\n";
+    print JOBFILE " -sinc \\\n";
+    print JOBFILE " -s $followup \\\n";
+    print JOBFILE " -t $baseline \\\n";
+    print JOBFILE " -arMatrix $arMatrix \\\n";
+    print JOBFILE " -globalIScaleFile $globalIScaleFile \\\n";
+    print JOBFILE " -od $affRegPDir \\\n";
+    print JOBFILE " -tm $maskBroad \n\n";
+    
+    $infixTmp = "_TGlobalIntensityNorm";
+    $baselineGIStmp = "$affRegPDir/${baselinePrefix}$infixTmp$headFileSuffix";
+    print JOBFILE "mv $baselineGIStmp \\\n   $baselineGIS \n\n";
+    
+    $infixTmp = "_AffReg_GlobalIntensityNorm";
+    $followupARGIStmp = "$affRegPDir/${followupPrefix}$infixTmp$headFileSuffix";
+    print JOBFILE "mv $followupARGIStmp \\\n   $followupARGIS \n\n";
+    
+    $infixTmp = "_GlobalIntensityNorm";
+    print JOBFILE "rm -f $affRegPDir/${followupPrefix}$infixTmp$headFileSuffix \n\n";
+    
+    $infixTmp = "_AffReg";
+    $followupARtmp = "$affRegPDir/${followupPrefix}$infixTmp$headFileSuffix";
+    print JOBFILE "rm -f $followupARtmp \n\n";
+}
+
+############################################################################################################
+################# L O C A L   N O R M A L I Z A T I O N ####################################################
+############################################################################################################
+
+$followupARINorm = "$iNormPDir/${headFilePrefix}$headFileSuffix"; # Delete at end
+if( !-e $scaleField || !-e $touchSF1 || (defined $inormRefine && !-e $touchSF2) || defined $forceRedo) {
+    
+    # Normalize followup while mapping baseline to followup.
+    # Desired output is normalized followup.
+    print JOBFILE "$exeReg \\\n";
+    print JOBFILE " -ip $inputParamsFileINorm1 \\\n";
+    print JOBFILE " -od $iNormPDir \\\n";
+    print JOBFILE " -s  $followup \\\n";
+    print JOBFILE " -t  $baseline \\\n";
+    print JOBFILE " -arMatrix $arMatrix \\\n";
+    print JOBFILE " -globalIScaleFile $globalIScaleFile \\\n";
+    print JOBFILE " -tm $mask \n\n";
+    
+    print JOBFILE "mv $iNormPDir/.touchSF \\\n   $touchSF1 \n\n"; # See normalizeIntensitiesByNonlinearReg.cpp
+    
+    # Clean up.
+    $infixTmp = "_Tnlr";
+    $baselineNLRTmp  = "$iNormPDir/${baselinePrefix}$infixTmp$headFileSuffix";
+    print JOBFILE "rm -f $baselineNLRTmp \n";
+    
+    $infixTmp = "_TGlobalIntensityNorm";
+    $baselineGISTmp  = "$iNormPDir/${baselinePrefix}$infixTmp$headFileSuffix";
+    print JOBFILE "rm -f $baselineGISTmp \n";
+    
+    $infixTmp = "_AffReg";
+    $followupARGISTmp = "$iNormPDir/${followupPrefix}$infixTmp$headFileSuffix";
+    print JOBFILE "rm -f $followupARGISTmp \n\n";
+    
+    $infixTmp = "_GlobalIntensityNorm";
+    $followupARGISTmp = "$iNormPDir/${followupPrefix}$infixTmp$headFileSuffix";
+    print JOBFILE "rm -f $followupARGISTmp \n\n";
+    
+    $infixTmp = "_AffReg_GlobalIntensityNorm";
+    $followupARGISTmp = "$iNormPDir/${followupPrefix}$infixTmp$headFileSuffix";
+    print JOBFILE "rm -f $followupARGISTmp \n\n";
+    
+    $infixTmp = "_Sinorm";
+    $followupNormTmp = "$iNormPDir/${followupPrefix}$infixTmp$headFileSuffix";
+    $followupNormNew = "$iNormPDir/${headFilePrefix}$headFileSuffix";
+    if( $inormRefine ) {
+	print JOBFILE "mv $followupNormTmp \\\n";
+	print JOBFILE "   $followupNormNew \n";
+    }
+    else {
+	print JOBFILE "rm -f $followupNormTmp \n\n";
+    }
+    
+    if( $inormRefine ) {
+	print JOBFILE "rm -f $scaleField \n\n";
+	$maskBroadTmp = "$iNormPDir/maskBroad.mgz"; # Just made by previous command.
+	
+	# Map baseline to normalized followup ($followupNormNew),
+	# writing out result $baselineNLRNew in followup space.
+	
+	if ( 0 ) { # If $baselineGIS deleted, this is how to remake it...
+	    $baselineGIS = "$baselineOutPDir/$headFilePrefix$headFileSuffix";
+	    print JOBFILE "$exeApplyLocalScaling \\\n";
+	    print JOBFILE " -i   $baseline \\\n";
+	    print JOBFILE " -gf  $globalIScaleFile \\\n";
+	    print JOBFILE " -gft TargetScaleFactor \\\n";
+	    print JOBFILE " -o   $baselineGIS \n\n";
+	}
+	if ( 0 ) { # If $followupNormNew is deleted above, this is how to remake it...
+	    $infixTmp = "_TMP";
+	    $followupTmp = "$iNormPDir/${headFilePrefix}$infixTmp$headFileSuffix";
+	    print JOBFILE "$exeApplyTransforms \\\n";
+	    print JOBFILE " -sinc \\\n";
+	    print JOBFILE " -f $followup \\\n";
+	    print JOBFILE " -m $arMatrix \\\n";
+	    print JOBFILE " -t $baseline \\\n";
+	    print JOBFILE " -o $followupTmp \n\n";
+	    
+	    print JOBFILE "$exeApplyLocalScaling \\\n";
+	    print JOBFILE " -i   $followupTmp \\\n";
+	    print JOBFILE " -gf  $globalIScaleFile \\\n";
+	    print JOBFILE " -gft SourceScaleFactor \\\n";
+	    print JOBFILE " -s   $scaleField \\\n";
+	    print JOBFILE " -m   $maskBroadTmp \\\n";
+	    print JOBFILE " -o   $followupNormNew \n\n";
+	    
+	    print JOBFILE "rm -f $followupTmp \n";
+	}
+	
+	print JOBFILE "$exeReg \\\n";
+	print JOBFILE " -ip $inputParamsFileRegEstimate \\\n";
+	print JOBFILE " -od $iNormPDir \\\n";
+	print JOBFILE " -t  $followupNormNew \\\n";
+	print JOBFILE " -s  $baselineGIS \\\n";
+	print JOBFILE " -tm $maskBroadTmp \\\n";
+	print JOBFILE " -nflow $nflowEstimate \n\n";
+	
+	$infixTmp = "_NonLinReg";
+	$baselineNLRTmp = "$iNormPDir/${headFilePrefix}$infixTmp$headFileSuffix";
+	$baselineNLRNew = "$iNormPDir/baselineNLR$headFileSuffix";
+	print JOBFILE "mv    $baselineNLRTmp \\\n";
+	print JOBFILE "      $baselineNLRNew \n";
+	print JOBFILE "rm -f $iNormPDir/di.mgz \n";
+	print JOBFILE "rm -f $iNormPDir/dv.mgz \n";
+	print JOBFILE "rm -f $iNormPDir/dx.mgz \n";
+	print JOBFILE "rm -f $iNormPDir/dy.mgz \n";
+	print JOBFILE "rm -f $iNormPDir/dz.mgz \n\n";
+	
+	# Normalize, again, the original followup, while mapping baselineNLRNew to original followup. 
+	# Desired output is, again, normalized followup.
+	print JOBFILE "$exeReg \\\n";
+	print JOBFILE " -ip $inputParamsFileINorm2 \\\n";
+	print JOBFILE " -od $iNormPDir \\\n";
+	print JOBFILE " -s  $followupARGIS \\\n";
+	print JOBFILE " -t  $baselineNLRNew \\\n";
+	print JOBFILE " -sm $mask \\\n";
+	print JOBFILE " -tm $mask \n\n";
+	
+	print JOBFILE "mv $iNormPDir/.touchSF \\\n   $touchSF2 \n\n"; # See normalizeIntensitiesByNonlinearReg.cpp
+	
+	$baselineNLRTmp = "$iNormPDir/baselineNLR_Tnlr$headFileSuffix";
+	print JOBFILE "rm -f $baselineNLRTmp \n";
+	print JOBFILE "rm -f $baselineNLRNew \n";
+	print JOBFILE "rm -f $maskBroadTmp \n";
+	
+	$followupNormTmp = "$iNormPDir/${headFilePrefix}_Sinorm$headFileSuffix";# This is the intensity-normalized followup:
+        print JOBFILE "mv    $followupNormTmp \\\n      $followupARINorm \n\n"; # Delete at end
+    }
+}
+else {
+    print JOBFILE "$exeApplyLocalScaling \\\n";
+    print JOBFILE " -i $followupARGIS \\\n";
+    print JOBFILE " -s $scaleField \\\n";
+    print JOBFILE " -m $maskBroad \\\n";
+    print JOBFILE " -o $followupARINorm \n\n";                 # Delete at end.
+}
+
+#$maskPreAR       = "$affRegPDir/maskPreAR.mgz";
+#$maskBroadPreAR  = "$affRegPDir/maskBroadPreAR.mgz";
+$scaleFieldPreAR = "$iNormPDir/sfPreAR.mgz";
+
+if ( !-e $maskPreAR ) {
+    print JOBFILE "$exeApplyTransforms \\\n";
+    print JOBFILE " -f $mask \\\n";
+    print JOBFILE " -m $arMatrix \\\n";
+    print JOBFILE " -inv \\\n";
+    print JOBFILE " -t $followup \\\n";
+    print JOBFILE " -o $maskPreAR \n\n";
+}
+
+if ( !-e $maskBroadPreAR ) {
+    print JOBFILE "$exeApplyTransforms \\\n";
+    print JOBFILE " -f $maskBroad \\\n";
+    print JOBFILE " -m $arMatrix \\\n";
+    print JOBFILE " -inv \\\n";
+    print JOBFILE " -t $followup \\\n";
+    print JOBFILE " -o $maskBroadPreAR \n\n";
+}
+
+if ( !-e $scaleFieldPreAR ) {
+    print JOBFILE "$exeApplyTransforms \\\n";
+    print JOBFILE " -f $scaleField \\\n";
+    print JOBFILE " -m $arMatrix \\\n";
+    print JOBFILE " -inv \\\n";
+    print JOBFILE " -t $followup \\\n";
+    print JOBFILE " -o $scaleFieldPreAR \n\n";
+}
+
+$followupPreAffRegNorm = "$iNormPDir/${headFilePrefix}PreAR.mgz"; # Delete at end.
+if ( !-e $followupPreAffRegNorm ) {
+    print JOBFILE "$exeApplyLocalScaling \\\n";
+    print JOBFILE " -i   $followup \\\n";
+    print JOBFILE " -gf  $globalIScaleFile \\\n";
+    print JOBFILE " -gft SourceScaleFactor \\\n";
+    print JOBFILE " -s   $scaleFieldPreAR \\\n";
+    print JOBFILE " -m   $maskBroadPreAR \\\n";
+    print JOBFILE " -o   $followupPreAffRegNorm \n\n";
+}
+
+############################################################################################################
+############### N O N L I N R E G ##########################################################################
+############################################################################################################
+
+if ( (!-e "$nonlinRegEstimatePDir/dv.mgz" && !-e "$nonlinRegStandardPDir/dv.mgz")  || defined $forceRedo ) {
+    
+    # Map intensity-normalized followup to original
+    # baseline, naturally writing out result in baseline
+    # space. NOTE: The displacement field and the volume-change
+    # field are, naturally, written out in the baseline space.
+    # The interpretation of the dv-field, therefore, is what
+    # happens to that voxel in the baseline to make it align with
+    # the appropriate volume element in the followup image. So, if
+    # the followup is bigger than the baseline, then the baseline
+    # voxel EXPANDS into the appropriate volume element in the
+    # followup; i.e., the dv-field will be red not blue!
+    
+    print JOBFILE "$exeReg \\\n";
+    print JOBFILE " -ip $inputParamsFileRegEstimate \\\n";
+    print JOBFILE " -od $nonlinRegEstimatePDir \\\n";
+    print JOBFILE " -s  $followupARINorm\\\n";
+    print JOBFILE " -t  $baselineGIS \\\n";
+    print JOBFILE " -tm $mask \\\n";
+    print JOBFILE " -nflow $nflowEstimate \n\n";
+    
+    $baselineNLRTmp = "$nonlinRegEstimatePDir/${headFilePrefix}_NonLinReg.mgz";
+    $baselineNLRNew = "$nonlinRegEstimatePDir/${headFilePrefix}.mgz";
+    
+    if ($cleanup) {
+	print JOBFILE "rm -f $baselineNLRTmp \n";
+	print JOBFILE "rm -f $nonlinRegEstimatePDir/head_TEMP.mgz \n\n";
+    } else {
+	print JOBFILE "mv    $baselineNLRTmp \\\n      $baselineNLRNew \n\n";
+    }
+}
+
+
+if ( (!-e "$nonlinRegStandardPDir/dv.mgz" || defined $forceRedo) && defined $nlrStandard ) {
+    
+    $dx = "$nonlinRegEstimatePDir/dx.mgz";
+    $dy = "$nonlinRegEstimatePDir/dy.mgz";
+    $dz = "$nonlinRegEstimatePDir/dz.mgz";
+    
+    print JOBFILE "$exeReg \\\n";
+    print JOBFILE " -ip $inputParamsFileRegStandard \\\n";
+    print JOBFILE " -od $nonlinRegStandardPDir \\\n";
+    print JOBFILE " -s  $followupARINorm\\\n";
+    print JOBFILE " -t  $baselineGIS \\\n";
+    print JOBFILE " -tm $mask \\\n";
+    print JOBFILE " -nflow $nflowStandard \\\n";
+    print JOBFILE " -restart \\\n";
+    print JOBFILE " -restartNonLinRegFromPreAffReg \\\n"; # NEW
+    print JOBFILE " -sPAR $followupPreAffRegNorm \\\n";   # NEW
+    print JOBFILE " -arMatrix $arMatrix \\\n";            # NEW
+    print JOBFILE " -dx $dx \\\n";
+    print JOBFILE " -dy $dy \\\n";
+    print JOBFILE " -dz $dz \n\n";
+    
+    $baselineNLRTmp = "$nonlinRegStandardPDir/${headFilePrefix}_NonLinReg.mgz";
+    $baselineNLRNew = "$nonlinRegStandardPDir/${headFilePrefix}.mgz";
+    if ($cleanup) {
+	print JOBFILE "rm -f $baselineNLRTmp \n";
+	print JOBFILE "rm -f $nonlinRegStandardPDir/di.mgz \n";
+	
+	print JOBFILE "rm -f $nonlinRegStandardPDir/dx[0-$nflowStandard].mgz \n"; # Left behind in the event of early termination.
+	print JOBFILE "rm -f $nonlinRegStandardPDir/dy[0-$nflowStandard].mgz \n";
+	print JOBFILE "rm -f $nonlinRegStandardPDir/dz[0-$nflowStandard].mgz \n";
+	print JOBFILE "rm -f $nonlinRegStandardPDir/head_TEMP.mgz \n";
+	
+        print JOBFILE "rm -rf $nonlinRegEstimatePDir \n\n";                       # SHOULD DO THIS MORE CAREULLY
+    } else {
+	print JOBFILE "mv    $baselineNLRTmp \\\n      $baselineNLRNew \n\n";
+    }
+}
+
+
+if ( (!-e "$nonlinRegFinePDir/dv.mgz" || defined $forceRedo) && defined $nlrFine ) {
+    
+    $dx = "$nonlinRegStandardPDir/dx.mgz";
+    $dy = "$nonlinRegStandardPDir/dy.mgz";
+    $dz = "$nonlinRegStandardPDir/dz.mgz";
+    
+    print JOBFILE "$exeReg \\\n";
+    print JOBFILE " -ip $inputParamsFileRegFine \\\n";
+    print JOBFILE " -od $nonlinRegFinePDir \\\n";
+    print JOBFILE " -s  $followupARINorm\\\n";
+    print JOBFILE " -t  $baselineGIS \\\n";
+    print JOBFILE " -tm $mask \\\n";
+    print JOBFILE " -nflow $nflowFine \\\n";
+    print JOBFILE " -restart \\\n";
+    print JOBFILE " -restartNonLinRegFromPreAffReg \\\n"; # NEW
+    print JOBFILE " -sPAR $followupPreAffRegNorm \\\n";   # NEW
+    print JOBFILE " -arMatrix $arMatrix \\\n";            # NEW
+    print JOBFILE " -dx $dx \\\n";
+    print JOBFILE " -dy $dy \\\n";
+    print JOBFILE " -dz $dz \\\n";
+    print JOBFILE " -rescale -rescaleFac 2.0 \n\n";
+    
+    $baselineNLRTmp = "$nonlinRegFinePDir/${headFilePrefix}_NonLinReg.mgz";
+    $baselineNLRNew = "$nonlinRegFinePDir/${headFilePrefix}.mgz";
+    if ($cleanup) {
+	print JOBFILE "rm -f $baselineNLRTmp \n";
+	print JOBFILE "rm -f $nonlinRegFinePDir/di.mgz \n\n";
+	
+	print JOBFILE "rm -f $nonlinRegFinePDir/dx[0-$nflowFine].mgz \n"; # Left behind in the event of early termination.
+	print JOBFILE "rm -f $nonlinRegFinePDir/dy[0-$nflowFine].mgz \n";
+	print JOBFILE "rm -f $nonlinRegFinePDir/dz[0-$nflowFine].mgz \n";
+	print JOBFILE "rm -f $nonlinRegFinePDir/head_TEMP.mgz \n\n";
+    } else {
+	print JOBFILE "mv    $baselineNLRTmp \\\n      $baselineNLRNew \n\n";
+    }
+}
+#} # REMOVE!!!!
+
+############################################################################################################
+################### S E G M E N T A T I O N  ###############################################################
+############################################################################################################
+
+#$asegAR = "$affRegPDir/asegApprox.mgz";        # Affine reg.
+ $asegFR = "$baselineOutPDir/asegApprox.mgz";   # Full reg.
+#if ( -e $asegPreReg && (!-e $asegFR || defined $forceRedo) ) {
+if ( -e $asegPreReg || defined $forceRedo ) {
+    
+    if( !-e $asegFR || ( defined $nlrFine && -M "$nonlinRegFinePDir/dz.mgz" < -M $asegFR ) ) {
+	if ( defined $nlrFine ) {
+	    $dx = "$nonlinRegFinePDir/dx.mgz";
+	    $dy = "$nonlinRegFinePDir/dy.mgz";
+	    $dz = "$nonlinRegFinePDir/dz.mgz";
+	} elsif ( defined $nlrStandard ) {
+	    $dx = "$nonlinRegStandardPDir/dx.mgz";
+	    $dy = "$nonlinRegStandardPDir/dy.mgz";
+	    $dz = "$nonlinRegStandardPDir/dz.mgz";
+	}# elsif ( defined $nlrEstimate ) {
+#	    $dx = "$nonlinRegEstimatePDir/dx.mgz";
+#	    $dy = "$nonlinRegEstimatePDir/dy.mgz";
+#	    $dz = "$nonlinRegEstimatePDir/dz.mgz";
+#       }
+	
+	print JOBFILE "$exeApplyTransforms \\\n";
+	print JOBFILE " -nearest \\\n";
+	print JOBFILE " -f $asegPreReg \\\n";
+	print JOBFILE " -m $arMatrix \\\n";
+	print JOBFILE " -t $baseline \\\n";
+	if ( defined $nlrFine || defined $nlrStandard ) { # || defined $nlrEstimate ) {
+	    print JOBFILE " -dx $dx \\\n";
+	    print JOBFILE " -dy $dy \\\n";
+	    print JOBFILE " -dz $dz \\\n";
+	}
+	print JOBFILE " -o $asegFR \n\n";
+    }
+    
+    $seg = $asegFR;
+}
+#elsif ( -e $asegPreReg && -e $asegFR ) {
+#    $seg = $asegFR;
+#}
+
+
+#$segMasks     = "$baselineOutPDir/segMasks.mgz";
+#$brainSegMask = "$baselineOutPDir/brainSegMask.mgz";
+if( ( !-e $segMasks || !-e $brainSegMask || defined $forceRedo ) && -e $seg) {
+    print JOBFILE "$exeSegMasks \\\n -a $seg \\\n -os $segMasks \\\n -ob $brainSegMask \n\n";
+}
+
+############################################################################################################
+############## C S V   R O I   DV   F I L E S ##############################################################
+############################################################################################################
+
+
+if ( 0 ) { # SEE  "if ($cleanup)"  IN  "if ( (!-e "$nonlinRegStandardPDir/dv.mgz"....))"
+    if ( ( !-e "$nonlinRegEstimatePDir/$roiDvFile" || defined $forceRedo ) && -e $seg ) {
+	print JOBFILE "$exeROIdv \\\n";
+	print JOBFILE " -s  $subjID \\\n";
+	print JOBFILE " -o  $nonlinRegEstimatePDir/$roiDvFile \\\n";
+	print JOBFILE " -a  $seg \\\n";
+	print JOBFILE " -dv $nonlinRegEstimatePDir/dv.mgz \\\n";
+	print JOBFILE " -sm $segMasks \\\n";
+	print JOBFILE " -bm $brainSegMask \n\n";
+	#print JOBFILE " -t  $thresholdROIMask \n\n";
+    }
+    
+    if ( defined $cortexSeg && ( !-e "$nonlinRegEstimatePDir/$cortRoiDvFile" || defined $forceRedo ) && -e $seg ) {
+	print JOBFILE "$exeCortROIdv \\\n";
+	print JOBFILE " -s  $subjID \\\n";
+	print JOBFILE " -o  $nonlinRegEstimatePDir/$cortRoiDvFile \\\n";
+	print JOBFILE " -a  $seg \\\n";
+	print JOBFILE " -dv $nonlinRegEstimatePDir/dv.mgz \n\n";
+    }
+}
+
+if ( (!-e "$nonlinRegStandardPDir/$roiDvFile" || defined $forceRedo) && defined $nlrStandard && -e $seg ) {
+    
+    print JOBFILE "$exeROIdv \\\n";
+    print JOBFILE " -s  $subjID \\\n";
+    print JOBFILE " -o  $nonlinRegStandardPDir/$roiDvFile \\\n";
+    print JOBFILE " -a  $seg \\\n";
+    print JOBFILE " -dv $nonlinRegStandardPDir/dv.mgz \\\n";
+    print JOBFILE " -sm $segMasks \\\n";
+    print JOBFILE " -bm $brainSegMask \n\n";
+}
+
+if ( defined $cortexSeg && ( !-e "$nonlinRegStandardPDir/$cortRoiDvFile" || defined $forceRedo ) && defined $nlrStandard && -e $seg ) {
+    print JOBFILE "$exeCortROIdv \\\n";
+    print JOBFILE " -s  $subjID \\\n";
+    print JOBFILE " -o  $nonlinRegStandardPDir/$cortRoiDvFile \\\n";
+    print JOBFILE " -a  $seg \\\n";
+    print JOBFILE " -dv $nonlinRegStandardPDir/dv.mgz \n\n";
+}
+
+
+if ( (!-e "$nonlinRegFinePDir/$roiDvFile" || defined $forceRedo) && defined $nlrFine && -e $seg ) {
+    print JOBFILE "$exeROIdv \\\n";
+    print JOBFILE " -s  $subjID \\\n";
+    print JOBFILE " -o  $nonlinRegFinePDir/$roiDvFile \\\n";
+    print JOBFILE " -a  $seg \\\n";
+    print JOBFILE " -dv $nonlinRegFinePDir/dv.mgz \\\n";
+    print JOBFILE " -sm $segMasks \\\n";
+    print JOBFILE " -bm $brainSegMask \n\n";
+}
+
+if ( defined $cortexSeg && ( !-e "$nonlinRegFinePDir/$cortRoiDvFile" || defined $forceRedo ) && defined $nlrFine && -e $seg ) {
+    print JOBFILE "$exeCortROIdv \\\n";
+    print JOBFILE " -s  $subjID \\\n";
+    print JOBFILE " -o  $nonlinRegFinePDir/$cortRoiDvFile \\\n";
+    print JOBFILE " -a  $seg \\\n";
+    print JOBFILE " -dv $nonlinRegFinePDir/dv.mgz \n\n";
+}
+
+
+############################################################################################################
+################### I N V E R S E   A N D   C O M B I N E D   C S V   R O I  DV  F I L E S #################
+############################################################################################################
+
+###################### S T A N D A R D #####################################################################
+
+if ( defined $invTransf && (!-e "$invTransf/$nonlinRegStandardDir/dv2.mgz" || !-e "$invTransf/$nonlinRegStandardDir/dvAvg.mgz" || defined $forceRedo)
+     && -e "$invTransf/$affRegDir/affineRegMatrix.txt" && -e "$invTransf/$nonlinRegStandardDir/dv.mgz" && defined $nlrStandard ) {
+    
+    $dx    = "$invTransf/$nonlinRegStandardDir/dx.mgz";
+    $dy    = "$invTransf/$nonlinRegStandardDir/dy.mgz";
+    $dz    = "$invTransf/$nonlinRegStandardDir/dz.mgz";
+    $matAR = "$invTransf/$affRegDir/affineRegMatrix.txt";
+    
+    print JOBFILE "$exeDvRev \\\n";
+    print JOBFILE " -dv $nonlinRegStandardPDir/dv.mgz \\\n";
+    print JOBFILE " -m  $mask \\\n";
+    print JOBFILE " -o  $nonlinRegStandardPDir/dvRev.mgz \n\n";
+    
+    print JOBFILE "$exeApplyTransforms \\\n";
+    print JOBFILE " -f  $nonlinRegStandardPDir/dvRev.mgz \\\n";
+    print JOBFILE " -m  $matAR \\\n";
+    print JOBFILE " -dx $dx \\\n";
+    print JOBFILE " -dy $dy \\\n";
+    print JOBFILE " -dz $dz \\\n";
+    print JOBFILE " -t  $invTransf/$nonlinRegStandardDir/dv.mgz \\\n";
+    print JOBFILE " -o  $invTransf/$nonlinRegStandardDir/dv2.mgz \n\n";
+    
+    print JOBFILE "$exeAverageImage \\\n";
+    print JOBFILE " -i1 $invTransf/$nonlinRegStandardDir/dv.mgz \\\n";
+    print JOBFILE " -i2 $invTransf/$nonlinRegStandardDir/dv2.mgz \\\n";
+    print JOBFILE " -m  $invTransf/$baselineOutDir/$maskFile \\\n";
+    print JOBFILE " -o  $invTransf/$nonlinRegStandardDir/dvAvg.mgz \n\n";
+    
+    print JOBFILE "rm -f $nonlinRegStandardPDir/dvRev.mgz \n\n";
+}
+
+if ( defined $invTransf && defined $cortexSeg && (!-e "$invTransf/$nonlinRegStandardDir/$cortRoiDv2File" || defined $forceRedo) && defined $nlrStandard &&
+     -e $asegPreReg && -e "$invTransf/$nonlinRegStandardDir/dv2.mgz" ) {
+
+    print JOBFILE "$exeCortROIdv \\\n";
+    print JOBFILE " -s  $subjID \\\n";
+    print JOBFILE " -o  $invTransf/$nonlinRegStandardDir/$cortRoiDv2File \\\n";
+    print JOBFILE " -a  $asegPreReg \\\n";
+    print JOBFILE " -dv $invTransf/$nonlinRegStandardDir/dv2.mgz \n\n";
+}
+
+if ( defined $invTransf && defined $cortexSeg && (!-e "$invTransf/$nonlinRegStandardDir/$cortRoiDvAvgFile" || defined $forceRedo) && defined $nlrStandard &&
+     -e $asegPreReg && -e "$invTransf/$nonlinRegStandardDir/dvAvg.mgz" ) {
+
+    print JOBFILE "$exeCortROIdv \\\n";
+    print JOBFILE " -s  $subjID \\\n";
+    print JOBFILE " -o  $invTransf/$nonlinRegStandardDir/$cortRoiDvAvgFile \\\n";
+    print JOBFILE " -a  $asegPreReg \\\n";
+    print JOBFILE " -dv $invTransf/$nonlinRegStandardDir/dvAvg.mgz \n\n";
+}
+
+if ( defined $invTransf && (!-e "$invTransf/$nonlinRegStandardDir/$roiDv2File" || defined $forceRedo) && defined $nlrStandard && -e $asegPreReg &&
+     -e "$invTransf/$baselineOutDir/segMasks.mgz" && -e "$invTransf/$baselineOutDir/brainSegMask.mgz" && -e "$invTransf/$nonlinRegStandardDir/dv2.mgz" ) {
+    
+    print JOBFILE "$exeROIdv \\\n";
+    print JOBFILE " -s  $subjID \\\n";
+    print JOBFILE " -o  $invTransf/$nonlinRegStandardDir/$roiDv2File \\\n";
+    print JOBFILE " -a  $asegPreReg \\\n";
+    print JOBFILE " -dv $invTransf/$nonlinRegStandardDir/dv2.mgz \\\n";
+    print JOBFILE " -sm $invTransf/$baselineOutDir/segMasks.mgz \\\n";
+    print JOBFILE " -bm $invTransf/$baselineOutDir/brainSegMask.mgz \n\n";
+}
+
+if ( defined $invTransf && (!-e "$invTransf/$nonlinRegStandardDir/$roiDvAvgFile" || defined $forceRedo) && defined $nlrStandard && -e $asegPreReg &&
+     -e "$invTransf/$baselineOutDir/segMasks.mgz" && -e "$invTransf/$baselineOutDir/brainSegMask.mgz" && -e "$invTransf/$nonlinRegStandardDir/dvAvg.mgz" ) {
+    
+    print JOBFILE "$exeROIdv \\\n";
+    print JOBFILE " -s  $subjID \\\n";
+    print JOBFILE " -o  $invTransf/$nonlinRegStandardDir/$roiDvAvgFile \\\n";
+    print JOBFILE " -a  $asegPreReg \\\n";
+    print JOBFILE " -dv $invTransf/$nonlinRegStandardDir/dvAvg.mgz \\\n";
+    print JOBFILE " -sm $invTransf/$baselineOutDir/segMasks.mgz \\\n";
+    print JOBFILE " -bm $invTransf/$baselineOutDir/brainSegMask.mgz \n\n";
+}
+
+###################### F I N E #############################################################################
+
+if ( defined $invTransf && (!-e "$invTransf/$nonlinRegFineDir/dv2.mgz" || !-e "$invTransf/$nonlinRegFineDir/dvAvg.mgz" || defined $forceRedo)
+     && -e "$invTransf/$affRegDir/affineRegMatrix.txt" && -e "$invTransf/$nonlinRegFineDir/dv.mgz" && defined $nlrFine ) {
+    
+    $dx    = "$invTransf/$nonlinRegFineDir/dx.mgz";
+    $dy    = "$invTransf/$nonlinRegFineDir/dy.mgz";
+    $dz    = "$invTransf/$nonlinRegFineDir/dz.mgz";
+    $matAR = "$invTransf/$affRegDir/affineRegMatrix.txt";
+    
+    print JOBFILE "$exeDvRev \\\n";
+    print JOBFILE " -dv $nonlinRegFinePDir/dv.mgz \\\n";
+    print JOBFILE " -m  $mask \\\n";
+    print JOBFILE " -o  $nonlinRegFinePDir/dvRev.mgz \n\n";
+    
+    print JOBFILE "$exeApplyTransforms \\\n";
+    print JOBFILE " -f  $nonlinRegFinePDir/dvRev.mgz \\\n";
+    print JOBFILE " -m  $matAR \\\n";
+    print JOBFILE " -dx $dx \\\n";
+    print JOBFILE " -dy $dy \\\n";
+    print JOBFILE " -dz $dz \\\n";
+    print JOBFILE " -t  $invTransf/$nonlinRegFineDir/dv.mgz \\\n";
+    print JOBFILE " -o  $invTransf/$nonlinRegFineDir/dv2.mgz \n\n";
+    
+    print JOBFILE "$exeAverageImage \\\n";
+    print JOBFILE " -i1 $invTransf/$nonlinRegFineDir/dv.mgz \\\n";
+    print JOBFILE " -i2 $invTransf/$nonlinRegFineDir/dv2.mgz \\\n";
+    print JOBFILE " -m  $invTransf/$baselineOutDir/$maskFile \\\n";
+    print JOBFILE " -o  $invTransf/$nonlinRegFineDir/dvAvg.mgz \n\n";
+    
+    print JOBFILE "rm -f $nonlinRegFinePDir/dvRev.mgz \n\n";
+}
+
+if ( defined $invTransf && defined $cortexSeg && (!-e "$invTransf/$nonlinRegFineDir/$cortRoiDv2File" || defined $forceRedo) && defined $nlrFine &&
+     -e $asegPreReg && -e "$invTransf/$nonlinRegFineDir/dv2.mgz" ) {
+
+    print JOBFILE "$exeCortROIdv \\\n";
+    print JOBFILE " -s  $subjID \\\n";
+    print JOBFILE " -o  $invTransf/$nonlinRegFineDir/$cortRoiDv2File \\\n";
+    print JOBFILE " -a  $asegPreReg \\\n";
+    print JOBFILE " -dv $invTransf/$nonlinRegFineDir/dv2.mgz \n\n";
+}
+
+if ( defined $invTransf && defined $cortexSeg && (!-e "$invTransf/$nonlinRegFineDir/$cortRoiDvAvgFile" || defined $forceRedo) && defined $nlrFine &&
+     -e $asegPreReg && -e "$invTransf/$nonlinRegFineDir/dvAvg.mgz" ) {
+
+    print JOBFILE "$exeCortROIdv \\\n";
+    print JOBFILE " -s  $subjID \\\n";
+    print JOBFILE " -o  $invTransf/$nonlinRegFineDir/$cortRoiDvAvgFile \\\n";
+    print JOBFILE " -a  $asegPreReg \\\n";
+    print JOBFILE " -dv $invTransf/$nonlinRegFineDir/dvAvg.mgz \n\n";
+}
+
+if ( defined $invTransf && (!-e "$invTransf/$nonlinRegFineDir/$roiDv2File" || defined $forceRedo) && defined $nlrFine && -e $asegPreReg &&
+     -e "$invTransf/$nonlinRegFineDir/dv2.mgz" && -e "$invTransf/$baselineOutDir/segMasks.mgz" && -e "$invTransf/$baselineOutDir/brainSegMask.mgz" ) {
+    
+    print JOBFILE "$exeROIdv \\\n";
+    print JOBFILE " -s  $subjID \\\n";
+    print JOBFILE " -o  $invTransf/$nonlinRegFineDir/$roiDv2File \\\n";
+    print JOBFILE " -a  $asegPreReg \\\n";
+    print JOBFILE " -dv $invTransf/$nonlinRegFineDir/dv2.mgz \\\n";
+    print JOBFILE " -sm $invTransf/$baselineOutDir/segMasks.mgz \\\n";
+    print JOBFILE " -bm $invTransf/$baselineOutDir/brainSegMask.mgz \n\n";
+}
+
+if ( defined $invTransf && (!-e "$invTransf/$nonlinRegFineDir/$roiDvAvgFile" || defined $forceRedo) && defined $nlrFine && -e $asegPreReg &&
+     -e "$invTransf/$baselineOutDir/segMasks.mgz" && -e "$invTransf/$baselineOutDir/brainSegMask.mgz" ) {
+    
+    print JOBFILE "$exeROIdv \\\n";
+    print JOBFILE " -s  $subjID \\\n";
+    print JOBFILE " -o  $invTransf/$nonlinRegFineDir/$roiDvAvgFile \\\n";
+    print JOBFILE " -a  $asegPreReg \\\n";
+    print JOBFILE " -dv $invTransf/$nonlinRegFineDir/dvAvg.mgz \\\n";
+    print JOBFILE " -sm $invTransf/$baselineOutDir/segMasks.mgz \\\n";
+    print JOBFILE " -bm $invTransf/$baselineOutDir/brainSegMask.mgz \n\n";
+}
+
+############################################################################################################
+################## R O I - S P E C I F I C #################################################################
+############################################################################################################
+#$ROI1infix = "_44_53_54";  # See register/src/writeFullCorrectedVolumes.cpp and $inputParamsFileRegROI1
+#$touchROI1 = "$nonlinRegROIPDir/.touchROI${ROI1infix}";
+if ( (!-e "$nonlinRegROIPDir/dv.mgz" || !-e $touchROI1 || defined $forceRedo) && defined $nlrROI && (-e $seg || -e $asegPreReg) ) {
+    
+    $dx = "$nonlinRegFinePDir/dx.mgz";
+    $dy = "$nonlinRegFinePDir/dy.mgz";
+    $dz = "$nonlinRegFinePDir/dz.mgz";
+    
+    print JOBFILE "$exeReg \\\n";
+    print JOBFILE " -ip $inputParamsFileRegROI1 \\\n";
+    print JOBFILE " -od $nonlinRegROIPDir \\\n";
+    print JOBFILE " -s  $followupARINorm\\\n";
+    print JOBFILE " -t  $baselineGIS \\\n";
+    print JOBFILE " -tm $mask \\\n";
+    print JOBFILE " -nflow $nflowROI \\\n";
+    print JOBFILE " -restart \\\n";
+    print JOBFILE " -restartNonLinRegFromPreAffReg \\\n"; # NEW
+    print JOBFILE " -sPAR $followupPreAffRegNorm \\\n";   # NEW
+    print JOBFILE " -arMatrix $arMatrix \\\n";            # NEW
+    print JOBFILE " -dx $dx \\\n";
+    print JOBFILE " -dy $dy \\\n";
+    print JOBFILE " -dz $dz \\\n";
+    print JOBFILE " -rescale -rescaleFac 2.5 \\\n";
+    print JOBFILE " -ta $seg \\\n";
+    print JOBFILE " -regROI \n\n";
+    
+    $baselineNLRTmp = "$nonlinRegROIPDir/${headFilePrefix}_NonLinReg${ROI1infix}.mgz";
+    if ($cleanup) {
+	print JOBFILE "rm -f $baselineNLRTmp \n";
+	print JOBFILE "rm -f $nonlinRegROIPDir/di.mgz \n\n";
+	
+	print JOBFILE "rm -f $nonlinRegROIPDir/dx[0-$nflowROI].mgz \n"; # Left behind in the event of early termination.
+	print JOBFILE "rm -f $nonlinRegROIPDir/dy[0-$nflowROI].mgz \n"; # Left behind in the event of early termination.
+	print JOBFILE "rm -f $nonlinRegROIPDir/dz[0-$nflowROI].mgz \n"; # Left behind in the event of early termination.
+	print JOBFILE "rm -f $nonlinRegROIPDir/head_TEMP.mgz \n\n";
+    }
+}
+
+#$ROI2infix = "_5_17_18";
+#$touchROI2 = "${nonlinRegROIPDir}/.touchROI${ROI2infix}";
+if ( (!-e "$nonlinRegROIPDir/dv.mgz" || !-e $touchROI2 || defined $forceRedo) && defined $nlrROI && (-e $seg || -e $asegPreReg) ) {    
+    
+    $dx = "$nonlinRegFinePDir/dx.mgz";
+    $dy = "$nonlinRegFinePDir/dy.mgz";
+    $dz = "$nonlinRegFinePDir/dz.mgz";
+    
+    print JOBFILE "$exeReg \\\n";
+    print JOBFILE " -ip $inputParamsFileRegROI2 \\\n";
+    print JOBFILE " -od $nonlinRegROIPDir \\\n";
+    print JOBFILE " -s  $followupARINorm\\\n";
+    print JOBFILE " -t  $baselineGIS \\\n";
+    print JOBFILE " -tm $mask \\\n";
+    print JOBFILE " -nflow $nflowROI \\\n";
+    print JOBFILE " -restart \\\n";
+    print JOBFILE " -restartNonLinRegFromPreAffReg \\\n"; # NEW
+    print JOBFILE " -sPAR $followupPreAffRegNorm \\\n";   # NEW
+    print JOBFILE " -arMatrix $arMatrix \\\n";            # NEW
+    print JOBFILE " -dx $dx \\\n";
+    print JOBFILE " -dy $dy \\\n";
+    print JOBFILE " -dz $dz \\\n";
+    print JOBFILE " -rescale -rescaleFac 2.5 \\\n";
+    print JOBFILE " -ta $seg \\\n";
+    print JOBFILE " -regROI \n\n";
+    
+    $baselineNLRTmp = "$nonlinRegROIPDir/${headFilePrefix}_NonLinReg${ROI2infix}.mgz";
+    if ($cleanup) {
+	print JOBFILE "rm -f $baselineNLRTmp \n";
+	print JOBFILE "rm -f $nonlinRegROIPDir/di.mgz \n\n";
+	
+	print JOBFILE "rm -f $nonlinRegROIPDir/dx[0-$nflowROI].mgz \n"; # Left behind in the event of early termination.
+	print JOBFILE "rm -f $nonlinRegROIPDir/dy[0-$nflowROI].mgz \n"; # Left behind in the event of early termination.
+	print JOBFILE "rm -f $nonlinRegROIPDir/dz[0-$nflowROI].mgz \n"; # Left behind in the event of early termination.
+	print JOBFILE "rm -f $nonlinRegROIPDir/head_TEMP.mgz \n\n";
+    }
+}
+
+############## C S V   R O I   DV   F I L E S ##############################################################
+
+if ( (!-e "$nonlinRegROIPDir/$roiDvFile" || !-e $touchROI1  || !-e $touchROI2 || defined $forceRedo) && defined $nlrROI && (-e $seg || -e $asegPreReg) ) {
+    print JOBFILE "$exeROIdv \\\n";
+    print JOBFILE " -s  $subjID \\\n";
+    print JOBFILE " -o  $nonlinRegROIPDir/$roiDvFile \\\n";
+    print JOBFILE " -a  $seg \\\n";
+    print JOBFILE " -dv $nonlinRegROIPDir/dv.mgz \\\n";
+    print JOBFILE " -sm $segMasks \n\n";
+    
+    if ( 0 ) {
+	print JOBFILE "$exeROIdv \\\n";
+	print JOBFILE " -o  $nonlinRegROIPDir/$roiDvFileTxt \\\n";
+	print JOBFILE " -a  $seg \\\n";
+	print JOBFILE " -r  5 \\\n";
+	print JOBFILE " -dv $nonlinRegROIPDir/dv.mgz \\\n";
+	print JOBFILE " -sm $segMasks \n\n";
+	
+	print JOBFILE "$exeROIdv \\\n";
+	print JOBFILE " -o  $nonlinRegROIPDir/$roiDvFileTxt \\\n";
+	print JOBFILE " -a  $seg \\\n";
+	print JOBFILE " -r  17 \\\n";
+	print JOBFILE " -dv $nonlinRegROIPDir/dv.mgz \\\n";
+	print JOBFILE " -sm $segMasks \n\n";
+	
+	print JOBFILE "$exeROIdv \\\n";
+	print JOBFILE " -o  $nonlinRegROIPDir/$roiDvFileTxt \\\n";
+	print JOBFILE " -a  $seg \\\n";
+	print JOBFILE " -r  18 \\\n";
+	print JOBFILE " -dv $nonlinRegROIPDir/dv.mgz \\\n";
+	print JOBFILE " -sm $segMasks \n\n";
+	
+	print JOBFILE "$exeROIdv \\\n";
+	print JOBFILE " -o  $nonlinRegROIPDir/$roiDvFileTxt \\\n";
+	print JOBFILE " -a  $seg \\\n";
+	print JOBFILE " -r  44 \\\n";
+	print JOBFILE " -dv $nonlinRegROIPDir/dv.mgz \\\n";
+	print JOBFILE " -sm $segMasks \n\n";
+	
+	print JOBFILE "$exeROIdv \\\n";
+	print JOBFILE " -o  $nonlinRegROIPDir/$roiDvFileTxt \\\n";
+	print JOBFILE " -a  $seg \\\n";
+	print JOBFILE " -r  53 \\\n";
+	print JOBFILE " -dv $nonlinRegROIPDir/dv.mgz \\\n";
+	print JOBFILE " -sm $segMasks \n\n";
+	
+	print JOBFILE "$exeROIdv \\\n";
+	print JOBFILE " -o  $nonlinRegROIPDir/$roiDvFileTxt \\\n";
+	print JOBFILE " -a  $seg \\\n";
+	print JOBFILE " -r  54 \\\n";
+	print JOBFILE " -dv $nonlinRegROIPDir/dv.mgz \\\n";
+	print JOBFILE " -sm $segMasks \n\n";
+    }
+}
+
+################### I N V E R S E   A N D   C O M B I N E D   C S V   R O I  DV  F I L E S #################
+
+#$touchInvROI1 = "$invTransf/$nonlinRegROIDir/.touchROI${ROI1infix}";
+#$touchInvROI2 = "$invTransf/$nonlinRegROIDir/.touchROI${ROI2infix}";
+
+if ( defined $invTransf && (!-e "$invTransf/$nonlinRegROIDir/dv2.mgz" || !-e "$invTransf/$nonlinRegROIDir/dvAvg.mgz" || defined $forceRedo)
+     && -e $touchInvROI1 && -e $touchInvROI2
+     && -e "$invTransf/$affRegDir/affineRegMatrix.txt" && -e "$invTransf/$nonlinRegROIDir/dv.mgz" && defined $nlrROI ) {
+    
+    $dx    = "$invTransf/$nonlinRegROIDir/dx.mgz";
+    $dy    = "$invTransf/$nonlinRegROIDir/dy.mgz";
+    $dz    = "$invTransf/$nonlinRegROIDir/dz.mgz";
+    $matAR = "$invTransf/$affRegDir/affineRegMatrix.txt";
+    
+    print JOBFILE "$exeDvRev \\\n";
+    print JOBFILE " -dv $nonlinRegROIPDir/dv.mgz \\\n";
+    print JOBFILE " -m  $mask \\\n";
+    print JOBFILE " -o  $nonlinRegROIPDir/dvRev.mgz \n\n";
+    
+    print JOBFILE "$exeApplyTransforms \\\n";
+    print JOBFILE " -f  $nonlinRegROIPDir/dvRev.mgz \\\n";
+    print JOBFILE " -m  $matAR \\\n";
+    print JOBFILE " -dx $dx \\\n";
+    print JOBFILE " -dy $dy \\\n";
+    print JOBFILE " -dz $dz \\\n";
+    print JOBFILE " -t  $invTransf/$nonlinRegROIDir/dv.mgz \\\n";
+    print JOBFILE " -o  $invTransf/$nonlinRegROIDir/dv2.mgz \n\n";
+    
+    print JOBFILE "$exeAverageImage \\\n";
+    print JOBFILE " -i1 $invTransf/$nonlinRegROIDir/dv.mgz \\\n";
+    print JOBFILE " -i2 $invTransf/$nonlinRegROIDir/dv2.mgz \\\n";
+    print JOBFILE " -m  $invTransf/$baselineOutDir/$maskFile \\\n";
+    print JOBFILE " -o  $invTransf/$nonlinRegROIDir/dvAvg.mgz \n\n";
+    
+    print JOBFILE "rm -f $nonlinRegROIPDir/dvRev.mgz \n\n";
+}
+
+if ( defined $invTransf && (!-e "$invTransf/$nonlinRegROIDir/$roiDv2File" || defined $forceRedo) && defined $nlrROI && -e $asegPreReg &&
+     -e $touchInvROI1 && -e $touchInvROI2 &&
+     -e "$invTransf/$baselineOutDir/segMasks.mgz" && -e "$invTransf/$baselineOutDir/brainSegMask.mgz" ) {
+    
+    print JOBFILE "$exeROIdv \\\n";
+    print JOBFILE " -s  $subjID \\\n";
+    print JOBFILE " -o  $invTransf/$nonlinRegROIDir/$roiDv2File \\\n";
+    print JOBFILE " -a  $asegPreReg \\\n";
+    print JOBFILE " -dv $invTransf/$nonlinRegROIDir/dv2.mgz \\\n";
+    print JOBFILE " -sm $invTransf/$baselineOutDir/segMasks.mgz \\\n";
+    print JOBFILE " -bm $invTransf/$baselineOutDir/brainSegMask.mgz \n\n";
+}
+
+if ( defined $invTransf && (!-e "$invTransf/$nonlinRegROIDir/$roiDvAvgFile" || defined $forceRedo) && defined $nlrROI && -e $asegPreReg &&
+     -e $touchInvROI1 && -e $touchInvROI2 &&
+     -e "$invTransf/$baselineOutDir/segMasks.mgz" && -e "$invTransf/$baselineOutDir/brainSegMask.mgz" ) {
+    
+    print JOBFILE "$exeROIdv \\\n";
+    print JOBFILE " -s  $subjID \\\n";
+    print JOBFILE " -o  $invTransf/$nonlinRegROIDir/$roiDvAvgFile \\\n";
+    print JOBFILE " -a  $asegPreReg \\\n";
+    print JOBFILE " -dv $invTransf/$nonlinRegROIDir/dvAvg.mgz \\\n";
+    print JOBFILE " -sm $invTransf/$baselineOutDir/segMasks.mgz \\\n";
+    print JOBFILE " -bm $invTransf/$baselineOutDir/brainSegMask.mgz \n\n";
+}
+
+
+if ($cleanup) {
+    print JOBFILE "rm -f $maskPreAR \n";
+    print JOBFILE "rm -f $maskBroadPreAR \n";
+    print JOBFILE "rm -f $scaleFieldPreAR \n";
+    print JOBFILE "rm -f $baselineGIS \n";
+   #print JOBFILE "rm -f $followupPreAffRegNorm \n";
+    print JOBFILE "rm -f $followupARINorm \n\n";
+    print JOBFILE "rm -f $followupARGIS \n\n";
+}
+
+print JOBFILE "date \n";
+close JOBFILE;
+
+if( defined $batch ) {
+    chdir $batchJobsDir;
+    print "Submitting $jobName\n";
+    `qsub $jobName`;
+    chdir $commandDir;
+} else { # OR pass $jobName to calling script and have IT run $jobName...
+    chmod 0775, $jobFName;
+    $cmd = "$jobFName";            # "./$jobFName";
+    print "Executing $jobFName\n";
+   `$cmd`;
+}

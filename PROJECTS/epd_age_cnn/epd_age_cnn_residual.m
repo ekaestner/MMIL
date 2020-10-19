@@ -5,7 +5,7 @@ clear; clc;
 prj_dir = '/home/ekaestne/PROJECTS/';
 prj_nme = 'Epilepsy_and_Aging';
 
-sbj_nme = 'epilepsy_aging_graph_sample_v2.csv';
+sbj_nme = 'epilepsy_aging_graph_sample.csv';
     sbj_nme = mmil_readtext( [prj_dir '/' 'SUBJECTS' '/' 'projects' '/' prj_nme '/' sbj_nme ]);
 
 prc_nme = { '' '.a2009s' '.split' };
@@ -20,14 +20,14 @@ bin_cut_off = 10:5:50;
 bin_dir     = 'pos';
 bin_foc     = 4; % 
 
-sbj_grp_col = {   'Laterality'                                                  'MTS'   }; % {   'Cognitive'                                              'Diagnosis'                                'Onset'                                   };
-sbj_grp_nme = { { 'HC'       'MCI'         'Left'        'Right'       'Bilateral' }  { 'HC'        'MCI'         'Yes'         'No' } }; % { { 'HC'       'MCI'         'TLE_NI'      'TLE_MND' }     { 'HC'       'MCI'         'EPD_Old' }     { 'HC'       'MCI'         'Early'       'Late' }        };
-sbj_grp_clr = { { [.8 .8 .8] [.47 .31 .45] [.63 .77 .80] [.00 .33 .37] [.04 .45 .45] } { [.8 .8 .8] [.47 .31 .45] [.63 .77 .80] [.00 .33 .37] } }; % { { [.8 .8 .8] [.47 .31 .45] [.63 .77 .80] [.00 .33 .37] } { [.8 .8 .8] [.47 .31 .45] [.34 .59 .64] } { [.8 .8 .8] [.47 .31 .45] [.63 .77 .80] [.00 .33 .37] } };
+sbj_grp_col = {   'Diagnosis'                              }; %%% {   'Cognitive'                                              'Diagnosis'                                'Onset'                                   };              %%% {   'Laterality'                                                  'MTS'   };
+sbj_grp_nme = { { 'HC'       'MCI'         'EPD_Old' }     }; %%% { { 'HC'       'MCI'         'TLE_NI'      'TLE_MND' }     { 'HC'       'MCI'         'EPD_Old' }     { 'HC'       'MCI'         'Early'       'Late' }        }; %%% { { 'HC'       'MCI'         'Left'        'Right'       'Bilateral' }  { 'HC'        'MCI'         'Yes'         'No' } }; %
+sbj_grp_clr = { { [.8 .8 .8] [.47 .31 .45] [.34 .59 .64] } }; %%% { { [.8 .8 .8] [.47 .31 .45] [.63 .77 .80] [.00 .33 .37] } { [.8 .8 .8] [.47 .31 .45] [.34 .59 .64] } { [.8 .8 .8] [.47 .31 .45] [.63 .77 .80] [.00 .33 .37] } }; %%% { { [.8 .8 .8] [.47 .31 .45] [.63 .77 .80] [.00 .33 .37] [.04 .45 .45] } { [.8 .8 .8] [.47 .31 .45] [.63 .77 .80] [.00 .33 .37] } };
 
 num_rep = 5000;
 pvl_lvl = .01;
-pvl_con = {    'HC'                                           'HC'              }; %{    'HC'                                   'HC'               'HC' };
-pvl_cmp = {  { 'MCI'       'Left'     'Right' 'Bilateral' } { 'MCI' 'Yes' 'No'} }; % {  { 'MCI'       'TLE_NI'     'TLE_MND' } { 'MCI' 'EPD_Old'} { 'MCI'         'Early'       'Late' } };
+pvl_con = {    'HC'              }; %%% {    'HC'                                   'HC'               'HC'              }; %%%{    'HC'                                   'HC'               'HC' };
+pvl_cmp = {  { 'MCI' 'EPD_Old'}  }; %%% {  { 'MCI'       'TLE_NI'     'TLE_MND' } { 'MCI' 'EPD_Old'} { 'MCI'         'Early'       'Late' } }; %%% {  { 'MCI'       'Left'     'Right' 'Bilateral' } { 'MCI' 'Yes' 'No'} }; % 
 lve_num_out = 3;
 
 %% Calculate Age Residual
@@ -76,6 +76,7 @@ for iS = 1:size(thk_sbj_nme, 1)
 end
 
 % Residual Matrix %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Age
 fcfg = [];
 
 fcfg.sbj_nme = thk_dta_sbj_use;
@@ -88,16 +89,33 @@ fcfg.cov_nme = cov_roi_nme(1);
 
 fcfg.out_dir = '/home/ekaestner/Downloads/Braintest/residuals'; % split % desikan
 
-rsd_mtx = ejk_residual_matrix( fcfg );
+rsd_mtx_age = ejk_residual_matrix( fcfg );
+
+% Age + Sex + Mean Thickness
+fcfg = [];
+
+fcfg.sbj_nme = thk_dta_sbj_use;
+
+fcfg.dta     = thk_dta_use;
+fcfg.dta_nme = thk_roi_nme;
+
+fcfg.cov     = [ cov_dta_use(:,[1 2]) num2cell(mean(thk_dta_use,2)) ];
+fcfg.cov_nme = [ cov_roi_nme(1:2)     'MeanThick' ];
+
+fcfg.out_dir = '/home/ekaestner/Downloads/Braintest/residuals'; % split % desikan
+
+rsd_mtx_mlt = ejk_residual_matrix( fcfg );
 
 %%
 % Setup
 clear thk_dta thk_sbj_nme thk_roi_nme
 
 dta_nme = { 'Thickness_Desikan_Split' ...
-            'Thickness_Desikan_Residuals' };
+            'Thickness_Desikan_Residuals' ...
+            'Thickness_Desikan_Residuals_Complex' };
 
 prc_nme_hld = [ 3 ...
+                3 ...
                 3 ];
 
 thk_dta_hld = mmil_readtext( [ '/home/ekaestne/PROJECTS/' '/' 'OUTPUT' '/' 'Epilepsy_and_Aging' '/' 'ROI' '/' 'MRI_thickness_aparc_xsplit_Epilepsy_and_Aging_updated.csv' ] );
@@ -105,11 +123,15 @@ thk_sbj_nme{1} = thk_dta_hld(2:end,1);
 thk_roi_nme{1} = thk_dta_hld(1,2:end);
 thk_dta{1}     = cell2mat(thk_dta_hld(2:end,2:end));            
 
-thk_dta{2} = rsd_mtx;
+thk_dta{2} = rsd_mtx_age;
 thk_sbj_nme{2} = thk_sbj_nme{1};
 thk_roi_nme{2} = thk_roi_nme{1};
-            
-for iDT = 1%:2
+
+thk_dta{3} = rsd_mtx_mlt;
+thk_sbj_nme{3} = thk_sbj_nme{1};
+thk_roi_nme{3} = thk_roi_nme{1};
+
+for iDT = 3 %1:3
     
     out_dir = [ prj_dir '/' 'OUTPUT' '/' prj_nme '/' 'TestResiduals' '/' dta_nme{iDT} ];
     

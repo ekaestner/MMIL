@@ -1,0 +1,16 @@
+Multiband Image Reconstruction
+==============================
+Matlab/Octave code to reconstruct raw k-space data acquired using the CNI's multiband EPI pulse sequences.
+
+Primary author: Kangrong Zhu
+
+Getting started
+===============
+
+Have a look at mux_epi_main. That should explain everything. Note that our preferred recon method is 1Dgrappa_sense1. This does a GRAPPA recon for unaliasing, followed by a SENSE coil combination to reduce the noise floor.
+
+
+
+
+
+

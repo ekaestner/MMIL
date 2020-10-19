@@ -1,0 +1,6 @@
+#!/bin/csh
+
+set h_vmem = '15.0G'
+
+qmatjobs_memlimit $1 $h_vmem
+

@@ -41,8 +41,13 @@ end
 
 ylabel(mmil_spec_char(cfg.ylb,{'_'}))
 
+if isfield(cfg,'ttl')
+    title(mmil_spec_char(cfg.ttl,{'_'},' '))
+end
+
 if isfield(cfg,'out_dir')
     ejk_chk_dir(cfg.out_dir)
+    tightfig();
     print([cfg.out_dir '/' cfg.out_nme '.png'],'-dpng')
     close all
 end
