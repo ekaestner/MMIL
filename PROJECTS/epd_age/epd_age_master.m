@@ -1,5 +1,5 @@
 %%
-clear; pc;
+clear; clc;
 
 %%
 prj_dir = '/home/ekaestne/PROJECTS/';

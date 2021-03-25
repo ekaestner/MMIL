@@ -7,7 +7,7 @@ cfg = [];
 cfg.prj_dir = '/home/ekaestne/PROJECTS/';
 
 cfg.sbj_nme_fle = 'sbj000_total_2019_03_27.csv';
-cfg.sbj_fsr_fle = 'sbj001_Freesurfer_Recons.csv';
+cfg.sbj_fsr_fle = 'sbj001_Freesurfer_Recons_uptodate.csv';
 cfg.bld_sbj_dir = 'sbj002_BOLD.csv';
 
 cfg.mri_fsr_dir = '/home/mmilmcd/data/FSRECONS/'; % /space/syn09/1/data/MMILDB/MCD_RSI/proc_dti ; /space/syn09/1/data/MMILDB/MCD_RSI/proc_bold ; /space/syn09/1/data/MMILDB/MCD_RSI/fsurf
@@ -26,14 +26,14 @@ cfg.fmr_nme = { 'N_FF'              'NW'                'FF' };
 cfg.fmr_typ = {'-c'};
 
 %% List of Subjects Put Together
-sbj_nme_hld = mmil_readtext([cfg.prj_dir '/' 'SUBJECTS' '/' cfg.sbj_nme_fle]);
-sbj_fsr = mmil_readtext([cfg.prj_dir '/' 'SUBJECTS' '/' cfg.sbj_fsr_fle]);
+sbj_nme_hld = mmil_readtext([cfg.prj_dir '/' 'SUBJECTS' '/' 'old_two' '/' cfg.sbj_nme_fle]);
+sbj_fsr = mmil_readtext([cfg.prj_dir '/' 'SUBJECTS' '/' 'old_two' '/' cfg.sbj_fsr_fle]);
 sbj_fsr = sbj_fsr(:,[1 2]); sbj_fsr(cellfun(@isempty,sbj_fsr(:,2)),2) = {''};
 
 dta_typ     = { 'T1' 'DTI' 'fMRI' };
 dta_typ_col = find(ismember(sbj_fsr(1,:),dta_typ));
 
-fmr_sbj_dir = mmil_readtext([cfg.prj_dir '/' 'SUBJECTS' '/' cfg.bld_sbj_dir]);
+fmr_sbj_dir = mmil_readtext([cfg.prj_dir '/' 'SUBJECTS' '/' 'old_two' '/' cfg.bld_sbj_dir]);
 
 sbj_nme = sbj_nme_hld(2:end,1);
 % sbj_fsr = cell(numel(sbj_nme),numel(dta_typ)+1);
