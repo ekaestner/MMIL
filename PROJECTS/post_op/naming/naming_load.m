@@ -312,7 +312,11 @@ for iS = 1:size(sbj_dem.sbj_nme, 1)
       
 end
 
+cell2csv( [ prj_dir '/' prj_nme '/' 'Data' '/' 'sbj_srf_out.csv' ], sbj_srf_out)
+ 
 % Load data %%%%%%%%%%%%%%%
+sbj_srf_out = mmil_readtext([ prj_dir '/' prj_nme '/' 'Data' '/' 'sbj_srf_out.csv' ]);
+
 % MRI
 tic;
 fcfg = [];
@@ -330,7 +334,7 @@ for iH = 1:numel(hms_hld)
         if ~isempty(srf_dta_hld); srf_dta(iS,:) = srf_dta_hld; end
     end
     srf_dta_sbj = sbj_srf_out(:,1);
-    save([cfg.prj_dir '/' 'DATA' '/' 'SRFHOLD' '/' 'surf' '_' fcfg.mes_typ '_' fcfg.hms 's.mat'],'srf_dta_sbj','srf_dta');
+    save( [ prj_dir '/' prj_nme '/' 'Data' '/' 'surf' '_' fcfg.mes_typ '_' fcfg.hms 's.mat'],'srf_dta_sbj','srf_dta');
     clear srf_dta
 end
 toc
@@ -352,7 +356,7 @@ for iH = 1:numel(hms_hld)
         if ~isempty(srf_dta_hld); srf_dta(iS,:) = srf_dta_hld; end
     end
     srf_dta_sbj = sbj_srf_out(:,1);
-    save([cfg.prj_dir '/' 'DATA' '/' 'SRFHOLD' '/' 'surf' '_' fcfg.mes_typ '_' fcfg.hms 's.mat'],'srf_dta_sbj','srf_dta');
+    save( [ prj_dir '/' prj_nme '/' 'Data' '/' 'surf' '_' fcfg.mes_typ '_' fcfg.hms 's.mat'],'srf_dta_sbj','srf_dta');
     clear srf_dta
 end
 toc
