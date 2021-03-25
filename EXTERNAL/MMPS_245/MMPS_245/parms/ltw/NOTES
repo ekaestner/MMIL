@@ -1,0 +1,8 @@
+NOTE:
+This directory contains parameter files for scripts, etc.
+cretead by Lars T. Westlye
+
+
+bbr.sch is used by epi_reg_ltw, which registers EPI to T1 using FSL binaries
+and flirt_bbr_ltw, a modified version of FSL's flirt
+

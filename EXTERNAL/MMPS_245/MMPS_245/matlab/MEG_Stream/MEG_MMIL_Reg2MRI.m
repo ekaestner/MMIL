@@ -1,0 +1,159 @@
+function MEG_MMIL_Reg2MRI(varargin)
+%function MEG_MMIL_Reg2MRI([options])
+%
+% Purpose: run ts_pointreg to manually register MEG to MRI (FreeSurfer space)
+%
+% Optional Input:
+%  'ContainerPath': full path of processed MEG Container
+%     {default = pwd}
+%  'FSContainerPath': full path of FreeSurfer Container
+%     If empty, will use ContainerInfo.FSContainerPath
+%     {default = []}
+%  'transfile': text file containing 4x4 mri2head transformation
+%     either full path or relative to ContainerPath
+%     {default = 'mri2head.trans'}
+%  'surf_fstem': stem of tri format surface file for scalp
+%     if not full path, expected to be found in FSContainerPath/bem
+%     {default = 'outer_scalp'}
+%  'iskull_fstem': stem of tri format surface file for inner skull
+%     if not full path, expected to be found in FSContainerPath/bem
+%     {default = 'inner_skull'}
+%  'oskull_fstem': stem of tri format surface file for outer skull
+%     if not full path, expected to be found in FSContainerPath/bem
+%     {default = 'outer_skull'}
+%  'initflag': [0|1] initialize transfile with automatic registration
+%     NOTE:automatic registration is unreliable, but maybe ok for starting point
+%     {default = 0}
+%  'forceflag': [0|1] overwrite existing output
+%     {default = 0}
+%
+% Note: requires that FSContainerPath has bem directory with outer scalp surface
+%
+% Created:  02/23/11 by Don Hagler
+% Last Mod: 06/16/14 by Don Hagler
+%
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+parms = mmil_args2parms(varargin, { ...
+  'ContainerPath',pwd,[],...
+  'FSContainerPath',[],[],...
+...
+  'transfile','mri2head.trans',[],...
+  'surf_fstem','outer_scalp',[],...
+  'iskull_fstem','inner_skull',[],...
+  'oskull_fstem','outer_skull',[],...
+  'forceflag',false,[false true],...
+...
+  'initflag',false,[false true],...
+  'fitflag',1,[0 1 2],...
+  'niters',100,[],...
+  'fit_card_flag',true,[false true],...
+  'init_card_flag',true,[false true],...
+...
+  'scalp_alpha',0.6,[0,1],...
+  'iskull_alpha',1,[0,1],...
+  'oskull_alpha',0.7,[0,1],...
+  'scalp_color',0.7,[0,1],...
+  'iskull_color',0.2,[0,1],...
+  'oskull_color',0.5,[0,1],...
+  'colormap','gray',[],...
+  'lights_flag',true,[false true],...
+  'plot_flag',2,[0,1,2],... % 0=no plot, 1=plot, 2=plot + controls
+  'view',[190,20],[-Inf,Inf],... % azimuth and elevation
+  'point_color','b',[],...
+  'point_size',20,[],...
+  'excl_point_color','k',[],...
+  'card_point_color','r',[],...
+  'verbose',false,[false true],...
+  'trans_stepsize',0.2,[],...
+  'rot_stepsize',0.5,[],...
+  'trans_stepsize_manual',2,[],...
+  'rot_stepsize_manual',5,[],...
+  'cost_include_percentile',100,[50,100],...
+  'init_lpa',[-0.05,0,0],[],...
+  'init_rpa',[0.05,0,0],[],...
+  'init_nasion',[0,0.1,0],[],...
+});
+
+excl_tags = {'ContainerPath','FSContainerPath','transfile',...
+  'surf_fstem','iskull_fstem','oskull_fstem','forceflag',...
+  'initflag','fitflag','niters','fit_card_flag','init_card_flag'};
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% load ContainerInfo
+[ContainerInfo,errcode] = MMIL_Load_ContainerInfo(parms.ContainerPath);
+if errcode
+  error('failed to load ContainerInfo.mat in %s',parms.ContainerPath);
+end;
+
+if isempty(parms.FSContainerPath)
+  parms.FSContainerPath = mmil_getfield(ContainerInfo,'FSContainerPath',[]);
+end;
+if isempty(parms.FSContainerPath)
+  error('FSContainerPath unspecified');
+end; 
+
+datafile = ContainerInfo.input_data_files{1};
+[tpath,tstem,text] = fileparts(datafile);
+if ~exist(datafile,'file')
+  error('data file %s not found',datafile);
+end;
+
+if mmil_isrelative(parms.surf_fstem)
+  parms.surf_fstem = [parms.FSContainerPath '/bem/' parms.surf_fstem];
+end;
+surffile = sprintf('%s.tri',parms.surf_fstem);
+if ~exist(surffile,'file')
+  error('surface file %s not found',surffile);
+end;
+
+hptsfile = sprintf('%s/%s.hpts',parms.ContainerPath,tstem);
+if ~exist(hptsfile,'file') || parms.forceflag
+  ts_extract_hpts_from_fiff(datafile,hptsfile);
+end;
+
+if mmil_isrelative(parms.iskull_fstem)
+  parms.iskull_fstem = [parms.FSContainerPath '/bem/' parms.iskull_fstem];
+end;
+parms.iskullfile = sprintf('%s.tri',parms.iskull_fstem);
+if ~exist(parms.iskullfile,'file')
+  fprintf('%s: WARNING: inner skull file %s not found\n',...
+    mfilename,parms.iskullfile);
+  parms.iskullfile = [];
+end;
+
+if mmil_isrelative(parms.oskull_fstem)
+  parms.oskull_fstem = [parms.FSContainerPath '/bem/' parms.oskull_fstem];
+end;
+parms.oskullfile = sprintf('%s.tri',parms.oskull_fstem);
+if ~exist(parms.oskullfile,'file')
+  fprintf('%s: WARNING: outer skull file %s not found\n',...
+    mfilename,parms.oskullfile);
+  parms.oskullfile = [];
+end;
+
+if mmil_isrelative(parms.transfile)
+  parms.transfile = [parms.ContainerPath '/' parms.transfile];
+end;
+intransfile = parms.transfile;
+[tpath,tstem,text] = fileparts(intransfile);
+outtransfile = sprintf('%s/%s-new%s',tpath,tstem,text);
+
+tags = setdiff(fieldnames(parms),excl_tags);
+args = mmil_parms2args(parms,tags);
+
+if parms.initflag
+  ts_pointreg(hptsfile,surffile,...
+    'intransfile',intransfile,'outtransfile',outtransfile,...
+    'fitflag',parms.fitflag,...
+    'niters',parms.niters,...
+    'fit_card_flag',parms.fit_card_flag,...
+    'init_card_flag',parms.init_card_flag,...
+    args{:});
+else
+  ts_pointreg(hptsfile,surffile,...
+    'intransfile',intransfile,'outtransfile',outtransfile,args{:});
+end;
+

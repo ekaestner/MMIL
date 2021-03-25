@@ -1,0 +1,3 @@
+1. ssh to ip84
+2. create directory for working copy, cd into it
+3. check out a working copy: svn co file:///var/svn/repos/mmil

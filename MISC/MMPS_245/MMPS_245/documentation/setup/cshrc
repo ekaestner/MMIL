@@ -1,0 +1,80 @@
+############################################################################
+#   Default MMIL cshrc file
+#   Created 2010-04-30 tcooper
+#   Master Copy Stored at /usr/pubsw/scripts/cshrc
+############################################################################
+
+############################################################################
+### Default software/script locations
+setenv PUBSW /usr/pubsw        ### Override the default pubsw location for
+                               ### ALL shells here *NOT RECOMMENDED*
+setenv PUBSH /usr/pubsw
+
+############################################################################
+### Default path additions
+set addpathlist = ( \
+~/bin \
+./ \
+)
+foreach dir ( $addpathlist )
+  if ("$path" !~ *$dir*) set path = ($dir $path)
+end
+unset addpathlist dir
+
+
+############################################################################
+### common shell variables
+set system=`hostname`       # name of this system.
+set cpu=`uname -m`
+set release=`cat /etc/redhat-release`
+limit coredumpsize 0
+#set prompt = "${system}:${USER}[\!] "
+set history = 200
+set ignoreeof
+set savehist = (1000 merge)
+
+
+############################################################################
+### common aliases
+alias h 'history'
+alias ncs 'nedit ~/.cshrc &'
+alias cs 'source ~/.cshrc'
+alias gterm 'gnome-terminal &'
+alias gt3 'gterm; gterm; gterm'
+alias smc 'ssh -Y mmilcluster'
+alias smc2 'ssh -Y mmilcluster2'
+alias smc3 'ssh -Y mmilcluster3'
+alias smc4 'ssh -Y mmilcluster4'
+alias smc5 'ssh -Y mmilcluster5'
+alias cl 'clear'
+alias fixvid '/bin/chmod a+rw /dev/nvidia*'
+alias countfiles 'du -a \!:1 | cut -d/ -f2 | sort | uniq -c | sort -nr'
+
+
+############################################################################
+### custom aliases
+if ( -e ~/.alias ) then
+  source ~/.alias
+endif
+
+
+############################################################################
+### Setup standard software environment.
+### Override by setting $PUBSH to point somewhere else or specify path to
+### specific setup file.
+source $PUBSH/bin/SetUpFreeSurfer.csh 450
+source $PUBSH/bin/SetUpMatlab.csh R2007a
+source $PUBSH/bin/SetUpAFNI.csh
+source $PUBSH/bin/SetUpFSL.csh
+source $PUBSH/bin/SetUpMMPS.csh 213
+#uncomment the following line if you use mmilcluster
+#source $PUBSW/bin/SetUpMMPS_mc1.csh 213
+
+############################################################################
+### Remove duplicates from path WITHOUT reording
+set path=`echo $path | awk '{for(i=1;i<=NF;i++){if(!($i in a)){a[$i];printf s$i;s=" "}}}'`
+
+
+############################################################################
+### Set the default umask for file permissions 
+umask 002

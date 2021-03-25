@@ -1,0 +1,85 @@
+How to resolve Subversion Conflicts
+
+\b0\fs24 \cf0 If there\'92s more than one person working on a project, chances are (although slim) that at some point two developers work on the same piece of code and check it in. To clarify, let me give you an example.\
+The repository is currently at revision 5 and contains a file named \'91README\'92. Revision 5 of that file contains a single line: \'91This is a README file\'92.\
+Now, both you and your colleague check out r5 and edit README. Your colleague changes the line to \'91This is a documentation file\'92 and commits it back to the repository, which is bumped to revision 6.\
+You\'92re an island, and have no clue about the new revision being created. You just happily write away and change the README file to: \'91This is fun stuff!\'92.\
+When you commit your changes, you\'92ll get an error message:\
+\pard\pardeftab720\ql\qnatural
+
+\f1 \cf0 $ svn commit -m "Updated README"\
+Sending    README\
+Transmitting file data .svn: Commit failed (details follow):\
+svn: Out of date: '/myproject/README'\
+\pard\pardeftab720\sa240\ql\qnatural
+
+\f0 \cf0 This is good. Subversion has detected that the file you want to commit has changed since you last updated it. Update the file to get it up-to-date again.\
+\pard\pardeftab720\ql\qnatural
+
+\f1 \cf0 $ svn update\
+C   README\
+Updated to revision 6.\
+\pard\pardeftab720\sa240\ql\qnatural
+
+\f0 \cf0 The \'91C\'92 indicates there is a conflict with the README file, and Subversion does not know how to solve this. You are called in to help.\
+If you now take a look at README, you\'92ll notice that there are several markers that indicate what parts of the code are conflicting. You can easily see what you changed, and what has changed in the repository:\
+\pard\pardeftab720\ql\qnatural
+
+\f1 \cf0 >>>>>> .r6\
+\pard\pardeftab720\sa280\ql\qnatural
+
+\f0\b\fs28 \cf0 What are your options?\
+\pard\pardeftab720\sa240\ql\qnatural
+
+\b0\fs24 \cf0 You have three options for resolving the conflict. Whatever you choose, make sure you confer with your colleague on the matter.\
+\pard\pardeftab720\sa240\ql\qnatural
+
+\i \cf0 1. Scrap your changes, and go with the current work from your colleague.
+\i0 \
+This is the easiest solution. All you have to do is revert the changes you made, and update your working copy:\
+\pard\pardeftab720\ql\qnatural
+
+\f1 \cf0 $ svn revert README\
+Reverted 'README'\
+$ svn update README\
+At revision 6.\
+\pard\pardeftab720\sa240\ql\qnatural
+
+\f0\i \cf0 2. Keep your changes, and dump whatever your colleague did.
+\i0 \
+Performing a simple \'91ls\'92 will show you that there are four files related to this conflict:\
+\pard\tx220\tx720\pardeftab720\li720\fi-720\ql\qnatural
+\ls1\ilvl0\cf0 {\listtext	\'95	}README \'96 the original with markers\
+{\listtext	\'95	}README.mine \'96 your version\
+{\listtext	\'95	}README.r5 \'96 the original your worked with\
+{\listtext	\'95	}README.r6 \'96 the most update version from your colleague\
+\pard\pardeftab720\sa240\ql\qnatural
+\cf0 To check in your changes, copy your version over the original and tell Subversion you have resolved the conflict.\
+\pard\pardeftab720\ql\qnatural
+
+\f1 \cf0 $ cp README.mine README\
+$ svn resolved README\
+Resolved conflicted state of 'README'\
+\pard\pardeftab720\sa240\ql\qnatural
+
+\f0 \cf0 The \'91resolved\'92 command will clean up all the special files that were generated.\
+\pard\pardeftab720\sa240\ql\qnatural
+
+\i \cf0 3. Merge both version to a new version
+\i0 \
+If you choose this option, you will have to manually edit README. Remove the markers and add whatever you need to add here.\
+Subversion won\'92t let you commit this file, so you\'92ll have to mark it as \'91resolved\'92 as we saw during option 2:\
+\pard\pardeftab720\ql\qnatural
+
+\f1 \cf0 $ svn resolved README\
+Resolved conflicted state of 'README'\
+\pard\pardeftab720\sa240\ql\qnatural
+
+\f0\i \cf0 Before you rush ahead
+\i0 \
+With option 1, you\'92re done. With options 2 and 3 there is some more work to do, because you didn\'92t commit your changes yet. Because we\'92re dealing with conflicts here, I recommend you don\'92t just commit to your repository, but follow a slightly different route.\
+First, update your working copy (again) to make sure you have all the latest, and are not trying to check in any more conflicting code. If any conflicts pop-up, fix these first.\
+Now, run your tests to make sure everything is working as it should.\
+When all is clear, commit your changes to your repository as you normally would.\
+Done. Problem solved.\
+}

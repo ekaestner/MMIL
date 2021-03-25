@@ -1,0 +1,24 @@
+Instructions to accompany the following example:
+---------------------------------------------------------
+	Interactive_PLV_example.mat
+
+---------------------------------------------------------
+Procedure
+---------------------------------------------------------
+1. Get data
+	option 1: Load data from file (File => Load data)
+	option 2: Grab data from base workspace (File => Grab data)
+2. Load example (File => Load study)
+3. Adjust parameters (ex. title, prefix, frequencies, etc)
+4. Select dataset and click Run
+5. View phase-locking images (jpegs) using syncview
+	- Tools => Plot => syncview
+	- Select layout files created by ts_syncplot
+	- Select ALL jpegs created by ts_syncplot
+	- Click load
+	- Use left figure to control reference channel for PLV image on right
+	
+Note: rename dataset by right-clicking in dataset list
+
+---------------------------------------------------------
+Prepared on 13-Apr-2010 by Jason Sherfey

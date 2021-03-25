@@ -1,0 +1,41 @@
+# Makefile for DICOM enabled autor2
+
+OFFIS_ROOT = /home/suabe/tool/dcmtk-3.5.3
+
+CFLAGS = -O2
+CXXFLAGS= -w -O2 -Wall -Wunused
+CXX_DEFINES = -DHAVE_CONFIG_H  -DNDEBUG -D_REENTRANT -D_XOPEN_SOURCE_EXTENDED -D_XOPEN_SOURCE=500 -D_BSD_SOURCE -D_BSD_COMPAT -D_OSF_SOURCE -D_POSIX_C_SOURCE=199506L
+INCLUDES = -I. -I$(OFFIS_ROOT)/dcmdata/include -I$(OFFIS_ROOT)/config/include -I$(OFFIS_ROOT)/ofstd/include
+LDFLAGS = -L$(OFFIS_ROOT)/dcmdata/libsrc -L$(OFFIS_ROOT)/ofstd/libsrc -L/home/suabe/zlib-1.2.3
+LIBS=$(LDFLAGS) -ldcmdata -lofstd  -lz -lm -lpthread
+
+SOURCEPATH = /home/suabe/work/cooper/program/c_src/ADNI_Executable
+
+C_FILES = 
+
+C_OBJS = 
+
+CC_FILES = $(SOURCEPATH)/converter_dcm2mgh.cc \
+	$(SOURCEPATH)/readmgh.cc \
+	$(SOURCEPATH)/writemgh.cc \
+	$(SOURCEPATH)/dcm2mgh.cc  \
+	$(SOURCEPATH)/convert_ADNI_DICOM2RAS.cc  \
+	$(SOURCEPATH)/matrixCalculation.cc
+
+all: cobjs ccobjs program
+
+cobjs: $(C_OBJS)
+
+ccobjs: 
+	c++ $(CXXFLAGS) $(CXX_DEFINES) $(INCLUDES) -c $(CC_FILES)
+program:
+	c++ -static $(CXXFLAGS) $(CXX_DEFINES) \
+	converter_dcm2mgh.o \
+	readmgh.o \
+	writemgh.o \
+	dcm2mgh.o \
+	convert_ADNI_DICOM2RAS.o \
+	matrixCalculation.o \
+	$(C_OBJS) \
+	-o $(SOURCEPATH)/dcm2mgh $(LIBS)
+

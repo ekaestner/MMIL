@@ -1,0 +1,5 @@
+#!/bin/csh
+
+set h_vmem = '2.0G'
+
+qmatjobs_memlimit_lowdisk2 $1 $h_vmem

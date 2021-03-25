@@ -1,0 +1,11 @@
+tkmedit started: Fri Mar 13 21:22:43 2009
+
+	tkmedit FREESURFERRECON_NTNU_PRE_332_20030602.183325.625000_1 brainmask.mgz lh.white -aux T1.mgz -aux-surface rh.white -segmentation mri/aseg.mgz /space/monkeys/1/pubsw/packages/freesurfer/RH4-x86_32-R302/FreeSurferColorLUT.txt 
+
+$Id: tkmedit.c,v 1.274.2.3 2006/04/15 00:13:10 nicks Exp $ $Name: stable3 $
+Set user home dir to /home/mmilrec/matlab/REC_Stream
+Set subject home dir to /home/mmilrec/data_NTNU_PRE/FSContainers/FREESURFERRECON_NTNU_PRE_332_20030602.183325.625000_1
+Using interface file /space/monkeys/1/pubsw/packages/freesurfer/RH4-x86_32-R302/lib/tcl/tkmedit.tcl
+Tcl: Successfully parsed tkmedit.tcl
+Tcl: Successfully parsed tkm_functional.tcl
+Program terminated successfully.

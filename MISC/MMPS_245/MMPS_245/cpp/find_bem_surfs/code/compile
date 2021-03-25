@@ -1,0 +1,7 @@
+g++ -O3 -o find_bem_surfs find_bem_surfs.cpp mri.cpp mesh.cpp deterministic.cpp
+
+g++ -o triFileDecimator triFileDecimator.cpp
+
+cp find_bem_surfs triFileDecimator ~/bin
+
+

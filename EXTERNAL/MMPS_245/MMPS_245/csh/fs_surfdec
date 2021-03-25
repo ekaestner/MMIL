@@ -1,0 +1,134 @@
+#!/bin/csh -f
+# surfdec -- generate dec file (decimated surface vertices) with tksurfer
+
+## initialize variables ##
+set name = ()
+set hemi = ()
+set surf = white
+set spacing = 7
+set outstem = ""
+set outdir = "."
+
+if($#argv < 2) then
+  goto usage_exit;
+  exit 1;
+endif
+
+## parse and check params ##
+goto parse_args;
+parse_args_return:
+
+goto check_params;
+check_params_return:
+
+###############################################################################
+
+if ($outstem == "") then
+  set outfile = $outdir/$hemi'_'$surf'_'$spacing'.dec'
+else
+  set outfile = $outdir/$outstem'_'$hemi'_'$surf'_'$spacing'.dec'
+endif
+
+# create tcl script
+set pidlist = `ps | grep surfdec`
+set pid = $pidlist[1]
+set out = tempsurf.tcl.$pid
+rm -f $out
+
+if ($spacing > 1) then
+  echo "subsample_dist $spacing" >> $out
+else
+  echo "subsample_orient $spacing" >> $out
+endif
+echo "set dec $outfile" >> $out
+echo "write_binary_decimation" >> $out
+echo "exit" >> $out
+
+tksurfer -$name $hemi $surf -tcl $out
+rm $out
+
+exit 0;
+###############################################
+
+############--------------##################
+parse_args:
+set cmdline = ($argv);
+
+set name = $argv[1]; shift;
+set hemi = $argv[1]; shift;
+
+while( $#argv != 0 )
+
+  set flag = $argv[1]; shift;
+  
+  switch($flag)
+
+    case "-surf":
+      if ( $#argv == 0) goto arg1err;
+      set surf = $argv[1]; shift;
+      breaksw
+
+    case "-spacing"
+      if ( $#argv == 0) goto arg1err;
+      set spacing = $argv[1]; shift;
+      breaksw
+
+    case "-outstem"
+      if ( $#argv == 0) goto arg1err;
+      set outstem = $argv[1]; shift;
+      breaksw
+
+    case "-outdir"
+      if ( $#argv == 0) goto arg1err;
+      set outdir = $argv[1]; shift;
+      breaksw
+
+    default:
+      echo ERROR: Flag $flag unrecognized. 
+      echo $cmdline
+      exit 1
+      breaksw
+  endsw
+
+end
+
+goto parse_args_return;
+############--------------##################
+
+############--------------##################
+check_params:
+
+  if ("$hemi" != "rh" && "$hemi" != "lh") then
+    echo "ERROR: hemi must be rh or lh"
+    exit 1;
+  endif
+
+  if ($#name == 0) then
+    goto usage_exit;
+  endif
+
+goto check_params_return;
+############--------------##################
+
+############--------------##################
+arg1err:
+  echo "ERROR: flag $flag requires one argument"
+  exit 1
+############--------------##################
+
+############--------------##################
+usage_exit:
+  echo " "
+  echo "USAGE: fs_surfdec <subj> <hemi> [options]"
+  echo " "
+  echo "Required Arguments:";
+  echo "  subj      : subject name"
+  echo "  hemi      : hemisphere"
+  echo " "
+  echo "Optional Arguments:";
+  echo "  -surf      surface              : [$surf]"
+  echo "  -spacing   spacing (mm)         : [$spacing]"
+  echo "  -outstem   output file stem     : [$outstem]"
+  echo "  -outdir    output dir           : [$outdir]"
+  echo " "
+exit 1;

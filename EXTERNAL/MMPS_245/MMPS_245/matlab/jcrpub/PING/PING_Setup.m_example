@@ -1,0 +1,3 @@
+PING_tmp_dir = '/space/md10/10/data/MMILDB/PINGN/tmp';
+PING_scratch_dir = sprintf('%s/tmp',PING_tmp_dir);
+PING_Exclude_file = '/tmp/exclude_list.txt';

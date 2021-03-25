@@ -1,0 +1,454 @@
+#! /usr/bin/perl -w
+#
+# rendall : creates and runs tksurfer tcl script
+#           to render and save tifs or rgb's for all w or mgh files
+#
+# Created:   08/23/10 by Don Hagler
+# Last Mod:  01/18/13 by Don Hagler
+#
+
+use Cwd;
+
+#$cmd = "tksurfer_offscreen";
+$cmd = "tksurfer";
+
+# set defaults
+$tclscript = "tempsurf.tcl.$$";
+# note: $$ = pid of perl process running script
+$name = "unknown";
+$ext = "mgh";
+$indir = cwd;
+$outdir = cwd;
+$surf = "inflated";
+$hemi = "both";
+$fthresh = 0.0;
+$fslope = 1.5;
+$fmid = 1.5;
+$fadef = 0.7;
+$offset = 0.2;
+$cvfact = 1.5;
+$truncflag =0;
+$smooth = 5;
+$scale = 1.0;
+$view = "lat";
+$cust_rot_x = 0;
+$cust_rot_y = 0;
+$cust_rot_z = 0;
+$polar = 0;
+$eccen = 0;
+$fieldsign = 0;
+$flat = 0;
+$angoffset = -1.0;
+$angcycles = 0;
+$patch = "occip";
+$scalebarflag = 0;
+$colscalebarflag = 0;
+$offscreenflag = 0;
+$tif_flag = 1;
+
+$USAGE = "Usage: rendall name [options]\n".
+         "       type rendall -h for help\n";
+
+sub help {
+    print <<"HELP"; exit 0;
+
+Usage: rendall <name> [options]
+  Required Arguments:
+    name       subject name
+
+  Optional Arguments:
+    -ext       [mgh]        input file extension (w or mgh)
+    -indir     [.]          input directory
+    -outdir    [.]          output directory
+    -surf      [inflated]   render surface
+    -hemi      [both]       hemisphere (rh, lh, or both)
+    -fthresh   [0.0]        stats threshold
+    -fslope    [1.5]        stats slope
+    -fmid      [1.5]        stats midpoint
+    -fadef     [0.7]        fade factor
+    -offset    [0.2]        background offset
+    -cvfact    [1.5]        curvature contrast factor
+    -trunc                  truncate negative values    
+    -angoffset              angle offset (polar or eccen only)
+               [0 (pol-rh) or 0.5 (pol-lh) or 0.83 (ecc)]
+    -cycles                 angle cycles (polar or eccen only)
+               [2.2 (pol) or 1 (ecc)]  
+    -smooth    [5]          smoothing steps
+    -scale     [1.0]        zoom factor
+    -view      [lat]        lat,med,ven,pos,dor
+    -rotx      [0]          x rotation (done first)
+    -roty      [0]          y rotation (done second)
+    -rotz      [0]          z rotation (done third)
+    -polar                  polar angle complex data
+    -eccen                  eccentricity complex data
+    -fieldsign              fieldsign data
+    -flat                   render on flattened surface
+    -patch     [occip]      which flattened patch
+    -scalebar               display cm scale bar
+    -colscalebar            display color scale bar
+    -offscreen              render offscreen
+    -tif_flag [1]           save images as tifs instead of rgb
+    -h                      prints this message and quits
+
+  This program will render and save a tif or rgb file for each w or mgh file in indir
+      
+HELP
+}
+
+# parse arguments
+if ($#ARGV < 0) {die "$USAGE";}
+for ($i = 0; $i <= $#ARGV; $i++)
+{
+	if ($ARGV[$i] =~ /^-/) {
+		@opt = split (/-/,$ARGV[$i]);	# split the argument into "-" and "opt"
+		shift (@opt);                   # get rid of the initial space
+      if ($opt[0] eq 'h' || $opt[0] eq 'H') { help; }
+      elsif ($opt[0] eq 'ext') {$i++; $ext = $ARGV[$i];}
+      elsif ($opt[0] eq 'indir') {$i++; $indir = $ARGV[$i];}
+      elsif ($opt[0] eq 'outdir') {$i++; $outdir = $ARGV[$i];}
+      elsif ($opt[0] eq 'surf') {$i++; $surf = $ARGV[$i];}
+      elsif ($opt[0] eq 'hemi') {$i++; $hemi = $ARGV[$i];}
+      elsif ($opt[0] eq 'fthresh') {$i++; $fthresh = $ARGV[$i];}
+      elsif ($opt[0] eq 'fslope') {$i++; $fslope = $ARGV[$i];}
+      elsif ($opt[0] eq 'fmid') {$i++; $fmid = $ARGV[$i];}
+      elsif ($opt[0] eq 'fadef') {$i++; $fadef = $ARGV[$i];}
+      elsif ($opt[0] eq 'offset') {$i++; $offset = $ARGV[$i];}
+      elsif ($opt[0] eq 'cvfact') {$i++; $cvfact = $ARGV[$i];}
+      elsif ($opt[0] eq 'trunc') {$truncflag = 1;}
+      elsif ($opt[0] eq 'angoffset') {$i++; $angoffset = $ARGV[$i];}
+      elsif ($opt[0] eq 'cycles') {$i++; $angcycles = $ARGV[$i];}
+      elsif ($opt[0] eq 'smooth') {$i++; $smooth = $ARGV[$i];}
+      elsif ($opt[0] eq 'scale') {$i++; $scale = $ARGV[$i];}
+      elsif ($opt[0] eq 'view') {$i++; $view = $ARGV[$i];}
+      elsif ($opt[0] eq 'rotx') {$i++; $cust_rot_x = $ARGV[$i];}
+      elsif ($opt[0] eq 'roty') {$i++; $cust_rot_y = $ARGV[$i];}
+      elsif ($opt[0] eq 'rotz') {$i++; $cust_rot_z = $ARGV[$i];}
+      elsif ($opt[0] eq 'polar') {$polar = 1;}
+      elsif ($opt[0] eq 'eccen') {$eccen = 1;}
+      elsif ($opt[0] eq 'fieldsign') {$fieldsign = 1;}
+      elsif ($opt[0] eq 'flat') {$flat = 1;}
+      elsif ($opt[0] eq 'patch') {$i++; $patch = $ARGV[$i];}
+      elsif ($opt[0] eq 'scalebar') {$scalebarflag = 1;}
+      elsif ($opt[0] eq 'colscalebar') {$colscalebarflag = 1;}
+      elsif ($opt[0] eq 'offscreen') {$offscreenflag = 1;}
+      else { die "Unknown option -$opt[0]\n";}
+  } else {
+    if($i==0) {
+      $name = $ARGV[$i];
+    } else {
+      die "Unknown option $ARGV[$i]\n";
+    }
+  }
+}
+
+# check args
+if ($name eq "unknown") {print "Must supply subject name ... quitting\n"; exit;}
+opendir(DIR, "$outdir") || die "Cannot open outdir $outdir: $!";
+closedir(DIR);
+if ("$hemi" eq "rh") {
+  @hemilist = ("rh");
+} elsif ("$hemi" eq "lh") {
+  @hemilist = ("lh")
+} elsif ("$hemi" eq "both") {
+  @hemilist = ("rh","lh")
+} else {
+  print "hemi must be rh, lh, or both\n";
+  exit;
+}
+
+if ($angcycles == 0) {
+  if ($polar == 1) {
+    $angcycles = 2.2;
+  } else {
+    $angcycles = 1;
+  }
+}
+
+foreach $hemi (@hemilist) {
+  opendir(DIR, "$indir") || die "Cannot open indir $indir: $!";
+  if ($fieldsign == 1) {
+    @wfiles = grep /$hemi/, (grep !/^\.\.?$/, readdir DIR);
+    @iwfiles = grep /$hemi.fm$/, @wfiles;
+    @wfiles = grep /$hemi.fs$/, @wfiles;
+#    print "wfiles = @wfiles\n";
+#    print "iwfiles = @iwfiles\n";
+    if ($#wfiles != $#iwfiles) {
+      die "Unequal numbers of fieldsign and mask files ... quitting\n";
+    }
+  } elsif ($polar == 1 || $eccen == 1) {
+    @wfiles = grep /$hemi.$ext$/, (grep !/^\.\.?$/, readdir DIR);
+    @iwfiles = grep /_i-$hemi.$ext/, @wfiles;
+    @wfiles = grep /_r-$hemi.$ext/, @wfiles;
+    if ($#wfiles != $#iwfiles) {
+      die "Unequal numbers of real and imaginary files ... quitting\n";
+    }
+  } else {
+    @wfiles = grep /\-$hemi.$ext$/, (grep !/^\.\.?$/, readdir DIR);
+#    print "wfiles = @wfiles\n";
+  }
+  if ($#wfiles < 0) {
+    if ($fieldsign == 1) {
+      print "No $hemi fieldsign files found in $indir/\n";
+    } else {
+      print "No $hemi $ext files found in $indir/\n";
+    }
+    next;
+  }
+  closedir(DIR);
+
+  # strip off endings
+  if ($fieldsign == 1) {
+    @filestems = @wfiles;
+    grep s/-$hemi.fs//, @filestems;
+#    print "filestems = @filestems\n";
+  } elsif ($polar == 1 || $eccen == 1) {
+    @filestems = @wfiles;
+    grep s/_r-$hemi.$ext//, @filestems;
+  } else {
+    @filestems = @wfiles;
+    grep s/-$hemi.$ext//, @filestems;
+#    print "filestems = @filestems\n";
+  }
+
+  open(OUTFILE, ">$tclscript") || die "Cannot create temporary tcl script: $!";
+  print(OUTFILE
+    "set overlayflag 1\n".
+    "set surfcolor 1\n".
+    "set avgflag 1\n".
+    "set fthresh $fthresh\n".
+    "set fslope $fslope\n".
+    "set fmid $fmid\n".
+    "set fadef $fadef\n".
+    "set offset $offset\n".
+    "set cvfact $cvfact\n".
+    "set truncphaseflag $truncflag\n".
+    "set flatzrot 0\n".
+    "set flatscale 1.0\n".
+    "set smoothsteps $smooth\n".
+    "set scalebarflag $scalebarflag\n".
+    "set colscalebarflag $colscalebarflag\n"
+  );
+
+  if ($fieldsign == 1) {
+    print(OUTFILE
+      "set complexvalflag 0\n".
+      "set autoscaleflag 1\n".
+      "set colscale 9\n".
+      "set angle_offset 0.0\n".
+      "set angle_cycles 1.0\n"
+    );
+  } elsif ($polar == 1) {
+    print(OUTFILE
+      "set complexvalflag 1\n".
+      "set colscale 0\n".
+      "set angle_cycles $angcycles\n"
+    );
+    if ($hemi eq "rh") {
+      if ($angoffset == -1) {
+        print(OUTFILE "set angle_offset 0.0\n");
+      } else {
+        print(OUTFILE "set angle_offset $angoffset\n");
+      }
+      print(OUTFILE "set revphaseflag 0\n");
+    } else {
+      if ($angoffset == -1) {
+        print(OUTFILE "set angle_offset 0.5\n");
+      } else {
+        print(OUTFILE "set angle_offset $angoffset\n");
+      }
+      print(OUTFILE "set revphaseflag 1\n");
+    }
+  } elsif ($eccen == 1) {
+    print(OUTFILE
+      "set complexvalflag 1\n".
+      "set colscale 0\n".
+      "set angle_cycles $angcycles\n"
+    );
+    if ($angoffset == -1) {
+      print(OUTFILE "set angle_offset 0.83\n");
+    } else {
+      print(OUTFILE "set angle_offset $angoffset\n");
+    }
+    print(OUTFILE "set revphaseflag 0\n");
+  } else {
+    print(OUTFILE
+      "set complexvalflag 0\n".
+      "set colscale 1\n".
+      "set angle_offset 0.0\n".
+      "set angle_cycles 1.0\n"
+    );
+  }
+
+  if ($flat == 1) {
+    print(OUTFILE
+      "setfile patch $hemi.$patch.patch.flat\n".
+      "read_binary_patch\n"
+    );
+  } else {
+    if ($view eq "lat") {
+      $rot_x = 0;
+      $rot_y = 0;
+      $rot_z = 0;
+    } elsif ($view eq "med") {
+      $rot_x = 0;
+      $rot_y = 180;
+      $rot_z = 0;
+    } elsif ($view eq "ven") {
+      $rot_x = 90;
+      $rot_y = 0;
+      $rot_z = 0;
+    } elsif ($view eq "pos") {
+      $rot_x = 0;
+      if ($hemi eq "rh") {
+        $rot_y = 270;
+      } else {
+        $rot_y = 90;
+      }
+      $rot_z = 0;
+    } elsif ($view eq "dor") {
+      $rot_x = 270;
+      if ($hemi eq "rh") {
+        $rot_z = 90;
+      } else {
+        $rot_z = 270;
+      }
+      $rot_y = 0;
+    }
+  }
+  print(OUTFILE "read_binary_curv\n");
+  if ($offscreenflag) {
+    print(OUTFILE "set renderoffscreen 1\n");
+  }
+  print(OUTFILE
+    "do_lighting_model -1 -1 -1 -1 \$offset\n".
+    "open_window\n"
+  );
+  if ($flat == 0) {
+    print(OUTFILE "make_lateral_view\n");
+    if ($rot_x != 0) {
+      print(OUTFILE "rotate_brain_x $rot_x\n");
+    }  
+    if ($rot_y != 0) {
+      print(OUTFILE "rotate_brain_y $rot_y\n");
+    }
+    if ($rot_z != 0) {
+      print(OUTFILE "rotate_brain_z $rot_z\n");
+    }  
+    if ($cust_rot_x != 0) {
+      print(OUTFILE "rotate_brain_x $cust_rot_x\n");
+      $view = "cus";
+    }  
+    if ($cust_rot_y != 0) {
+      print(OUTFILE "rotate_brain_y $cust_rot_y\n");
+      $view = "cus";
+    }
+    if ($cust_rot_z != 0) {
+      print(OUTFILE "rotate_brain_z $cust_rot_z\n");
+      $view = "cus";
+    }  
+  } else {
+    print(OUTFILE "restore\n");
+    if ($cust_rot_z != 0) {
+      print(OUTFILE "rotate_brain_z $cust_rot_z\n");
+    }  
+  }
+
+  print(OUTFILE "scale_brain $scale\n");
+
+  foreach $filestem (@filestems) {
+    if ($fieldsign == 1) {
+      $fsfile = "$filestem-$hemi.fs";
+      $fmfile = "$filestem-$hemi.fm";
+
+#      print "indir = $indir\n";
+#      print "fsfile = $fsfile\n";
+#      print "fmfile = $fmfile\n";
+      
+      print(OUTFILE
+        "setfile fs $indir/$fsfile\n".
+        "setfile fm $indir/$fmfile\n".
+        "read_fieldsign\n".
+        "read_fsmask\n".
+        "set complexvalflag 0\n"
+      );
+    } elsif ($polar == 1 || $eccen == 1) {
+      $realfile = "$filestem"."_r-$hemi.$ext";
+      $imagfile = "$filestem"."_i-$hemi.$ext";
+      if ($ext eq "w") {
+        print(OUTFILE
+          "setfile val $indir/$imagfile\n".
+          "read_binary_values\n"
+        );
+        if ($smooth != 0) {
+          print(OUTFILE "smooth_val $smooth\n");
+        }
+        print(OUTFILE
+          "shift_values\n".
+          "setfile val $indir/$realfile\n".
+          "read_binary_values\n"
+        );
+        if ($smooth != 0) {
+          print(OUTFILE "smooth_val $smooth\n");
+        }
+      } else {
+        print(OUTFILE
+          "sclv_read_from_volume 0 $indir/$realfile 2\n".
+          "sclv_read_from_volume 1 $indir/$imagfile 2\n"
+        );
+        if ($smooth != 0) {
+          print(OUTFILE
+            "swap_val_val2\n".
+            "smooth_val $smooth\n".
+            "swap_val_val2\n"
+          );
+        }
+      }
+    } else {
+      $realfile = "$filestem-$hemi.$ext";
+      if ($ext eq "w") {
+        print(OUTFILE
+          "setfile val $indir/$realfile\n".
+          "read_binary_values\n"
+        );
+      } else {
+        print(OUTFILE
+          "sclv_read_from_volume 0 $indir/$realfile 2\n"
+        );
+      }
+      if ($smooth != 0) {
+        print(OUTFILE "smooth_val $smooth\n");
+      }
+    }
+    if ($flat == 1) {
+      $imname = "$outdir/$filestem-$hemi-$patch.patch.flat";
+    } else {
+      $imname = "$outdir/$filestem-$hemi-$surf-$view";
+    }
+    if ($tif_flag == 1) {
+      $imname = "$imname.tif";
+      print(OUTFILE
+        "set fthresh $fthresh\n".
+        "set fslope $fslope\n".
+        "set fmid $fmid\n".
+        "redraw\n".
+        "save_tiff $imname\n"
+      );
+    } else {
+      $imname = "$imname.rgb";
+      print(OUTFILE
+        "set fthresh $fthresh\n".
+        "set fslope $fslope\n".
+        "set fmid $fmid\n".
+        "redraw\n".
+        "set rgb $imname\n".
+        "save_rgb\n"
+      );
+    }
+  }
+  print(OUTFILE "exit\n");
+  close(OUTFILE);
+  print("$cmd -$name $hemi $surf -tcl $tclscript\n");
+  system("$cmd -$name $hemi $surf -tcl $tclscript");
+}
+
+exit;

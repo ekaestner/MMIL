@@ -1,0 +1,31 @@
+#!/bin/csh
+
+set batchdir = ~/batchdirs/$1
+set qlen = $2
+cd $batchdir
+mkdir -p pbsout
+#rm pbsout/*
+set joblist = `cat scriptlist.txt`
+
+set q = 1
+
+foreach job ( $joblist )
+  echo $job
+  if (-e pbsout/$job.out) then
+    rm pbsout/$job.out
+  endif
+  if (-e pbsout/$job.err) then
+    rm pbsout/$job.err
+  endif
+  if ($q >= $qlen) then
+    runmatjob $batchdir $job >& pbsout/$job.out 
+    set q = 1
+  else
+    runmatjob $batchdir $job >& pbsout/$job.out &
+    @ q++
+  endif 
+
+  sleep 0.25
+end
+
+

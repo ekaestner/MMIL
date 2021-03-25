@@ -1,0 +1,521 @@
+#!/bin/csh -f
+#
+# ppge
+#
+# Pre-process GE DICOM files and then calls epidwarp.ucsd to perform unwarping
+# 
+#
+# Requires: FSL tools from fMRIB 
+#           bxh tools from Syam Gyadde at Duke BIAC
+#           dicom2 from http://www.barre.nom.fr/medical/dicom2/
+#           AFNI tools from NIH
+#
+# Calls:  epidewarp.ucsd
+#
+# What this script does:
+#  1) Creates BXH headers for DICOM files using BXH tools
+#  2) Determines echo times from DICOM headers
+#  3) Converts field map DICOM to ANALYZE using BXH tools
+#  4) Generates complex AVW volumes and magnitudes for maskng.
+#  5) Determine EPI dwell time from DICOM header
+#  6) Converts EPI DICOM files to ANALYZE
+#  7) Merges ANALYZE into 3D volume (optional)
+#  8) Calls epidewarp.ucsd to unwarp the files
+#  9) Creates an AFNI BRIK (default) and/or AVW VOLUME (optional)
+#
+# Capabilities that are not yet supported:
+#  1. multiple coils
+#
+# Version History
+#  1.0 040727 TTL initial version
+#      040926 TTL adding comments, checking into CVS. 
+#      040927 TTL adding option not to merge  EPI AVW volume on input
+#  2.0 040928 TTL adding (1) AFNI BRIK output option
+#                        (2) option to disable EPI AVW output volume creation
+#  3.0 040929 TTL motion correction options added.
+#  3.1 041001 TTL added nocleanup option
+#  3.2 041015 TTL added phswap option
+#  3.3 050413 GTB added fmap option
+#  3.4 050505 GTB added briktype option
+#  3.5 092705 KL  added Rx info to the output hdr
+#                 (if dicomrx is not in the path, will do nothing)
+# Send Comments/Questions to ttliu@ucsd.edu 
+
+set VERSION = '$Id: ppge,v 1.11 2005/08/11 20:16:12 webtt Exp $';
+set inputargs = ($argv);
+set DateStr = "`date '+%y%m%d%H%M'`"
+
+
+
+set dir1 = (); 
+set dir2 = (); 
+set instem = ();
+set tediff = ();
+set tmpdir = 'tmp';
+set outstem = ();
+set TR = ();
+set merge_in = 1;
+set domask = 1;
+set dobrik = 1;
+set doavwvol = 0;
+set unwarpdir = ();
+set domoco = 1;
+set refnum = ();
+set docleanup = 1;
+
+set reps = 0;
+set nslices = 0;
+set cleanup = 1;
+set PrintHelp = 0;
+set dopmask = 1;
+set dofmask = 1;
+set dounwrap = 1;
+set fmap = ();
+set briktype = 'short';
+
+
+if($#argv == 0) goto usage_exit;
+set n = `echo $argv | grep version | wc -l` 
+if($n != 0) then
+  echo $VERSION
+  exit 0;
+endif
+set n = `echo $argv | grep help | wc -l` 
+if($n != 0) then
+  set PrintHelp = 1;
+  goto usage_exit;
+endif
+
+goto parse_args;
+parse_args_return:
+
+
+goto check_params;
+check_params_return:
+
+
+## Get/Create output directory ##
+set outdir = `dirname $outstem`;
+mkdir -p $outdir
+
+## Get/Create tmp directory ##
+mkdir -p $tmpdir
+if( ! -e $tmpdir) then
+  echo "ERROR: cannot find tmp dir $tmpdir"
+  exit 1;
+endif 
+# rm -rf $tmpdir/*
+
+
+set curdir = `pwd`;
+
+echo " "
+echo " Grabbing TE1 and TE2 Data"
+echo ""
+
+# convert to BXH format
+echo $d1
+echo $d2
+dicom2bxh $curdir/$d1/i* $tmpdir/te1.bxh
+dicom2bxh $curdir/$d2/i* $tmpdir/te2.bxh
+
+
+# determine if there are mag,ph,real,imag or just real,imag
+set nfiles = `ls -1 $tmpdir/te1*bxh | wc -l`
+echo $nfiles
+
+# convert BXH to ANALYZE real and imaginary files
+if ( $nfiles == 2) then
+  set re = 1
+  set im = 2
+else
+ if ($nfiles == 4) then 
+  set re = 3
+  set im = 4
+ else
+  echo "Field map data should be mag,ph,re,im or re,im"
+  exit 1
+ endif
+endif
+
+
+# determine echo times
+if ( $tediff == "auto" ) then
+    set l1 = `grep "<te>" $tmpdir/te1-1.bxh` 
+    set l1  = `echo "$l1" | awk -F\> '{print $2}'`
+    set te1 = `echo "$l1" | awk -F\< '{print $1}'`
+    set l1 = `grep "<te>" $tmpdir/te2-1.bxh` 
+    set l1  = `echo "$l1" | awk -F\> '{print $2}'`
+    set te2 = `echo "$l1" | awk -F\< '{print $1}'`
+    set tediff = ` echo " 1000.0*($te2 - $te1) " | bc -l`; 
+    echo "INFO: tediff = $tediff usec" 
+endif
+
+
+echo "converting bxh to analyze real and imaginary"
+  bxh2analyze $tmpdir/te1-$re.bxh $tmpdir/re_te1_
+  bxh2analyze $tmpdir/te1-$im.bxh $tmpdir/im_te1_
+  bxh2analyze $tmpdir/te2-$re.bxh $tmpdir/re_te2_
+  bxh2analyze $tmpdir/te2-$im.bxh $tmpdir/im_te2_
+
+
+# generate complex AVW volumes
+ avwcomplex -complex  $tmpdir/re_te1_0001.img  $tmpdir/im_te1_0001.img  $tmpdir/cp_te1.img
+ avwcomplex -complex  $tmpdir/re_te2_0001.img  $tmpdir/im_te2_0001.img  $tmpdir/cp_te2.img
+
+# generate magnitudes for masking
+avwcomplex -realabs $tmpdir/cp_te1.img  $tmpdir/mag_te1.img
+avwcomplex -realabs $tmpdir/cp_te2.img  $tmpdir/mag_te2.img
+
+
+
+#Also make up an AFNI brik to act as a geometric parent for to3d later on
+set nslices = `avwinfo $tmpdir/mag_te1.hdr | awk '{if($1 == "dim3") print $2}'`
+set gp = geom
+to3d -prefix $gp -time:tz $nfiles $nslices 1000 alt+z $d1/i*
+mv $gp+orig.HEAD $tmpdir
+mv $gp+orig.BRIK $tmpdir
+set gp = $tmpdir/$gp+orig.HEAD
+
+#determine EPI dwell time
+set f1 = `ls $epidir/*.1 `
+if $#f1 == 0 then
+  set f1 = `ls $epidir/*dcm*`
+  set f1 = $f1[1]
+endif
+set l1 = `dicom2 -t1 $f1 | grep 0043,102C`
+set l1  = `echo "$l1" | awk -F[ '{print $2}'`
+set dwell  = `echo "$l1" | awk -F] '{print $1}'`
+echo ""
+echo "INFO: EPI dwell time = $dwell usec"
+echo ""
+set dratio = `echo "scale = 10; $dwell/$tediff " | bc -l `
+echo " "
+echo "INFO: dratio = $dratio "
+
+echo "Creating bxh for EPI DICOM"
+#note: use the find command since ls i* may not work when the number
+#      of DICOM files is to large (depending on system defaults)
+find $epidir -type f -name 'i*' > $tmpdir/flist
+dicom2bxh --inputsfromfile $tmpdir/flist $tmpdir/epi.bxh
+echo "Converting bxh to ANALYZE "
+bxh2analyze $tmpdir/epi.bxh $tmpdir/avwepi
+
+if($merge_in) then
+    echo "merging epi into volume"
+    avwmerge -t $tmpdir/epivol $tmpdir/avwepi*.img
+endif
+
+
+echo "ppge done"
+echo "calling epidewarp.ucsd"
+
+
+if ($merge_in) then
+    set cmd = (epidewarp.ucsd --mag $tmpdir/mag_te1.img --dph $tmpdir/cp_te1.img --dph2 $tmpdir/cp_te2.img \
+               --epi $tmpdir/epivol.img \
+               --tediff $tediff  --esp $dwell  --vsm $tmpdir/vsm --exfdw $tmpdir/ex \
+               --epidw $outstem --nocleanup )
+else
+    set cmd = (epidewarp.ucsd --mag $tmpdir/mag_te1.img --dph $tmpdir/cp_te1.img --dph2 $tmpdir/cp_te2.img \
+               --sepi $tmpdir/avwepi \
+               --tediff $tediff  --esp $dwell  --vsm $tmpdir/vsm --exfdw $tmpdir/ex \
+               --epidw $outstem --nocleanup )
+endif
+
+if ($domask) then
+      set cmd = "$cmd --outmask";
+endif
+
+if ($domoco == 0) then
+     set cmd = "$cmd --nomoco";
+endif
+
+if($#refnum > 0 ) then
+    set cmd = "$cmd --refnum $refnum"
+endif
+
+if($#unwarpdir > 0 ) then
+    set cmd = "$cmd --unwarpdir $unwarpdir"
+endif
+
+if($#fmap > 0 ) then
+    set cmd = "$cmd --fmap $fmap"
+endif
+
+echo $cmd
+
+$cmd
+
+if ($dobrik) then
+  set reps =  `ls -1 $tmpdir/avwepi*.img | wc -l`
+  set cmd = "to3d -prefix $outstem -geomparent $gp -time:zt $nslices $reps $TR alt+z"
+  if($#briktype > 0 ) then
+    set cmd = "$cmd -datum $briktype"
+  endif
+
+  if($domask) then
+    set cmd = "$cmd  `find $tmpdir/muavwepi*.hdr`"
+  else
+    set cmd = "$cmd  `find $tmpdir/uavwepi*.hdr`"
+  endif
+  
+  $cmd   
+
+  set ff=`which dicomrx`
+  if (-e "$ff") then
+     dicomrx -brik $outstem $f1
+  endif
+endif
+
+if ($#fmap > 0 ) then
+  to3d -prefix $fmap -geomparent $gp $fmap.hdr
+  rm -f $fmap.hdr
+  rm -f $fmap.img
+endif
+
+#avwmerge unwarped volumes together
+if ($doavwvol) then
+    if($domask) then
+    avwmerge -t $outstem.img `find $tmpdir/muavwepi*.img`
+    else
+    avwmerge -t $outstem.img `find $tmpdir/uavwepi*.img`
+    endif
+endif
+
+
+if($docleanup) then
+  if ($domoco == 1) then 
+    mv  $tmpdir/*par $outstem.par 
+  endif
+  
+  echo "Deleting files in $tmpdir"
+  rm -rf $tmpdir
+endif
+
+exit 0;
+
+
+parse_args:
+set cmdline = ($argv);
+while( $#argv != 0 )
+
+  set flag = $argv[1]; shift;
+
+  switch($flag)
+
+    case "-d1":
+      if ( $#argv == 0) goto arg1err;
+      set d1 = $argv[1]; shift;
+      breaksw
+
+    case "-d2":
+      if ( $#argv == 0) goto arg1err;
+      set d2 = $argv[1]; shift;
+      breaksw
+
+
+    case "-i":
+      if ( $#argv == 0) goto arg1err;
+      set epidir = $argv[1]; shift;
+      breaksw
+
+    case "-o":
+      if ( $#argv == 0) goto arg1err;
+      set outstem = $argv[1]; shift;
+      breaksw
+      breaksw
+
+    case "-TR":
+      if ( $#argv == 0) goto arg1err;
+      set TR = $argv[1]; shift;
+      breaksw
+      breaksw
+
+    case "-tmpdir":
+      if ( $#argv == 0) goto arg1err;
+      set tmpdir = $argv[1]; shift;
+      breaksw
+
+    case "-tediff":
+      if ( $#argv == 0) goto arg1err;
+      set tediff = $argv[1]; shift;
+      breaksw
+
+    case "-nomerge":
+      set merge_in = 0;
+      breaksw
+
+    case "-nomask":
+      set domask = 0;
+      breaksw
+
+    case "-nobrik":
+      set dobrik = 0;
+      breaksw
+
+    case "-nomoco":
+      set domoco = 0;
+      breaksw
+
+    case "-nocleanup":
+      set docleanup = 0;
+      breaksw
+
+    case "-fmap":
+      if ( $#argv == 0) goto arg1err;
+      set fmap = $argv[1]; shift;
+      breaksw
+
+    case "-refnum":
+      if ( $#argv == 0) goto arg1err;
+      set refnum = $argv[1]; shift;
+      breaksw
+
+    case "-avwvol":
+      set doavwvol = 1;
+      breaksw
+
+    case "-unwarpdir":
+      if ( $#argv == 0) goto arg1err;
+      set unwarpdir = $argv[1]; shift;
+      breaksw
+
+    case "-briktype":
+      if ( $#argv == 0) goto arg1err;
+      set briktype = $argv[1]; shift;
+      breaksw
+
+    default:
+      echo ERROR: Flag $flag unrecognized. 
+      echo $cmdline
+      exit 1
+      breaksw
+  endsw
+
+end
+
+goto parse_args_return;
+############--------------##################
+
+############--------------##################
+check_params:
+
+  if($#d1 == 0) then
+    echo "ERROR: must specify a TE1 directory"
+    exit 1;
+  endif
+
+  if ( ! -e $d1) then
+    echo "ERROR: $d1 does not exist!"
+    exit 1;
+  endif
+
+
+  if($#d2 == 0) then
+    echo "ERROR: must specify a TE2 directory"
+    exit 1;
+  endif
+
+
+  if ( ! -e $d2) then
+    echo "ERROR: $d does not exist!"
+    exit 1;
+  endif
+
+
+  if($#epidir == 0) then
+    echo "ERROR: must specify an input EPI directory"
+    exit 1;
+  endif
+
+
+  if ( ! -e $epidir) then
+    echo "ERROR: $epidir does not exist!"
+    exit 1;
+  endif
+
+
+  if($#outstem == 0) then
+    echo "ERROR: must specify an output stem"
+    exit 1;
+  endif
+
+  if($#TR == 0) then
+    echo "ERROR: must specify TR (msec)"
+    exit 1;
+  endif
+
+
+  if($#tediff == 0) then
+    echo "INFO: tediff set to auto"
+    set tediff = 'auto'
+  endif
+
+
+goto check_params_return;
+############--------------##################
+
+############--------------##################
+arg1err:
+  echo "ERROR: flag $flag requires one argument"
+  exit 1
+############--------------##################
+
+
+usage_exit:
+    echo "Name"
+    echo "     ppge  - preprocesses GE DICOM FILES for unwarping and then"
+    echo "             calls epidewarp.ucsd"
+    echo ""
+    echo "Synopsis"
+    echo "     ppge -d1 <TE1 data dir> -d2 <TE2 data dir> -i<EPI dir> -o <outstem> -TR <TR> -tmpdir <tmpdir> [<options>]"
+    echo ""
+    echo "Required Arguments"
+    echo "     -d1 <TE1 data dir>"
+    echo "     -d2 <TE2 data dir>"
+    echo "     -i <input EPI data dir>"
+    echo "     -o <outstem>"
+    echo "     -TR <TR> in msec"
+    echo ""
+    echo "Optional Arguments"
+    echo "     -tmpdir <tmpdir>:   temporary file directory; default: <current directory>/tmp "
+    echo "     -tediff <tediff>:   TE difference [us]; default: auto"
+    echo "     -unwarpdir <dir>:   unwarping direction = x / y / z / x- / y- / z-, default = y"
+    echo "     -briktype <type>:   BRIK type to create = float/short, default = short"
+    echo "     -nobrik         :   disables default AFNI brik creation" 
+    echo "     -avwvol         :   enables AVW output volume creation"
+    echo "     -fmap           :   enables field map output volume creation"
+    echo "     -nomask         :   disables brain masking of output EPI volume" 
+    echo "     -nomoco         :   disables motion correction of EPI prior to unwarping"
+    echo "     -refnum <refnum>:   Reference image number [0,nframes-1] for motion correction, default is middle image in a series"
+    echo "     -nocleanup      :   disables removal of temporary files"
+    echo "     -nomerge        :   don't merge EPI input into AVW volume (default is to merge and use mcflirt for moco)" 
+    echo "" 
+    echo "Outputs"
+    echo "     <outstem> - unwarped volume filename stem" 
+    echo ""
+    echo "Version"
+    echo "     "$VERSION
+    echo ""
+    echo "Credits"
+    echo "     dicom2 is freeware "
+    echo "     avw tools are part of the FSL library" 
+    echo "     bxh tools were written by Syam Gadde from Duke BIAC"
+    echo ""
+    echo "Reporting Bugs"
+    echo "     Report bugs to ttliu@ucsd.edu"
+    echo ""
+
+
+
+  if($PrintHelp) \
+  cat $0 | awk 'BEGIN{prt=0}{if(prt) print $0; if($1 == "BEGINHELP") prt = 1 }'
+
+exit 1;
+
+
+#---- Everything below here is printed out as part of help -----#
+BEGINHELP
+
+ppge

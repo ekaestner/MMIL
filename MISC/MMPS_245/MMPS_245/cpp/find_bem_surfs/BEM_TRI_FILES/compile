@@ -1,0 +1,2 @@
+g++ -O3 subjectPlotter_ATL.cpp -lglut -lGL -lGLU -lm -L /usr/X11R6/lib/
+

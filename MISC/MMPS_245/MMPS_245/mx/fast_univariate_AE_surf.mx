@@ -1,0 +1,75 @@
+! Rapid User-defined fit approach to Mx Univariate script for twin data correlations matrices
+
+#ngroups 2
+Group1: both kinds of twin pairs
+Data NI=1
+
+Begin Matrices;
+ X Full 1 1 free    			! genetic structure
+ Y Full 1 1 fixed    			! shared environment 
+ Z Full 1 1 free    			! non-shared environment
+ M Full 2 2 					! MZ data matrix
+ D Full 2 2 					! DZ data matrix
+ N full 1 1 					! MZ sample size (number of pairs - 1)
+ O full 1 1 					! DZ sample size (number of pairs - 1)   
+ I iden 2 2
+ U unit 2 2
+ H full 1 1 					! .5
+ T full 1 1 					! 2.0
+End Matrices;
+
+ Matrix H .5
+ Matrix T 4
+ Matrix M file=mzcov1.txt			! MZ data file
+ Matrix D file=dzcov1.txt			! DZ data file
+ Matrix N file=mzn.txt  ! MZ number of pairs file
+ Matrix O file=dzn.txt  ! DZ number of pairs file
+ Matrix X .4					! Start Values
+ Matrix Y 0			      ! Start Values
+ Matrix Z .4					! Start Values
+
+BO -1 1 X 1 1 Y 1 1 Z 1 1  
+
+Begin Algebra;
+ A= X*X';   
+ C= U@(Y*Y') + I@(Z*Z'); 			! This is C and E Combined
+ R= U@A+C;						! MZ cov
+ S= h@(I+U)@A+C;				! DZ cov   
+ F=(
+	 N*(\ln(\det(R)%\det(M)) + \sum(M.(R~))-T)
+	+O*(\ln(\det(S)%\det(D)) + \sum(D.(S~))-T)
+);
+End Algebra;
+
+Compute F;	! log-likelihood of covariance matrices for both groups, summed        
+Option User-defined
+End
+
+Group 2 Summarize results 
+Calculation
+Begin Matrices;
+A comp = A1
+Y Full 1 1 = Y1
+Z Full 1 1 = Z1
+F comp =F1
+End Matrices;
+Begin Algebra;
+ P = \vech(A)_\vech(Y*Y')_\vech(Z*Z')_F ;
+
+End Algebra;
+Option multiple
+
+Option mxP=results.txt
+Option append
+Option format=(4(F10.4,1x))
+End  
+
+! Looping through files 2 through N (N=The number of the last file)
+!#loop $i 2 20000 1			! You have to change N to another number for the script to work
+#loop $i 2 4661 1
+  Matrix 1 M file=mzcov$i`.txt
+  Matrix 1 D file=dzcov$i`.txt
+ End
+#end loop
+
+

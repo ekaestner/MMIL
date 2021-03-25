@@ -1,0 +1,141 @@
+*******************************************************************************
+This README file help you to run the dSPM program developed by
+
+(c) Mingxiong Huang, Ph.D. mxhuang@ucsd.edu
+
+*******************************************************************************
+
+Before runing the program you need to have the following files ready
+
+1) Elekta/Neuromag .fif file contains the averaged MEG dtata
+2) Freesurfer .dip and .dec files for LH and RH, recommanded space in the dec file is 7 mm
+3) .tri file for the inner skull surface in MRI coordinate. It can be created by Freesurfer or SEGLAB
+4) .fif file with Transformation matrix from MRI to MEG (Head) which register the MEG with the MRI (using MRILAB)
+5) the bad channel names, e.g., 2042 1342
+
+**** To start dSPM using BEM forward model and for Elekta/Neuromag VectorView data,
+simply type the following command after the MATLAB prompt: 
+
+>> dSPM_bem_vectorview
+
+**** The program will ask several simple questions. Here is an example of the questions and answers
+
+--------------------------------------------------------------------------
+Name of evoked data set to load (.fif)[]: mxhuang_vectorview_ucsd_100305_som.fif]: 
+Stim Number []: 1
+List bad MEG channel number, e.g. [2042 1342]: 0321 1711] 
+Prestim interval for baseline (ms) [t1 t2]: -100 -10 
+Select 1 if Covariance matrix from average file; 2 if from single trial []: 1 
+SNR of amplitude signal []: 4 
+Name of LH Freesurfer .dip file []: /home/mxhuang/matlab/public_release/mxh_anders_scan-7-lh.dip 
+Name of LH Freesurfer .dec file []: /home/mxhuang/matlab/public_release/mxh_anders_scan-7-lh.dec 
+
+Name of RH Freesurfer .dip file []: /home/mxhuang/matlab/public_release/mxh_anders_scan-7-rh.dip 
+Name of RH Freesurfer .dec file []: /home/mxhuang/matlab/public_release/mxh_anders_scan-7-rh.dec 
+
+Name of .tri file for the inner skull surface in MRI coordinate[]: /home/mxhuang/matlab/public_release/mxhuang_5mm_skull_mesh.tri
+Name of .fif file with Tran from MRI to MEG (Head)[]: /home/mxhuang/matlab/public_release/COR-mxhuang_100305_som_meg_mri.fif 
+File name (.mat) of pre-calculated BEM  (will create one if not exist)[]: /home/mxhuang/matlab/public_release/mxhuang_BEM_linear.mat 
+Select 1 for gradiometers, 2 for magnetometers, 3 for both []: 1 
+Name of output summary file []: test_dSPM_mxh_som_100305_grad 
+--------------------------------------------------------------------------
+
+**** Then a file named "dSPM_vv_bem_default_input" will be created in the current directory. 
+Next time, when you run "dSPM_bem_vectorview", the parameters will be loaded -- it means to save your typing.
+
+
+**** Here is an example of the detault input file "dSPM_vv_bem_default_input":
+
+---------------------------------------------------------------------------
+mxhuang_vectorview_ucsd_100305_som.fif
+ 1
+ 321 1711
+ -100 -10
+ 1
+ 4
+/home/mxhuang/matlab/public_release/mxh_anders_scan-7-lh.dip
+/home/mxhuang/matlab/public_release/mxh_anders_scan-7-lh.dec
+/home/mxhuang/matlab/public_release/mxh_anders_scan-7-rh.dip
+/home/mxhuang/matlab/public_release/mxh_anders_scan-7-rh.dec
+/home/mxhuang/matlab/public_release/mxhuang_5mm_skull_mesh.tri
+/home/mxhuang/matlab/public_release/COR-mxhuang_100305_som_meg_mri.fif
+/home/mxhuang/matlab/public_release/mxhuang_BEM_linear.mat
+ 1
+test_dSPM_mxh_som_100305_grad
+---------------------------------------------------------------------------
+
+line 1: "mxhuang_vectorview_ucsd_100305_som.fif" is the everaged .fif 
+file contains the MEG data
+
+Line 2: "1" is the stimulus number
+
+Line 3: "0321 1711" is the bad channel names
+
+Line 4: "-100 -10" is the prestim interval for baseline correction and diag 
+
+Line 5: "1" is to use the diag element of the averaged pre-stim for noise coviriance
+
+Line 6: "4" means the estimated SNR (amplitude wise)
+
+Line 7-10 are the file names for the dip and dec files for LH and RH
+
+Line 11: is the .tri file name
+
+Line 12: is the .fif file with Transformation matrix from MRI to MEG (Head)
+
+Line 13: is the file name (.mat) of pre-calculated BEM, will create one if not exist  
+
+Line 14: "1" means to us both gradiometers and magnetometers
+
+Line 15: is the summary file name
+
+**** The program will plot the measured and predicted sensor waveforms as well as
+the sqrt(F) for the dSPM for the source space time-courses
+
+**** now you may generate snap shots using "dSPM_template_snap"
+edit this UNIX shell script 
+
+----------------------------------------------------------
+...
+fthresh=4
+fmid=8
+fslope=1
+
+...
+#
+# Times
+#
+lat0=20
+lat1=300
+dlat=10
+snap_lat="20 30 40 50 60 70 80 90 100 110 120 130 140 150 160 170 180 190 200"
+...
+---------------------------------------------------------
+
+
+In UNIX:
+
+1) type "tcsh"
+2) type "mne_setup"
+3) type "setenv SUBJECTS_DIR your_actual_subjects_directory"
+4) type "setenv SUBJECT your_actual_subject_directory" 
+ 
+dSPM_template_snap stc/test_dSPM_mxh_som_100305_grad-
+
+You should get the snap shots in the tif directory
+
+*** The variables in the summary file ("test_dSPM_mxh_som_100305_grad.mat" in the above
+example
+
+sqrt_dSPM_F: sqrt of the F for all dipole time-courses
+sqrt_dSPM_F_left: only for left hemisphere
+sqrt_dSPM_F_right: only for right hemisphere
+
+J_dip_moment_keep: the dipole moment matrix (x y z components)
+
+id_F_sort: index for dipole time-courses sorted form strongest to waekest
+id_fsurfer_vertex: index for free surfer vertex, sorted from stronest to 
+                   weakest, "1" for LH, "2" for RH
+
+
+

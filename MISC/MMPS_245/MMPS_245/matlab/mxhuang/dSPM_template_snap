@@ -1,0 +1,119 @@
+#!/bin/sh
+#
+# Template script for producing the QuickTime movie
+#
+if [ $# -ne 1 ]
+then
+    echo "usage: $0 <stcstem>"
+    exit 1
+fi
+#
+# PATHs
+#
+if [ ! "$NEWSTREAM_ROOT" ]
+then
+    echo "NEWSTREAM_ROOT environment variable is not set"
+    echo "Did you forget to source the MNE analysis setup script?"
+    exit 1
+fi
+export LD_LIBRARY_PATH=$NEWSTREAM_ROOT/lib
+export EasyMeg=meg_snapshot_om
+#
+if [ ! "$SUBJECTS_DIR" ]
+then
+    echo "SUBJECTS_DIR environment variable is not set"
+    exit 1
+fi
+if [ ! -d $SUBJECTS_DIR ]
+then
+    echo "SUBJECTS_DIR $SUBJECTS_DIR does not exist"
+    exit 1
+fi
+if [ ! "$SUBJECT" ]
+then
+    echo "SUBJECT environment variable is not set"
+    exit 1
+fi
+if [ ! -d $SUBJECTS_DIR/$SUBJECT ]
+then
+    echo "Subject $SUBJECT does not exist under $SUBJECTS_DIR"
+    exit 1
+fi
+#
+# Surface, and view
+#
+surface=inflated
+viewnames="lat med ven"
+hemispheres="lh rh"
+stcstem=`basename $1 -`
+#
+# Check the existense of the surfaces
+#
+surf=$SUBJECTS_DIR/$SUBJECT/surf/lh.$surface
+if [ ! -f $surf ]
+then
+    echo "Surface $surf doesn't exist."\
+    exit 1
+fi
+surf=$SUBJECTS_DIR/$SUBJECT/surf/rh.$surface
+if [ ! -f $surf ]
+then
+    echo "Surface $surf doesn't exist."
+    exit 1
+fi
+#
+# Color scale and smoothing
+#
+#fthresh=5
+#fmid=8
+#fslope=0.2
+#
+fthresh=4
+fmid=8
+fslope=1
+#
+# This is good for currents
+#
+#fthresh=5
+#fmid=10
+#fslope=0.05
+#
+#
+smoothsteps=10
+#
+# Times
+#
+lat0=20
+lat1=300
+dlat=10
+snap_lat="20 30 40 50 60 70 80 90 100 110 120 130 140 150 160 170 180 190 200"
+#
+echo "SUBJECTS_DIR: $SUBJECTS_DIR"
+echo "Subject:      $SUBJECT"
+echo "stcstem:      $stcstem"
+echo "Tresholding:  $fthresh...$fmid slope: $fslope"
+echo "Making snapshot at $snap_lat ms."
+
+mkdir -p tif
+
+echo "======================================="
+for hemi in $hemispheres
+do
+        for viewname in $viewnames
+	do
+	  echo "hemi = $hemi viewname = $viewname"
+	  echo "======================================="
+	  $EasyMeg --subject $SUBJECT \
+		--surface $surface \
+		--viewname $viewname \
+		--hemisphere ${hemi} \
+		--stcfile stc/${stcstem}-${hemi} \
+    	        --output tif/${stcstem}_${fthresh}_${fmid}_${fslope}_${hemi}_${viewname} \
+		--fthresh $fthresh --fmid $fmid --fslope $fslope \
+	        --times $snap_lat --dlat $dlat \
+		--smoothsteps $smoothsteps
+	  echo "======================================="
+	done
+done
+exit 0
+

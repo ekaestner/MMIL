@@ -1,0 +1,16 @@
+#!/bin/csh
+
+set job = $1
+
+if (-e pbsout/$job.out) then
+  rm pbsout/$job.out
+endif
+if (-e pbsout/$job.err) then
+  rm pbsout/$job.err
+endif
+
+touch 'pbsout/.isrunning_'$job
+xterm -e matlab -nosplash -nodesktop -r $job -logfile pbsout/$job.out
+echo "finished" >> pbsout/$job.out
+mv 'pbsout/.isrunning_'$job 'pbsout/.finished_'$job
+

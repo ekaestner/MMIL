@@ -50,7 +50,15 @@ men_val = mean(hld_val);
 max_val = max(abs(men_val-std_val*3),abs(men_val+std_val*3));
 
 %% fsaverage load
-if isfield(cfg,'fsr_dir') && ~isempty(cfg.fsr_dir)
+if isfield(cfg,'hme_wrk') && cfg.hme_wrk == 1
+    lhs_surf_brain.surf_brain =  fs_read_surf(['/home/ekaestne/PROJECTS/EXTERNAL/Misc/fsaverage/surf/' '/' 'lh.pial']);
+    lhs_surf_brain.surf_brain.coords = lhs_surf_brain.surf_brain.vertices;
+    lhs_srf_lbl = fs_read_label(['/home/ekaestne/PROJECTS/EXTERNAL/Misc/fsaverage/label/' '/' 'lh.cortex.label']);
+    
+    rhs_surf_brain.surf_brain =  fs_read_surf(['/home/ekaestne/PROJECTS/EXTERNAL/Misc/fsaverage/surf/' '/' 'rh.pial']);
+    rhs_surf_brain.surf_brain.coords = rhs_surf_brain.surf_brain.vertices;
+    rhs_srf_lbl = fs_read_label(['/home/ekaestne/PROJECTS/EXTERNAL/Misc/fsaverage/label/' '/' 'rh.cortex.label']);
+elseif isfield(cfg,'fsr_dir') && ~isempty(cfg.fsr_dir)
     lhs_surf_brain.surf_brain =  fs_read_surf(['/home/mmilmcd/data/FSRECONS/' cfg.fsr_dir '/' 'surf' '/' 'lh.pial']);
     lhs_surf_brain.surf_brain.coords = lhs_surf_brain.surf_brain.vertices;
     lhs_srf_lbl = fs_read_label(['/home/mmilmcd/data/FSRECONS/' cfg.fsr_dir '/' 'label' '/' 'lh.cortex.label']);
@@ -84,7 +92,7 @@ end
 
 %% Plot
 % Plot
-fig_hld(1) = figure('units','normalized','outerposition',[0 0 1 1],'Visible','off');
+fig_hld(1) = figure('units','pixels','outerposition',[0 0 1800 1200],'Visible','off');
 
 for iH = 1:numel(sph)   
     
@@ -167,7 +175,12 @@ if ~isfield(cfg,'fmr_rng_num') || isempty(cfg.fmr_rng_num)
     cfg.fmr_rng_num = [-roundsd(max_val,3) roundsd(max_val,3)];
 end
 
+if isfield(cfg,'hme_wrk') && cfg.hme_wrk == 1
+
+end
+    
 ax1 = axes('OuterPosition',[0.85 0.20 0.04 0.60],'visible','off','Parent',fig_hld(1));
+
 colormap(ax1,fmr_col_map)
 clb = colorbar('west','Position',[0.92 0.20 0.02 0.60]);
 clb.TickLength = 0;

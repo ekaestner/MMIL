@@ -1,0 +1,1 @@
+The functions in this folder are for correcting the EPI Nyquist ghosting artifacts.

@@ -1,0 +1,98 @@
+#! /usr/bin/perl -w
+
+# rename_files : accepts two patterns as args, finds file names in cwd with that
+# 			  target pattern, renames them with new pattern
+
+sub help {
+    print <<'HELP'; exit 0;
+
+Usage: rename_files targpattern newpattern [-np -h]
+   Required parameters
+      targpattern = pattern in file name(s) you want to rename
+      newpattern = pattern you want to use to rename file(s)
+
+   Optional parameters:
+      -np = do not prompt before renaming files
+      -h = prints this message and quits
+
+   This program will find those files containing targpattern
+      and rename them, replacing targpattern with newpattern
+
+HELP
+}
+
+if ($#ARGV < 0)
+	{die "\nUsage: rename_files targpattern newpattern [-np -h]\n".
+		  "       type rename_files -h for help\n";}
+
+#$targpattern = $ARGV[0];
+#$newpattern = $ARGV[1];
+
+$targpattern = "";
+$newpattern = "";
+
+for ($i = 0; $i <= $#ARGV; $i++)
+{
+	if ($ARGV[$i] =~ /^-/) {
+		@opt = split (/-/,$ARGV[$i]);	# split the argument into "-" and "opt"
+		shift (@opt); 						# get rid of the initial space
+		if ($opt[0] eq 'np') {
+			$noprompt = 1;
+		}
+		elsif ($opt[0] eq 'h' || $opt[0] eq 'H') { help; }
+      else { die "Unknown option -$opt\n"}
+	} else {
+		$targpattern = $ARGV[$i];
+		$i++;
+		$newpattern = $ARGV[$i];
+	}
+}
+
+if ($targpattern eq "")
+	{die "\nUsage: rename_files targpattern newpattern [-np -h]\n".
+		  "       type rename_files -h for help\n";}
+
+if ($newpattern eq "")
+	{die "\nUsage: rename_files targpattern newpattern [-np -h]\n".
+		  "       type rename_files -h for help\n";}
+
+
+
+opendir(DIR, '.') || die "Cannot open current directory: $!";
+$edittargpattern = join('\\+', split(/\+/, $targpattern));
+@targfiles = grep /$edittargpattern/, (grep !/^\.\.?$/, readdir DIR);
+closedir(DIR);
+
+@newfiles = @targfiles;
+grep s/$edittargpattern/$newpattern/, @newfiles;
+
+# inform as to how many target files were found
+printf("%d files found with specified pattern.\n", $#targfiles+1);
+
+# print "targpattern = $targpattern\n";
+# print "edittargpattern = $edittargpattern\n";
+# print "newpattern = $newpattern\n";
+
+if ($#targfiles < 0) { exit; }
+
+if (!$noprompt) {
+	print "Rename files (replace \"$targpattern\" with \"$newpattern\")?\n";
+	$_ = <STDIN>; # read one line of terminal input
+	chomp; # get rid of newline character
+
+	if (!/^[yY]/) {
+		print "Exiting...\n";
+		exit;
+	}
+}
+
+print "Renaming files...\n";
+
+for ($i = 0; $i <= $#targfiles; $i++)
+{
+#	print "mv $targfiles[$i] $newfiles[$i]\n";
+	system ("mv $targfiles[$i] $newfiles[$i]\n");	
+}
+
+
+exit;
