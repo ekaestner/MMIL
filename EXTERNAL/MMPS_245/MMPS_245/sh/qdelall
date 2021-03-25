@@ -1,0 +1,13 @@
+#!/bin/sh
+
+qjobs=`qstat | grep $USER | awk -F ' ' '{print $1}'` 
+qjobsl="$qjobs" 
+jlen=($qjobsl)
+len=${#jlen[*]}
+i=0
+while [ $i -lt $len ] ; do 
+#/opt/gridengine/bin/lx26-amd64/qdel $1 ${jlen[$i]}
+qdel $1 ${jlen[$i]}
+let i++ 
+done 
+

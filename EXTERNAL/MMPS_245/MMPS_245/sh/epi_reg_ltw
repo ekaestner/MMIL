@@ -1,0 +1,28 @@
+#!/bin/sh
+#
+# Created:  11/17/11 by Lars T Westlye
+# Last Mod: 11/22/11 by Don Hagler
+#
+
+if [ $# -lt 3 ] ; then
+  echo "Usage: `basename $0` <EPI image> <T1 image> <output name>"
+  echo " "
+  echo "Also need to have a brain extracted image for T1 with same basename and _brain"
+  exit 0;
+fi
+
+vin=`$FSLDIR/bin/remove_ext $1`;
+vref=`$FSLDIR/bin/remove_ext $2`;
+vout=$3;
+
+# create the WM segmentation
+$FSLDIR/bin/fast ${vref}_brain
+$FSLDIR/bin/fslmaths ${vref}_brain_pve_2 -thr 0.5 -bin ${vref}_wmseg
+
+# do a standard flirt pre-alignment
+$FSLDIR/bin/flirt -ref ${vref}_brain -in ${vin} -dof 6 -omat ${vout}_init.mat
+
+# now run the bbr
+flirt_bbr_ltw -ref ${vref} -in ${vin} -dof 6 -cost bbr -wmseg ${vref}_wmseg \
+ -init ${vout}_init.mat -omat ${vout}.mat -out ${vout} -schedule ${MMPS_PARMS}/ltw/bbr.sch
+

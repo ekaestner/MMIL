@@ -1,0 +1,10 @@
+//////////////////////
+/// Rescale Images ///
+
+rescaleToTarget = 0        (0|1: 1 ==> rescale width, height, depth, voxel x-, y-, and z-size of all other images to those of target)
+rescaleWidth    = 256      (if rescaleToTarget==0, then rescale ALL images to these values)
+rescaleHeight   = 256
+rescaleDepth    = 256
+rescaleXsize    = 1.0      (mm)
+rescaleYsize    = 1.0
+rescaleZsize    = 1.0

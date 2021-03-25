@@ -1,0 +1,28 @@
+FiberNumber,FiberName,LongFiberName,ColorRGB,ColorDescription
+101,R_Fx,R fornix,0 204 34,electric green
+102,L_Fx,L fornix,0 204 34,electric green
+103,R_CgC,R cingulum (cingulate),255 222 117,yellow
+104,L_CgC,L cingulum (cingulate),255 222 117,yellow
+105,R_CgH,R cingulum (parahippocampal),160 32 420,purple
+106,L_CgH,L cingulum (parahippocampal),160 32 420,purple
+107,R_CST,R corticospinal tract or pyramidal tract,160 32 240,purple
+108,L_CST,L corticospinal tract or pyramidal tract,160 32 240,purple
+115,R_Unc,R uncinate fasciculus,255 69 0,orange 
+116,L_Unc,L uncinate fasciculus,255 69 0,orange 
+117,R_ILF,R inferior longitudinal fasciculus,160 32 420,purple
+118,L_ILF,L inferior longitudinal fasciculus,160 32 420,purple
+119,R_IFO,R inferior fronto-occipital fasciculus,227 124 29,orange 
+120,L_IFO,L inferior fronto-occipital fasciculus,227 124 29,orange 
+123,CC,corpus callosum,150 150 150,dark gray
+133,R_SLF,R superior longitudinal fasciculus,32 222 222,cyan
+134,L_SLF,L superior longitudinal fasciculus,32 222 222,cyan
+135,R_tSLF,R temporal superior longitudinal fasciculus,32 222 222,cyan
+136,L_tSLF,L temporal superior longitudinal fasciculus,32 222 222,cyan
+137,R_pSLF,R parietal superior longitudinal fasciculus,222 32 64,bluish red
+138,L_pSLF,L parietal superior longitudinal fasciculus,222 32 64,bluish red
+143,R_fSCS,R superior corticostriate (frontal),103 119 25,forest green 
+144,L_fSCS,L superior corticostriate (frontal),103 119 25,forest green 
+147,R_SIFC,R striatal inferior frontal cotex,103 119 25,forest green 
+148,L_SIFC,L striatal inferior frontal cotex,103 119 25,forest green 
+149,R_IFSFC,R inferior frontal superior frontal cortex,123 206 104,leaf green 
+150,L_IFSFC,L inferior frontal superior frontal cortex,123 206 104,leaf green 

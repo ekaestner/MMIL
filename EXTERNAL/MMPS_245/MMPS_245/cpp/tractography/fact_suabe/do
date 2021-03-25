@@ -1,0 +1,9 @@
+./factnew -iFAmgh ./tp305084_FA.mgh -iV0mgh ./DTI_scans_5_6_7_reg3vs2_mc_ecc_B0uw_iso_DT_V0.mgh \
+ -iStartFA 0.15 \
+ -iStopFA 0.15 \
+ -iTurnAngleDeg 45.00 \
+ -iFiberLenMin 7 \
+ -iFlipEigenX 0 -iFlipEigenY 0 -iFlipEigenZ 1 \
+ -iRoimghOR fiber_23_mask.mgh \
+ -oSelFiberMghFile ./out_fiber_23_mask.mgh \
+ -oSelFiberFile ./out_fiber_23_path.grp

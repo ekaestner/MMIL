@@ -1,0 +1,84 @@
+function FW_pap_eff_hgp_rsp(fcfg)
+
+fprintf([fcfg.sbj_nme ': Starting initial effects work on %s \n'],fcfg.sbj_nme)
+
+cfg = [];
+cfg.load    = 'yes';
+cfg.file    = [fcfg.dat_fld '/' fcfg.sbj_nme '_overall_data.mat'];
+bcc_dat     = ft_func([],cfg);
+
+for iF = 1:numel(bcc_dat.data_name); 
+    bcc_dat.(bcc_dat.data_name{iF}).cfg.alt_lab.stt_lab = bcc_dat.(bcc_dat.data_name{iF}).label; 
+    bcc_dat.(bcc_dat.data_name{iF}).cfg.alt_lab.label = bcc_dat.(bcc_dat.data_name{iF}).label;
+end
+
+%% Old Data
+cfg = [];
+cfg.load    = 'yes';
+cfg.file    = ['/space/mdeh4/1/halgdev/projects/mmilanguage/FW/epoch_data' '/' fcfg.sbj_nme '_overall_data.mat'];
+old_dat     = ft_func([],cfg);
+
+for iF = 1:numel(bcc_dat.data_name); 
+    bcc_dat.(bcc_dat.data_name{iF}).cfg.alt_stt.vis_stm_01 = old_dat.(old_dat.data_name{iF}).cfg.alt_stt.vis_stm_01;
+    bcc_dat.(bcc_dat.data_name{iF}).cfg.alt_stt.fw_wrd_stt = old_dat.(old_dat.data_name{iF}).cfg.alt_stt.fw_wrd_stt;
+end
+
+%% New Data
+cfg = [];
+cfg.ovr_wrt = 1;
+cfg.clr_fld = fcfg.clr_fld;
+
+cfg.data_name = 2;
+
+cfg.stt_lab = 'stt_lab';
+
+cfg.alt_stt = { 'vis_mtr_wrd_stt' ...
+                'vis_mtr_trg_stt' };
+cfg.cmp_trl = { 'trialinfo' 'trialinfo' ...
+                'trialinfo' 'trialinfo' };
+cfg.cmp_stt = { [ 1 1 ] ...
+                [ 2 2 ] };
+cfg.cmp_nme = { { 'vis_wrd_600ms' 'vis_ffn_600ms' } ...
+                { 'vis_trg_600ms' 'vis_wrd_600ms' } };  
+cfg.cmp     = { { '3>6' '3<6' } ...
+                { '3<7' '3>7' } };
+cfg.tme_win = { { [0.025 0.600] [0.025 0.600] } ...
+                { [0.025 0.600] [0.025 0.600] } };
+cfg.stt_col = { { 'bright red' } ...
+                { 'bright red' } };
+           
+cfg.sbj_nme  = fcfg.sbj_nme;
+cfg.typ      = cellfun(@(x) x(end-2:end),bcc_dat.data_name(cfg.data_name),'uni',0);
+if any(strcmpi(cfg.typ,'hlb')); cfg.typ(strcmpi(cfg.typ,'hlb')) = {'hgp'}; end
+cfg.specific = {'typ' ; 1:numel(cfg.typ)};
+
+dat          = ft_func(@mmil_chn_eff,cfg,bcc_dat);
+
+% Split effects into ecog/depth
+cfg = [];
+
+cfg.sbj_nme = fcfg.sbj_nme;
+cfg.clr_fld = fcfg.clr_fld;
+
+cfg.dat_typ = {'hgp'};
+
+mmil_split_stat(cfg);
+
+% Split timing into ecog/depth
+cfg = [];
+
+cfg.sbj_nme = fcfg.sbj_nme;
+cfg.clr_fld = fcfg.clr_fld;
+
+cfg.dat_typ = {'hgp'};
+
+mmil_split_timing(cfg);
+
+%% Save Data
+cfg = [];
+cfg.str_nme  = 'bcc_dat';
+cfg.save     = 'yes';
+cfg.filename = [fcfg.dat_fld '/' fcfg.sbj_nme '_overall_data.mat'];
+ft_func([],cfg,bcc_dat);
+
+end

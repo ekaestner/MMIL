@@ -1,0 +1,12 @@
+#! /bin/csh -f
+
+set sys = `uname -s`
+if ($argv == "") then
+  echo "mk <target>       [sys=$sys]"
+  exit
+endif
+
+if ($sys == "IRIX")   make -f Makefile-IRIX  "$argv"
+if ($sys == "IRIX64") make -f Makefile-IRIX  "$argv"
+if ($sys == "Linux")  make -f Makefile-Linux "$argv"
+

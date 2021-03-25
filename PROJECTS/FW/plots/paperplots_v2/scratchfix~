@@ -1,0 +1,8 @@
+    0.5882    0.6824    0.5529
+    0.6000    0.8000    0.4000
+    0.8667    0.9333    0.4000
+
+    'caudalmiddlefrontal'         'Caudal Middle Frontal'     
+    'caudal-middlefrontal'        'Caudal Middle Frontal' 
+
+gedit /space/mdeh4/1/halgdev/projects/mmilanguage/SL/clerical//electrode_location_files/total/output/total_split_lhs_ecog

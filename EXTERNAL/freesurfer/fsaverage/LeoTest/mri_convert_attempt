@@ -1,0 +1,1 @@
+mri_convert --in_type mgz --out_type nii /home/ekaestne/PROJECTS/EXTERNAL/Misc/fsaverage/LeoTest/aseg.mgz /home/ekaestne/PROJECTS/EXTERNAL/Misc/fsaverage/LeoTest/aseg.nii

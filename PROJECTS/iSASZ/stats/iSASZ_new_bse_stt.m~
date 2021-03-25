@@ -1,0 +1,40 @@
+function iSASZ_new_bse_stt(fcfg)
+
+%% Initial Load
+sbj  = fcfg.sbj_nme;
+
+fprintf([fcfg.sbj_nme ': Starting initial stats work on %s \n'],sbj)
+
+cfg = [];
+cfg.load = 'yes';
+cfg.file = [fcfg.sbj_dat_hld '/' fcfg.sbj_nme '_overall_data.mat'];
+bcc_dat  = ft_func([],cfg);
+
+%% Base Stats
+if any(bcc_dat.(bcc_dat.data_name{1}).cfg.alt_eve.trialinfo < 10)
+    cfg = [];
+    cfg.stt_fnc  = {'sasz_vis_ovr_new'};
+    cfg.loc      = 'local';
+    cfg.fld_nme  = bcc_dat.data_name;
+    cfg.specific = {'fld_nme' ; 1:numel(cfg.fld_nme)};
+    bcc_dat      = ft_func(@mmil_cloud_stat,cfg,bcc_dat);
+end
+
+if any(bcc_dat.(bcc_dat.data_name{1}).cfg.alt_eve.trialinfo > 10)
+    % Novel Baseline
+    cfg = [];
+    cfg.stt_fnc  = {'sasz_aud_ovr_new'};
+    cfg.loc      = fcfg.loc;
+    cfg.fld_nme  = bcc_dat.data_name;
+    cfg.specific = {'fld_nme' ; 1:numel(cfg.fld_nme)};
+    bcc_dat      = ft_func(@mmil_cloud_stat,cfg,bcc_dat);
+end
+
+%% Save Data
+cfg = [];
+cfg.str_nme  = 'bcc_dat';
+cfg.save     = 'yes';
+cfg.filename = [fcfg.dat_fld '/' sbj '_overall_data.mat'];
+ft_func([],cfg,bcc_dat);
+
+end

@@ -94,7 +94,60 @@ fcfg.out_dir = '/home/ekaestner/Downloads/surface_ancova';
 
 ejk_surface_1way_ancova( fcfg );
 
-%% ejk_person_correlation %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% ejk_surface_correlation %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+pvl_chs = .20;
+pvl_cls = .20;
+smt_stp = 176;
+
+%
+dta_dir = '/home/ekaestne/PROJECTS/OUTPUT/Epilepsy_and_Aging/NEWDATA';
+
+new_dta = mmil_readtext('/home/ekaestne/PROJECTS/OUTPUT/Epilepsy_and_Aging/ROI/MRI_thickness_aparc__Epilepsy_and_Aging_updated_withTransverse.csv');
+org_dta = mmil_readtext('/home/ekaestne/PROJECTS/OUTPUT/Epilepsy_and_Aging/NEWDATA/epd_age_covariates_no_nan_no_mass.csv');
+
+cor_dta     = new_dta(:,[1 7 24]);
+cor_sbj_nme = cor_dta(2:end,1);
+cor_roi_nme = cor_dta(1,2:end);
+cor_dta     = cor_dta(2:end,2:end);
+
+grp_dta     = org_dta(:,[1 6]);
+grp_sbj_nme = grp_dta(2:end,1);
+grp_roi_nme = grp_dta(1,2:end);
+grp_dta     = grp_dta(2:end,2:end);
+
+cov_dta     = org_dta(:,[1 2 3 4 8]);
+cov_sbj_nme = cov_dta(2:end,1);
+cov_roi_nme = cov_dta(1,2:end);
+cov_dta     = cov_dta(2:end,2:end);
+
+%
+fcfg = [];
+
+fcfg.smt_stp = smt_stp;
+fcfg.pvl_chs = pvl_chs;
+fcfg.pvl_cls = pvl_cls;
+
+fcfg.sbj_nme = cor_sbj_nme;
+
+fcfg.dta_lhs = [ dta_dir '/' 'surf_aMRI_thickness_lhs_sm176_no_nan_no_mass.mat'];
+fcfg.dta_rhs = [ dta_dir '/' 'surf_aMRI_thickness_rhs_sm176_no_nan_no_mass.mat'];
+
+fcfg.cor     = cor_dta;
+fcfg.cor_nme = cor_roi_nme;
+
+fcfg.grp     = grp_dta;
+fcfg.grp_nme = grp_roi_nme;
+fcfg.grp_cmp = { 'TLE' 'HC' 'MCI' };
+
+fcfg.cov     = cov_dta;
+fcfg.cov_nme = cov_roi_nme;
+
+fcfg.out_dir = '/home/ekaestner/Downloads/surface_correlations';
+
+ejk_surface_correlations( fcfg );
+
+
+%% ejk_pearson_correlation %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 fcfg = [];
 
 fcfg.sbj_nme = strcat('s', num2str([1:75]') );
@@ -171,13 +224,42 @@ rsd_mtx = ejk_residual_matrix( fcfg );
 
 scatter()
 
+%% Cross-Correlations %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+lod_dta = mmil_readtext( [ '/home/ekaestne/PROJECTS/OUTPUT/PostOperative/Alena' '/' 'Memory_FA.csv' ] );
+    lod_dta( cellfun(@isempty,lod_dta) ) = {NaN};
 
+neu_bio_dta     = lod_dta(:,[1 14:36]);
+neu_bio_sbj_nme = neu_bio_dta(2:end,1);
+neu_bio_roi_nme = neu_bio_dta(1,2:end);
+neu_bio_dta     = cell2mat(neu_bio_dta(2:end,2:end));
 
+cog_scr_dta     = lod_dta(:,[1 5:13]);
+cog_scr_sbj_nme = cog_scr_dta(2:end,1);
+cog_scr_roi_nme = cog_scr_dta(1,2:end);
+cog_scr_dta     = cell2mat(cog_scr_dta(2:end,2:end));
 
+cov_dta     = lod_dta(:,1:4);
+cov_sbj_nme = cov_dta(2:end,1);
+cov_roi_nme = cov_dta(1,2:end);
+cov_dta     = cov_dta(2:end,2:end);
 
+%
+fcfg = [];
 
+fcfg.sbj_nme = neu_bio_sbj_nme;
 
+fcfg.dta_one = neu_bio_dta;
+fcfg.lbl_one = neu_bio_roi_nme;
 
+fcfg.dta_two = cog_scr_dta;
+fcfg.lbl_two = cog_scr_roi_nme;
+
+fcfg.pvl_cut = 0.05;
+fcfg.pvl_lib = 0.15;
+
+fcfg.out_dir = '/home/ekaestne/PROJECTS/OUTPUT/PostOperative/Alena/scores_by_wmparc';
+
+ejk_cross_cor( fcfg );
 
 
 

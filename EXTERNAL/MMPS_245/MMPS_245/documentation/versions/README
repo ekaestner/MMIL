@@ -1,0 +1,40 @@
+Multi-Modal Processing Stream (MMPS)
+
+MMPS is a package of binaries, scripts, and mostly matlab functions
+ for processing MRI, PET, fMRI, DTI, MEG and EEG brain imaging data
+
+The tools in this package were written by several current and past
+ members of the UCSD MultiModal Imaging Laboratory, including Don Hagler,
+ Anders Dale, Vijay Venkatraman, Cooper Roddey, Dominic Holland,
+ Nathan White, Alain Koyama, Jason Sherfey, Steve Deiss, Rajan Patel,
+ and Ben Cippolini
+
+Most recent version:
+
+MMPS_220: Major revision (see version.NOTES)
+Release date: 12/26/10
+
+MMPS_225: Minor revision (see version.NOTES)
+Release date: 09/27/11
+
+MMPS_226: Medium revision (see version.NOTES)
+Release date: 03/27/12
+
+
+MMPS_dep: deprecated
+This is the latest version of what was in /home/mmmildev
+  and /home/halgsvn as of Feb. 15, 2010 plus several bug fixes and
+  minor changes (see version.NOTES)
+Release date: NA (active repository)
+
+
+To setup this package (e.g. with version 220), do this in your .cshrc:
+  source /usr/pubsw/bin/SetUpMMPS.csh 220
+Also, add this line to your /home/$USER/matlab  /startup.m file:
+  run('/usr/pubsw/packages/MMPS/startup_MMPS');
+
+See documentation/MMPS_manual.doc for a general user's guide to MMPS
+
+
+Last Updated: 03/27/2012 by Don Hagler
+

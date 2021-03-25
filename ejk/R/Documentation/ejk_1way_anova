@@ -1,0 +1,25 @@
+%% Assumptions %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+> Independence of the observations
+> No significant outliers
+> Normality
+> Homogeneity of variances
+
+%% Checks %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+> Outliers
+	> identify_outliers checks values above or below Quartile (1 or 3) - 1.5*Interquatile Range (IQR = Q3-Q1)
+		> Also checks extreme points above or below Quartile (1 or 3) - 3*Interquatile Range (IQR = Q3-Q1)
+> Normality
+	> Shapiro-Wilk's test 
+		> p>.05 means normally distributed (become unreliable if N>50)
+	> Also checked with QQ plot (correlation betweeen data and normal distribution) if N>50
+> Variance Assumption
+	> Levene's test
+		> p>.05 suggets no reason to doubt homogeneity of variances
+
+%% Test %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+
+%% Function Input %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%% Function Output %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

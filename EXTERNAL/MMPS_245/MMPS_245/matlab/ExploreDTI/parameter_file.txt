@@ -1,0 +1,29 @@
+C:\some_folder\DW_Images.nii
+C:\some_folder\60_grad_dirs.txt
+C:\some_folder\output_folder
+1
+3000
+3 3 3
+1
+0.1
+45
+50 500
+8
+0.8
+
+Use exactly the same format as above and make sure paths do not contain any white space.
+The info above corresponds with the following parameters (the order is important of course):
+
+1.  Input file name (full path) of *.nii file (4D format with all the non-DW images in the beginning).
+2.  Input file name (full path) of *.txt file of the gradient directions (3 column format).
+3.  Output folder name (if it does not exist it will be created).
+4.  Number of non-DW images.
+5.  b-value (in s/mm^2).
+6.  Seed point sampling in x, y, and z direction (in mm).
+7.  Step size (in mm).
+8.  FOD threshold.
+9.  Angle deviation threshold.
+10. Fiber length range (in mm).
+11. Maximum order (even integers).
+12. Minimal FA to determine response function.  
+

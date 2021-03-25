@@ -1,0 +1,2 @@
+g++ -O3 main_template.cpp mri.cpp mesh.cpp statistical.cpp 
+

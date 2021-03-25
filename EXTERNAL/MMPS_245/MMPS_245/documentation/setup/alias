@@ -1,0 +1,17 @@
+###############################################################################
+#   Sample MMIL alias file
+#   Created 2010-02-05 tcooper
+#   Master Copy Stored at /usr/pubsw/scripts/alias
+###############################################################################
+
+### The x86_64 version of nedit, if installed, is way much faster than the one in mmildev/bin
+if (($cpu == "x86_64") && ( -f /usr/bin/nedit )) then
+  alias nedit '/usr/bin/nedit'
+endif
+
+alias tgz 'tar -czvf \!:1.tar.gz ./\!:1'
+alias untgz 'tar -xzvf \!:1'
+alias count 'du -a \!:1 | cut -d/ -f2 | sort | uniq -c | sort -nr'
+alias zero 'find . -type f -size 0'
+alias cpt 'tar cf - \!:1 | ( cd \!:2; tar xfp -)'
+alias com 'echo count zero cpt tgz untgz' 

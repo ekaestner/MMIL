@@ -1,0 +1,775 @@
+#!/bin/csh -f
+# epidewarp4.ucsd
+#
+# This script uses FSL prelude and fugue tools to unwarp EPI images.
+# Original version is called epidewarp.fsl authored by Doug Greve at MGH for use
+# by the fBIRN consortium.
+# 
+# This version is called epidewarp3.ucsd and is adapted from version 1.1 (2004/7/27) of
+# epidewarp.fsl. The intent is to faciliate unwarping from GE DICOM images at UCSD.
+# As much as possible, this script will be updated to reflect improvements
+# in epidewarp.fsl as these are made available.
+#
+# For processing at UCSD, this script is intended to be called by the script:  ppge3
+#
+# Version History
+#  1.0  TTL  040728  Added gemode input to support different processing for GE DICOM files at UCSD
+#       TTL  040926  Checked into CVS repository  
+#       TTL  040927  Modifying to support multiple EPI frames
+#  3.0  TTL  040929  Adding motion correction features
+#  3.1  TTL  041001  Redefine refnum to go from 0 to nframes-1, in accordance with standard AVW indexing
+#  3.2  TTL  041014  Added unwarpdir option
+#  3.3  GTB  050413  Added write fieldmap option
+#  3.4  GTB  050505  Added -plots flag on mcflirt
+#  3.5  GTB  061505  Modified for NIFTI format
+#  3.6  KL   081506  Corrected mismatch of nifti header information by using 
+#                 avwcpgeom in multiple places. Ohterwise dewarping won't be correct. 
+#  3.7  KL   040507  added number of phase splits to use in prelude.
+#  3.8  KL   042707  removed option dph2 (dph1 is now the phase difference between echo1 and 2, #                    Therefore dph2 is no longer needed)
+# Send Comments/Questions to kunlu@ucsd.edu
+
+set VERSION = '$Id$'
+set inputargs = ($argv);
+set do_outmask = 0;
+set gemode = 0;
+set domoco = 1;
+set dph = ();
+set mag = ();
+set epi = ();
+set refnum = ();
+set unwarpdir = ();
+set fmap = ();
+set np=();
+set betf=();
+# Difference between first and second echoes of the B0 Map
+set tediff = (); # Suggest 2.44 ms for 3T
+
+# EPI Echo Spacing (MGH .58 ms)
+set esp    = (); 
+
+# FUGUE parameters
+set sigma = ();
+set npart = ();
+
+# Outputs
+set epidw = ();
+set vsm = ();
+set exfdw = ();
+
+set tmpdir = ();
+set cleanup = 1;
+set cleanup_forced = 0;
+set PrintHelp = 0;
+
+## If there are no arguments, just print useage and exit ##
+if($#argv == 0) goto usage_exit;
+set n = `echo $argv | grep -e --help | wc -l` 
+if($n != 0) then
+  set PrintHelp = 1;
+  goto usage_exit;
+endif
+set n = `echo $argv | grep -e --version | wc -l` 
+if($n != 0) then
+  echo $VERSION
+  exit 0;
+endif
+
+goto parse_args;
+parse_args_return:
+
+goto check_params;
+check_params_return:
+
+# Create a log file
+set LF = $vsm.log
+if(-e $LF) mv $LF $LF.bak
+echo Logfile is $LF
+date >> $LF
+echo $VERSION >> $LF
+pwd >> $LF
+echo $0  >> $LF
+echo $inputargs >> $LF
+df -h $tmpdir  >> $LF
+df -h $outdir  >> $LF
+which prelude >> $LF
+which fugue   >> $LF
+
+# Some temp files
+set exf   = $tmpdir/exf$postfix
+set brain = $tmpdir/brain$postfix
+set head  = $tmpdir/head$postfix
+
+
+    # Extract the middle time point for the example func (exf)
+    set nframes = `avwinfo $epi | awk '{if($1 == "dim4") print $2}'`
+    if($nframes == 1) then
+      set nmidframe = 0;
+    else
+    set nmidframe = `echo "$nframes/2-1" | bc `;
+    endif
+    echo "nframes = $nframes, nmidframe = $nmidframe" |& tee -a $LF
+    set cmd = (avwroi $epi $exf $nmidframe 1)
+    echo $cmd |& tee -a $LF
+    $cmd |& tee -a $LF
+    if($status) exit 1;
+
+
+    # See if there's a .mat file to propogate
+    set epibase = `basename $epi $postfix`;
+    set epimat = $epibase.mat
+    if(! -e $epimat) set epimat = ();
+
+
+#REDEFINE exf  if refnum exists
+if($#refnum > 0 )  then
+    if ($refnum >= 0 && $refnum < $nframes) then
+       
+         set cmd = (avwroi $epi $exf $refnum 1)
+         echo $cmd |& tee -a $LF
+         $cmd |& tee -a $LF
+         if($status) exit 1;
+         set nmidframe = $refnum
+       
+    else
+      echo "refnum should be >= 0 and < $nframes"
+      exit 1
+    endif
+endif
+
+
+
+
+# Keep only the first frame from mag
+set cmd = (avwroi $mag $tmpdir/mag 0 1)
+echo $cmd |& tee -a $LF
+$cmd |& tee -a $LF
+if($status) exit 1;
+set mag = $tmpdir/mag$postfix
+
+# Create brain mask from the mag
+set cmd = (bet $mag $brain -f $betf)
+echo $cmd |& tee -a $LF
+$cmd |& tee -a $LF
+if($status) exit 1;
+set cmd = (avwmaths $brain -bin $brain)
+echo $cmd |& tee -a $LF
+$cmd |& tee -a $LF
+if($status) exit 1;
+
+# Create head mask by dilating the brain mask 3 times
+@ nthdil = 1;
+while($nthdil <= 3)
+  if($nthdil == 1) then
+    set cmd = (avwmaths $brain -dil $head)
+  else
+    set cmd = (avwmaths $head  -dil $head)
+  endif
+  echo $cmd |& tee -a $LF
+  $cmd |& tee -a $LF
+  if($status) exit 1;
+  @ nthdil = $nthdil + 1;
+end
+
+
+#!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+# now DIFFERENT for multi-channel  KL
+#!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+# Do the phase unwrapping of phase difference (-f for 3D, -v for verbose)
+
+    set cmd = (prelude -c $dph  -o  $tmpdir/dph$postfix -n $np -f -v -m $head);
+    echo $cmd |& tee -a $LF
+    $cmd |& tee -a $LF
+
+    set dph = $tmpdir/dph$postfix
+
+  # FUGUE wants a phase image for each echo, but we only have
+    # phase difference between echoes. So create an image of 0s 
+    # and merging with the phase diff.
+    set ph1 = $tmpdir/ph1$postfix
+    set cmd = (avwmaths $dph -mul 0 $ph1)
+    echo $cmd |& tee -a $LF
+    $cmd |& tee -a $LF
+    if($status) exit 1;
+
+
+    #currrent version (FSL3.3) prelude does not preserve header information
+    #thus we need to add header to ph1 and dph, copy from brain mask. KL
+    avwcpgeom $brain $ph1
+    avwcpgeom $brain $dph
+
+    # Merge, baby, merge
+    set ph2 = $tmpdir/ph2$postfix
+    set cmd = (avwmerge -t $ph2 $ph1 $dph)
+    echo $cmd |& tee -a $LF
+    $cmd |& tee -a $LF
+    if($status) exit 1;
+    
+
+
+# Create the voxel shift map (VSM) in the mag/phase space. Use mag as 
+# input to assure that VSM is same dimension as mag. The input only affects
+# the output dimension. The content of the input has no effect
+# on the VSM. The dewarped mag volume is meaningless and will be thrown away. 
+set vsmmag = $tmpdir/vsmmag$postfix
+set magdw = $tmpdir/magdw$postfix # To be thrown away
+set cmd = (fugue -i $mag -u $magdw -p $ph2 \
+    --dwell=$esp --asym=$tediff --mask=$brain --saveshift=$vsmmag);
+if($#unwarpdir > 0 ) then
+    set cmd = "$cmd --unwarpdir=$unwarpdir";
+endif
+if($#fmap > 0 ) then
+    set cmd = "$cmd --savefmap=$fmap";
+endif
+echo $cmd |& tee -a $LF
+$cmd |& tee -a $LF
+if($status) exit 1;
+
+
+# Forward warp the mag in order to reg with func
+# What does mask do here?
+set magfw = $tmpdir/magfw$postfix
+set cmd = (fugue -i $mag -w $magfw --loadshift=$vsmmag --mask=$brain )
+if($#unwarpdir > 0 ) then
+    set cmd = "$cmd --unwarpdir=$unwarpdir";
+endif
+echo $cmd |& tee -a $LF
+$cmd |& tee -a $LF
+if($status) exit 1;
+
+# Register magfw to example func. There are some parameters here
+# that may need to be tweeked.
+set cmd = (flirt -in $magfw -ref $exf \
+  -out $tmpdir/magfw-in-exf$postfix \
+  -omat $tmpdir/magfw-in-exf.fsl.mat \
+  -bins 256 -cost corratio \
+  -nosearch \
+  -searchrx -10 10 \
+  -searchry -10 10 \
+  -searchrz -10 10 \
+  -dof 6 \
+  -interp trilinear)
+echo $cmd |& tee -a $LF
+$cmd |& tee -a $LF
+if($status) exit 1;
+
+# Now resample VSM into epi space. This will take care of any 
+# differences in in-plane voxel size.
+set cmd = (flirt -in $vsmmag -ref $exf -out $vsm \
+  -init $tmpdir/magfw-in-exf.fsl.mat -applyxfm -paddingsize 1)
+echo $cmd |& tee -a $LF
+$cmd |& tee -a $LF
+if($status) exit 1;
+
+if($#epimat) then # Propogate mat file
+  set vsmbase = `basename $vsm $postfix`;
+  cp $epimat $vsmbase.mat
+endif
+
+# Check whether we can stop at this point
+if($#exfdw == 0 && $#epidw == 0) goto done;
+
+
+# UNWARP ONLY THE EXAMPLE FRAME HERE
+if($#exfdw != 0) then
+  # Now apply the VSM to the exf (um=unmasked)
+  set exfdwum = $tmpdir/exfdwum$postfix
+  set cmd = (fugue -i $exf -u $exfdwum --loadshift=$vsm --mask=$brain );
+  if($#unwarpdir > 0 ) then
+    set cmd = "$cmd --unwarpdir=$unwarpdir";
+  endif
+  echo $cmd |& tee -a $LF
+  $cmd |& tee -a $LF
+  if($status) exit 1;
+
+  # Now mask the dewarped exf using the mag brain mask.
+  # This is necessary to prevent voxels in the original EPI
+  # that are out of the brain from simply being copied into
+  # the dewarped image.
+  set cmd = (avwmaths $exfdwum -mul $brain $exfdw)
+  echo $cmd |& tee -a $LF
+  $cmd |& tee -a $LF
+  if($status) exit 1;
+
+  if($#epimat) then # Propogate mat file
+    set exfbase = `basename $exfdw $postfix`;
+    cp $epimat $exfbase.mat
+  endif
+endif
+
+# UNWARP ALL EPI FRAMES HERE 
+if($#epidw != 0) then
+if($domoco == 1 && $epimerged == 1) then
+  set mepi = $tmpdir/mepi$postfix
+  set cmd = (mcflirt -in $epi -out $mepi -refvol $nmidframe -plots )
+  echo $cmd |& tee -a $LF
+  $cmd |& tee -a $LF
+  if($status) exit 1;
+  set epi = $mepi
+endif
+
+@ frame = 1;
+  while($frame <= $nframes)
+     set inimg = $tmpdir/inframe$postfix
+     @ roiframe = $frame - 1
+     set cmd = (avwroi $epi $inimg $roiframe 1)
+     echo $cmd |& tee -a $LF
+     $cmd |& tee -a $LF
+     if($status) exit 1;
+
+     set outimg = `printf $tmpdir/uavwepi%04d$postfix $frame`;
+
+     echo $inimg $outimg
+
+     set cmd = (fugue -i $inimg -u $outimg --loadshift=$vsm --mask=$brain );
+     if($#unwarpdir > 0 ) then
+     set cmd = "$cmd --unwarpdir=$unwarpdir";
+     endif
+     echo $cmd |& tee -a $LF
+     $cmd |& tee -a $LF
+     if($status) exit 1;
+
+
+  #OPTIONAL MASKING OF THE DATA
+  if($do_outmask) then
+   set moutimg = `printf $tmpdir/muavwepi%04d$postfix $frame`;
+   set cmd = (avwmaths $outimg -mul $brain $moutimg)
+   echo $cmd |& tee -a $LF
+   $cmd |& tee -a $LF
+   if($status) exit 1;
+
+  endif
+
+  # Need to add propagation of mat file! 
+
+
+
+    @ frame = $frame + 1;
+end
+endif
+
+goto done;
+
+exit 0;
+##############################################################
+
+##############################################################
+done:
+  if($cleanup) then 
+    echo "Deleting tmp dir $tmpdir" |& tee -a $LF
+    rm -r $tmpdir
+  endif
+  date |& tee -a $LF
+  echo "epidewarp.ucsd done" |& tee -a $LF
+exit 0;
+
+##############################################################
+parse_args:
+set cmdline = ($argv);
+while( $#argv != 0 )
+
+  set flag = $argv[1]; shift;
+  
+  switch($flag)
+
+    case "--mag":
+      if ( $#argv == 0) goto arg1err;
+      set mag = $argv[1]; shift;
+      if(! -e $mag) then
+        echo "ERROR: cannot find $mag"
+        exit 1;
+      endif
+      breaksw
+
+    case "--dph":
+      if ( $#argv == 0) goto arg1err;
+      set dph = $argv[1]; shift;
+      if(! -e $dph) then
+        echo "ERROR: cannot find $dph"
+        exit 1;
+      endif
+      breaksw
+
+
+    case "--epi":
+      if ( $#argv == 0) goto arg1err;
+      set epi = $argv[1]; shift;
+      set epimerged = 1
+      if(! -e $epi) then
+        echo "ERROR: cannot find $epi"
+        exit 1;
+      endif
+      breaksw
+
+
+    case "--sepi":
+      if ( $#argv == 0) goto arg1err;
+      set epi = $argv[1]; shift;
+      set epimerged = 0
+      if(! -e {$epi}0001.$postfix) then
+        echo "ERROR: cannot find {$epi}0001$postfix (first image in series)"
+        exit 1;
+      endif
+      breaksw
+
+    case "--tediff":
+      if ( $#argv == 0) goto arg1err;
+      set tediff = $argv[1]; shift;
+      breaksw
+
+    case "--esp":
+      if ( $#argv == 0) goto arg1err;
+      set esp = $argv[1]; shift;
+      breaksw
+
+    case "--epidw":
+      if ( $#argv == 0) goto arg1err;
+      set epidw = $argv[1]; shift;
+      breaksw
+
+    case "--exfdw":
+      if ( $#argv == 0) goto arg1err;
+      set exfdw = $argv[1]; shift;
+      breaksw
+
+    case "--vsm":
+      if ( $#argv == 0) goto arg1err;
+      set vsm = $argv[1]; shift;
+      breaksw
+
+    case "--fmap":
+      if ( $#argv == 0) goto arg1err;
+      set fmap = $argv[1]; shift;
+      breaksw
+
+    case "--unwarpdir":
+      if ( $#argv == 0) goto arg1err;
+      set unwarpdir = $argv[1]; shift;
+      breaksw
+
+    case "--tmpdir":
+      if ( $#argv == 0) goto arg1err;
+      set tmpdir = $argv[1]; shift;
+      set cleanup = 0;
+      breaksw
+
+    case "--postfix":
+      if ( $#argv == 0) goto arg1err;
+      set postfix = $argv[1]; shift;
+      breaksw
+
+    case "--nphase":
+      if ( $#argv == 0) goto arg1err;
+      set np = $argv[1]; shift;
+      breaksw
+
+   case "--betf":
+      if ( $#argv == 0) goto arg1err;
+      set betf = $argv[1]; shift;
+      breaksw
+
+    case "--refnum":
+      set refnum = $argv[1]; shift;
+      breaksw
+
+    case "--nomoco":
+      set domoco = 0;
+      breaksw
+
+    case "--nocleanup":
+      set cleanup = 0;
+      breaksw
+
+    case "--outmask":
+      set do_outmask = 1;
+      breaksw
+
+    case "--cleanup":
+      set cleanup_forced = 1;
+      breaksw
+
+    case "--debug":
+      set verbose = 1;
+      set echo = 1; # turns on terminal echoing
+      breaksw
+
+    default:
+      echo ERROR: Flag $flag unrecognized. 
+      echo $cmdline
+      exit 1
+      breaksw
+  endsw
+
+end
+
+goto parse_args_return;
+############--------------##################
+
+############--------------##################
+check_params:
+
+  if($#mag == 0) then
+    echo "ERROR: no magnitude volume specified"    
+    exit 1;
+  endif
+
+  if($#dph == 0) then
+    echo "ERROR: no phase diff volume specified"    
+    exit 1;
+  endif
+
+
+  if($#tediff == 0) then
+    echo "ERROR: no TE diff specified"    
+    exit 1;
+  endif
+
+  if($#esp == 0) then
+    echo "ERROR: no Echo Spacing specified"    
+    exit 1;
+  endif
+
+  if($#vsm == 0) then
+    echo "ERROR: no output VSM specified"    
+    exit 1;
+  endif
+
+  if($#postfix == 0) then
+    echo "ERROR: no postfix (nii vs nii.gz) specified"    
+    exit 1;
+  endif
+
+  if($cleanup_forced) set cleanup = 1;
+
+  set outdir = `dirname $vsm`;
+  mkdir -p $outdir
+  if($status) then
+    echo "ERROR: cannot create $outdir"
+    exit 1;
+  endif
+
+  if($#tmpdir == 0) set tmpdir = $outdir
+  mkdir -p $tmpdir
+  if($status) then
+    echo "ERROR: cannot create $tmpdir"
+    exit 1;
+  endif
+
+  if($#epidw != 0) then
+    set epidwdir = `dirname $epidw`;
+    mkdir -p $epidwdir
+    if($status) then
+      echo "ERROR: cannot create $epidwdir"
+      exit 1;
+    endif
+  endif
+
+  if($#exfdw != 0) then
+    set exfdwdir = `dirname $exfdw`;
+    mkdir -p $exfdwdir
+    if($status) then
+      echo "ERROR: cannot create $exfdwdir"
+      exit 1;
+    endif
+  endif
+
+goto check_params_return;
+############--------------##################
+
+############--------------##################
+arg1err:
+  echo "ERROR: flag $flag requires one argument"
+  exit 1
+############--------------##################
+
+############--------------##################
+usage_exit:
+  echo ""
+  echo "USAGE: epidewarp4.ucsd"
+  echo ""
+  echo "Inputs"
+  echo "  --mag volid     : B0 magnitude volume"
+  echo "  --dph volid     : B0 phase difference volume "
+  echo "  --epi volid     : epi volume  (note: specify this for merged AVW data)"
+  echo "  --tediff tediff : difference in B0 field map TEs"
+  echo "  --esp esp       : EPI echo spacing"
+  echo "  "
+  echo "Outputs"
+  echo "  --vsm volid   : voxel shift map (required)"
+  echo "  --exfdw volid : dewarped example func volume"
+  echo "  --epidw volid : dewarped epi volume"
+  echo "  --fmap volid  : fieldmap volume"
+  echo "  "
+  echo "Options  "
+  echo "  --unwarpdir<dir>:   unwarping direction = x / y / z / x- / y- / z-, default = y"
+  echo "  --nomoco      : no motion correction"
+  echo "  --refnum <refnum>: reference image number for motion correction"
+  echo "  --tmpdir dir  : save intermediate results here"
+  echo "  --nocleanup   : do not delete tmpdir"
+  echo "  --cleanup     : force deletion of tmpdir"
+  echo "  --postfix     : .nii.gz (default) of .nii"
+  echo "  --nphase      : number of phase splits to use in prelude"
+  echo "  --betf        : fractional intensity threshold (0->1)for BET;
+  echo "  --debug"
+  echo "  --help"
+  echo ""
+  echo "Version"
+  echo "     "$VERSION
+
+  if(! $PrintHelp) exit 1;
+
+  echo $VERSION
+
+  cat $0 | awk 'BEGIN{prt=0}{if(prt) print $0; if($1 == "BEGINHELP") prt = 1 }'
+
+exit 1;
+
+
+#---- Everything below here is printed out as part of help -----#
+BEGINHELP
+
+SUMMARY
+
+Front end for FSLs PRELUDE and FUGUE programs to correct for B0
+distortion in functional EPI scans. The programs use a B0 fieldmap.
+This is assumed to be two conventional GREs collected at two different
+echo times (TEs). The field map should be acquired with the same
+slice prescription, slice thickness, slice skip, and field-of-view
+as the EPI. The field map can have a higher in-plane resolution.
+
+For the stock Siemens field map, two field maps are required, one to
+get the phase and another to get the magnitude. The volume that is
+stored as the phase is actually the phase difference and is scaled
+between 0 to 4095 for -pi to pi. The magnitude volumes for both 
+TEs are saved, but only one is needed.
+
+All volumes are assumed to be in NIFTI 4D format. All volumes should
+be referred to as volid.$postfix. If the EPI volume has a .mat file, this
+will be propagated to the outputs.
+
+ALGORITHM OVERVIEW
+
+1. Create a brain mask from the mag volume (BET)
+2. Create a head mask by dilating the brain mask
+3. Rescale the phase image to -pi to pi
+4. Unwrap the phase (PRELUDE)
+5. Create the voxel shift map (VSM) (FUGUE)
+6. Forward warp the mag volume (FUGUE)
+7. Register the forward warped mag with the example func (FLIRT)
+8. Resample the VSM into EPI space (FLIRT)
+9. Dewarp the EPI and/or Example Func (FUGUE).
+10. Mask out-of-brain voxels using the mag brain mask.
+
+The EPI and Example Func should be in register with the mag volume.
+
+ARGUMENTS:
+
+--mag magvolid
+
+Magnitude volume from the B0 fieldmap. If more than one frame is
+present, then only the first is used.
+
+--dph phasediffvolid
+
+Phase difference volume (Echo2-Echo1). These are assumed to be scaled
+between 0 to 4095 for -pi to pi. Eg, dph.nii.gz
+
+--epi epivolid
+
+EPI volume to dewarp (e.g. epivol.nii.gz)
+
+--sepi episeries
+
+EPI series to dewarp. (e.g. avwepi) 
+
+--tediff tediff
+
+Difference in the echo times of the B0 field map in ms. This number is
+set when acquiring the field map. This is often set to 2.44 ms at 3T,
+which is the amount of time it takes for the fat and water to
+rephase. Scales with field strength.
+
+--esp echospacing
+
+Time (ms) between the start of the readout of two successive lines in
+k-space during the EPI acquisition.  This can also be thought of as
+the time between rows.  This parameter is not available in the Siemens
+DICOM header. If one saves the raw kspace data, then the echo spacing
+can be found next to the m_lEchoSpacing tag in the meas.asc and is in
+usec. Note that the echo spacing is not the same as the time to read
+out a line of k-space and it cannot be computed from the bandwidth
+because neither of these methods takes into account the dead time
+between lines when no data are being read out.
+
+--vsm vsmvolid
+
+Voxel shift map. This is a volume the same size as the EPI. The value
+at each voxel indicates the amount the voxel has shifted in the phase
+encode direction due to B0 distortion. This argument is required.
+
+--fmap fmpvolid
+
+fieldmap volume. This is a volume the same size as the EPI. The value
+at each voxel indicates the B0 distortion (rad/s). This argument is optional.
+
+--exfdw exfdwvolid
+
+This is the middle time point from the EPI time series (the "example
+functional") with B0 distortion removed. Mainly good for checking how
+good the dewarping is without having to dewarp the entire time
+series. NOTE: the voxels outside the brain are set to 0.
+
+--epidw epidwvolid
+
+This is the EPI time series with B0 distortion removed. NOTE: the
+voxels outside the brain are set to 0.
+
+--tmpdir tmpdir
+
+Location to put the directory for storing temporary files. By default,
+this will be in a directory called tmp-epidewarp.fsl under the
+directory to hold the VSM volume. When --tmpdir is used or --nocleanup
+is specified, then this directory will not be deleted. Otherwise or
+with --cleanup it will automatically be deleted.
+
+--nomoco
+
+Disables motion correction of functionals prior to fugue'ing.
+
+--refnum <refnum>
+
+Defines reference image number for motion correction. Default is middle image in a series. 
+
+--nocleanup
+
+Do not delete the tmp dir. --tmpdir automatically implies --nocleanup.
+
+--cleanup
+
+Forces deleting of the tmp dir regardless of whether --tmpdir or 
+--nocleanup have been specified.
+
+--nphase
+
+Number of the phase splits to use in prelude. 
+
+--debug
+
+Prints copious amounts to the screen.
+
+
+BUGS
+
+1. Currently does not work when the B0 field map has a different
+in-plane resolution than the EPI.
+
+AUTHORS
+
+Doug Greve and Dave Tuch (help@nmr.mgh.harvard.edu) with generous 
+help from the FSL crew.
+
+UCSD specific mods made by Tom Liu (ttliu@ucsd.edu) and Giedrius Buracas (giedrius@salk.edu) and Kun Lu (kunlu@ucsd.edu)
+
+
+
+
+
