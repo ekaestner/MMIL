@@ -326,9 +326,9 @@ fcfg.smt_stp  = 313; % cfg.sph_smt = 313; % rsfMRI = 256 ; aMRI = 313;
 
 for iH = 1:numel(hms_hld)
     srf_dta = nan(size(sbj_srf_out,1),163842);
-    for iS = 1:size(size(sbj_srf_out,1),1)
+    for iS = 1:size(sbj_srf_out,1)
         fcfg.hms         = hms_hld{iH}(1:2);
-        fcfg.prc_dir     = [ sbj_srf_out{iS,2} '/' 'proc_dti' '/' ]; 
+        fcfg.prc_dir     = [ sbj_srf_out{iS,2} '/' 'fsurf' '/' ]; 
         fcfg.sbj_fsr_dir = sbj_srf_out{iS,3};
         srf_dta_hld = ejk_extract_vertices(fcfg);
         if ~isempty(srf_dta_hld); srf_dta(iS,:) = srf_dta_hld; end
@@ -348,9 +348,9 @@ fcfg.smt_stp  = 313; % cfg.sph_smt = 313; % rsfMRI = 256 ; aMRI = 313;
 
 for iH = 1:numel(hms_hld)
     srf_dta = nan(size(sbj_srf_out,1),163842);
-    for iS = 1:size(size(sbj_srf_out,1),1)
+    for iS = 1:size(sbj_srf_out,1)
         fcfg.hms         = hms_hld{iH}(1:2);
-        fcfg.prc_dir     = [ sbj_srf_out{iS,2} '/' 'fsurf' '/' ]; 
+        fcfg.prc_dir     = [ sbj_srf_out{iS,2} '/' 'proc_dti' '/' ]; 
         fcfg.sbj_fsr_dir = sbj_srf_out{iS,3};
         srf_dta_hld = ejk_extract_vertices(fcfg);
         if ~isempty(srf_dta_hld); srf_dta(iS,:) = srf_dta_hld; end
