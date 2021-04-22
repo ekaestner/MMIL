@@ -47,11 +47,28 @@ naming_clean
 naming_group_comparison
 
 %% Cross Correlations
-naming_correlation
+naming_correlation_v2
 
-naming_summarize_cc
+naming_summarize_cc_v3
 
 %% Surface Correlations
+naming_surface_correlations
+
+%% Hiearchical Correlation
+naming_hiearchical_correlation
+
+%% Logistic Regression
+naming_logistic_regression
+
+%% Tables/Figures
+
+
+% Table 2: Cognitive
+Naming_Table_2
+
+
+
+
 
 
 

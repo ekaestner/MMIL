@@ -3,9 +3,9 @@ ejk_ttest2 <- function( dep_var_loc,
                         out_put_loc,
                         alternative='two.sided') {
 
-#dep_var_loc =  '/home/ekaestne/PROJECTS/OUTPUT/PostOperative/Alena/HippocampalInvestigation//Left_ttest_3T//dep_var.mat'
-#grp_loc     = '/home/ekaestne/PROJECTS/OUTPUT/PostOperative/Alena/HippocampalInvestigation//Left_ttest_3T//grp_var.mat'
-#out_put_loc = '/home/ekaestne/PROJECTS/OUTPUT/PostOperative/Alena/HippocampalInvestigation//Left_ttest_3T/'  
+#dep_var_loc = '/home/ekaestne/PROJECTS/OUTPUT/PostOperative/Naming/TotalCor/Cognitive/Post_TLE_ttest/dep_var.mat'
+#grp_loc     = '/home/ekaestne/PROJECTS/OUTPUT/PostOperative/Naming/TotalCor/Cognitive/Post_TLE_ttest/grp_var.mat'
+#out_put_loc = '/home/ekaestne/PROJECTS/OUTPUT/PostOperative/Naming/TotalCor/Cognitive/Post_TLE_ttest'  
     
 library( R.matlab )
 library( rstatix )
@@ -92,7 +92,7 @@ for ( iG in 1:length(grp_var_nme) )
     #bxp <- ggboxplot( plt_dta, x = grp_var_nme[iG], y = dep_var_nme[iV], 
     #                  ylab = dep_var_nme[iV], xlab = "Groups", add = "jitter" )
     box_plt = ggboxplot( plt_dta, x = grp_var_nme[iG], y = dep_var_nme[iV], 
-                      ylab = dep_var_nme[iV], xlab = "Groups", add = "jitter" )
+                      ylab = dep_var_nme[iV], xlab = "Groups", add = "dotplot" )
     qqq_plt = ggqqplot( plt_dta, x = dep_var_nme[iV], facet.by = grp_var_nme[iG])
     out_plt = ggarrange( box_plt, qqq_plt, ncol = 1, nrow = 2)
     

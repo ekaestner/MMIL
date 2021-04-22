@@ -131,7 +131,7 @@ for ( iG in 1:length(grp_var_nme) )
     
     ## Make Reports
     box_plt <- ggboxplot( use_dta, x = grp_var_nme[iG], y = dep_var_nme[iV], 
-                          ylab = dep_var_nme[iV], xlab = "Groups", add = "jitter" )
+                          ylab = dep_var_nme[iV], xlab = "Groups", add = "dotplot" )
     ggsave(paste(out_put_loc,'/',grp_var_nme[iG],'/',dep_var_nme[iV],'.jpg',sep=''), plot=box_plt)
     
     nor_plt     = ggqqplot(residuals(nor_mdl))
