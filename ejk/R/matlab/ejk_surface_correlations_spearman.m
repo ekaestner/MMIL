@@ -1,5 +1,5 @@
 
-function ejk_surface_correlations(cfg)
+function ejk_surface_correlations_spearman(cfg)
 
 %
 %
@@ -46,8 +46,8 @@ for iG = 1:numel(cfg.cor_nme)
         end
         
         sve_cmd = sprintf('.libPaths(.libPaths()[2:5])\n');
-        sve_cmd = sprintf('%ssource(''/home/ekaestner/gitrep/MMIL/ejk/R/R/ejk_surface_correlation.r'')\n',sve_cmd);
-        sve_cmd = sprintf('%sejk_surface_correlation( ''%s'', ''%s'', ''%s/cor_var.mat'', ''%s/grp_var.mat'', ''%s'', %i, ''%s'', ''%s'' )', sve_cmd, cfg.dta_lhs, cfg.dta_rhs, out_hld, out_hld, cov_loc, iG, fst_nme, out_hld);
+        sve_cmd = sprintf('%ssource(''/home/ekaestner/gitrep/MMIL/ejk/R/R/ejk_surface_correlation_spearman.r'')\n',sve_cmd);
+        sve_cmd = sprintf('%sejk_surface_correlation_spearman( ''%s'', ''%s'', ''%s/cor_var.mat'', ''%s/grp_var.mat'', ''%s'', %i, ''%s'', ''%s'' )', sve_cmd, cfg.dta_lhs, cfg.dta_rhs, out_hld, out_hld, cov_loc, iG, fst_nme, out_hld);
         cell2csv( [out_hld '/example_R_script.r'], {sve_cmd} );
         unix( [ 'Rscript ' out_hld '/example_R_script.r' ] );
         
@@ -103,14 +103,11 @@ for iG = 1:numel(cfg.cor_nme)
         rvl_dff_lhs = load([ out_hld '/' 'rvalues_lhs_dep_var_' fst_nme '.mat' ]); %  '_' 'sm' '313'
         rvl_dff_lhs = rvl_dff_lhs.rvalues;
         rvl_dff_rhs = load([ out_hld '/' 'rvalues_rhs_dep_var_' fst_nme '.mat' ]); % '_' 'sm' '313'
-        rvl_dff_rhs = rvl_dff_rhs.rvalues;
+        rvl_dff_rhs = rvl_dff_rhs.rvalues;   
         
-        % plot threshold differences %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%         rvl_dff_lhs(rvl_dff_lhs>0) = 0;
-%         rvl_dff_rhs(rvl_dff_rhs>0) = 0;
         % rvalue %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        low_rng_num = [ -0.15 0.15 ];
-        hgh_rng_num = [ -0.30 0.30 ];
+        low_rng_num = [ -0.40 0.40 ];
+        hgh_rng_num = [ -0.70 0.70 ];
         
         pcfg = [];
         

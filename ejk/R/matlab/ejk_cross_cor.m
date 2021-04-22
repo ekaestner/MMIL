@@ -1,6 +1,8 @@
 
 function ejk_cross_cor( cfg )
 
+if ~isfield(cfg,'force_plot'); cfg.force_plot = 0; end
+
 %%
 dta_one.sbj_nme = cfg.sbj_nme;
 for iD = 1:numel(cfg.lbl_one)
@@ -26,7 +28,7 @@ unix( [ 'Rscript ' cfg.out_dir '/example_R_script.r' ] );
 %% Make Scatter plots of significant correlations
 ejk_chk_dir([  cfg.out_dir '/' 'plots' '/'])
 
-if exist([ cfg.out_dir '/' 'cross_correlation_significances_liberal.csv' ])
+if exist([ cfg.out_dir '/' 'cross_correlation_significances_liberal.csv' ]) && ~cfg.force_plot
     
     plt_dta = mmil_readtext([ cfg.out_dir '/' 'cross_correlation_significances_liberal.csv' ]);
     plt_dta = plt_dta(2:end, :);
@@ -53,6 +55,37 @@ if exist([ cfg.out_dir '/' 'cross_correlation_significances_liberal.csv' ])
         
         ejk_scatter(fcfg)
         
+    end
+    
+elseif cfg.force_plot
+    
+    rvl_dta = mmil_readtext([ cfg.out_dir '/' 'cross_correlation_rvalues.csv' ]);
+    pvl_dta = mmil_readtext([ cfg.out_dir '/' 'cross_correlation_pvalues.csv' ]);
+    
+    for iR = 2:size( rvl_dta, 1)
+        for iC = 2:size( rvl_dta, 2)
+            
+            fcfg = [];
+            
+            fcfg.xdt     = { dta_two.(mmil_spec_char(rvl_dta{1,iC},{'.'})) };
+            fcfg.ydt     = { dta_one.(mmil_spec_char(rvl_dta{iR,1},{'.'})) };
+            
+            fcfg.trd_lne = [ 1 0 ];
+            
+            fcfg.fce_col = { rgb('blue')  };
+            fcfg.edg_col = { rgb('black') };
+            
+            fcfg.xlb = { mmil_spec_char(rvl_dta{1,iC},{'.'}) };
+            fcfg.ylb = { mmil_spec_char(rvl_dta{iR,1},{'.'}) };
+            
+            fcfg.ttl = ['r = ' num2str(rvl_dta{iR,iC}) '  p = ' num2str(roundsd(pvl_dta{iR,iC},2))];
+            
+            fcfg.out_dir = [ cfg.out_dir '/' 'plots' '/'];
+            fcfg.out_nme = [ mmil_spec_char(rvl_dta{1,iC},{'.'}) '__BY__' mmil_spec_char(rvl_dta{iR,1},{'.'}) ];
+            
+            ejk_scatter(fcfg)
+            
+        end
     end
     
 end

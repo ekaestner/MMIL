@@ -3,7 +3,7 @@ out_put = [ prj_dir '/' prj_nme];
 %% Make groups
 sbj_typ = 1;
     sbj_hld = { { 'epd' } { 'fc' 'epd' } {'fc'} };
-    sbj_nme = { 'tle'    'tle_controls'           'controls' };
+    sbj_nme = { 'tle'     'tle_controls' 'controls' };
 tst_typ = 1;
     tst_hld = { [1 2 3] [4 5 6] };
     tst_nme = { 'pre'   'post'};
@@ -16,14 +16,16 @@ srg_typ = 2; % 1: All; 2: ATL-only
 grp_typ = 1; % 1: All % 2: Left/Right
 
 % sbj_typ x tst_typ x str_typ x srg_typ x grp_typ
-run_typ = { [ 1 1 2 1 1 ] ... % epd, pre, 3T, Non-Surgical, all patients 
-            [ 1 1 2 1 2 ] ... % epd, pre, 3T, Non-Surgical, L/R split 
-            [ 1 1 2 2 1 ] ... % epd, pre, 3T, ATL, all patients 
-            [ 1 1 2 2 2 ] ... % epd, pre, 3T, ATL, L/R split
-            [ 1 2 2 2 1 ] ... % epd, post, 3T, ATL, all patients 
-            [ 1 2 2 2 2 ] ... % epd, post, 3T, ATL, L/R split
+run_typ = { [ 1 1 2 1 1 ] ... % epd,          pre, 3T, Non-Surgical, all patients 
+            [ 1 1 2 1 2 ] ... % epd,          pre, 3T, Non-Surgical, L/R split 
+            [ 1 1 2 2 1 ] ... % epd,          pre, 3T, ATL, all patients 
+            [ 1 1 2 2 2 ] ... % epd,          pre, 3T, ATL, L/R split
+            [ 1 2 2 2 1 ] ... % epd,          post, 3T, ATL, all patients 
+            [ 1 2 2 2 2 ] ... % epd,          post, 3T, ATL, L/R split
             [ 2 1 2 1 1 ] ... % controls/epd, pre, 3T, Non-Surgical, all patients 
-            [ 3 1 2 1 1 ] };  % controls, pre, 3T, Non-Surgical, all 
+            [ 3 1 2 1 1 ] ... % controls,     pre, 3T, Non-Surgical, all
+            [ 2 1 2 1 3 ] };  % controls/epd, pre, 3T, Non-Surgical, L/R split including controls   
+ 
 
 cln_dta = mmil_readtext([ prj_dir '/' prj_nme '/' 'Data' '/' 'Clinical.csv' ]);
 cln_dta_col = cln_dta(1,2:end);
@@ -91,9 +93,25 @@ for iG = 1:numel(run_typ)
         grp.( [ sbj_nme{sbj_typ} '_' tst_nme{tst_typ} '_' str_nme{str_typ} '_' srg_nme{srg_typ} '_' 'left'] )  = intersect(intersect(intersect(intersect(tot_sbj,cog_sbj),str_sbj),srg_sbj), lft_tle);
         grp.( [ sbj_nme{sbj_typ} '_' tst_nme{tst_typ} '_' str_nme{str_typ} '_' srg_nme{srg_typ} '_' 'right'] ) = intersect(intersect(intersect(intersect(tot_sbj,cog_sbj),str_sbj),srg_sbj), rgh_tle);
         cog_col.( [ sbj_nme{sbj_typ} '_' tst_nme{tst_typ} '_' str_nme{str_typ} '_' srg_nme{srg_typ} '_' 'left'] ) = tst_hld{tst_typ};
-         cog_col.( [ sbj_nme{sbj_typ} '_' tst_nme{tst_typ} '_' str_nme{str_typ} '_' srg_nme{srg_typ} '_' 'right'] ) = tst_hld{tst_typ};
+        cog_col.( [ sbj_nme{sbj_typ} '_' tst_nme{tst_typ} '_' str_nme{str_typ} '_' srg_nme{srg_typ} '_' 'right'] ) = tst_hld{tst_typ};
+    elseif grp_typ==3
+        grp.( [ sbj_nme{sbj_typ} '_' tst_nme{tst_typ} '_' str_nme{str_typ} '_' srg_nme{srg_typ} '_' 'left'] )  = ...
+            [ intersect(intersect(intersect(intersect(tot_sbj,cog_sbj),str_sbj),srg_sbj), lft_tle) ; ...
+              grp.controls_pre_3T_allSurg_all ] ;
+        grp.( [ sbj_nme{sbj_typ} '_' tst_nme{tst_typ} '_' str_nme{str_typ} '_' srg_nme{srg_typ} '_' 'right'] ) = ...
+            [ intersect(intersect(intersect(intersect(tot_sbj,cog_sbj),str_sbj),srg_sbj), rgh_tle) ; ...
+              grp.controls_pre_3T_allSurg_all ];
+        cog_col.( [ sbj_nme{sbj_typ} '_' tst_nme{tst_typ} '_' str_nme{str_typ} '_' srg_nme{srg_typ} '_' 'left'] ) = tst_hld{tst_typ};
+        cog_col.( [ sbj_nme{sbj_typ} '_' tst_nme{tst_typ} '_' str_nme{str_typ} '_' srg_nme{srg_typ} '_' 'right'] ) = tst_hld{tst_typ};
     end
         
 end
 
+%% Save
 save([ out_put '/' 'groups.mat' ], 'grp', 'cog_col');
+
+
+
+
+
+

@@ -7,9 +7,9 @@ ejk_cross_cor <- function( dta_one_loc,
   
   # https://cran.r-project.org/web/packages/tidyLPA/vignettes/Introduction_to_tidyLPA.html
   
-  #dta_one_loc = '/home/ekaestne/PROJECTS/OUTPUT/PostOperative/Language/CrossCorrelation/MRI/subcort_vol/Raw/dta_one.mat'
-  #dta_two_loc = '/home/ekaestne/PROJECTS/OUTPUT/PostOperative/Language/CrossCorrelation/MRI/subcort_vol/Raw//dta_two.mat'
-  #out_put_loc = '/home/ekaestne/PROJECTS/OUTPUT/PostOperative/Language/CrossCorrelation/MRI/subcort_vol/Raw/'
+  #dta_one_loc = '/home/ekaestne/PROJECTS/OUTPUT/PostOperative/Naming/SpecificCor/DTI/wmparc_FA_wm/Raw/tle_post_3T_ATLonly_left/dta_one.mat'
+  #dta_two_loc = '/home/ekaestne/PROJECTS/OUTPUT/PostOperative/Naming/SpecificCor/DTI/wmparc_FA_wm/Raw/tle_post_3T_ATLonly_left/dta_two.mat'
+  #out_put_loc = '/home/ekaestne/PROJECTS/OUTPUT/PostOperative/Naming/SpecificCor/DTI/wmparc_FA_wm/Raw/tle_post_3T_ATLonly_left/'
   #cor_typ     = 'spearman'
   #pvl_cut = .05
   #pvl_lib = .15 

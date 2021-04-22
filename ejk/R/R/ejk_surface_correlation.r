@@ -9,14 +9,14 @@ ejk_surface_correlation <- function( lhs_srf_var_loc,
                                      fst_nme,
                                      out_put_loc ) {
   
-  lhs_srf_var_loc = '/home/ekaestner/Downloads/surface_correlations/JohnnyData/surf_wmparc_fa_lhs_sm176_epd006switch.mat'
-  rhs_srf_var_loc = '/home/ekaestner/Downloads/surface_correlations/JohnnyData/surf_wmparc_fa_rhs_sm176_epd006switch.mat'
-  cor_loc = '/home/ekaestne/PROJECTS/OUTPUT/PostOperative/Alena_February/LM2_n21_Covariate_none_ATL_only_Raw/cor_var.mat'
-  grp_loc = '/home/ekaestne/PROJECTS/OUTPUT/PostOperative/Alena_February/LM2_n21_Covariate_none_ATL_only_Raw/grp_var.mat'
-  cov_loc = ''
+  lhs_srf_var_loc = '/home/ekaestne/PROJECTS/OUTPUT/PostOperative/Naming/Data/surf_wmparc_fa_lhs_sm313.mat'
+  rhs_srf_var_loc = '/home/ekaestne/PROJECTS/OUTPUT/PostOperative/Naming/Data/surf_wmparc_fa_rhs_sm313.mat'
+  cor_loc = '/home/ekaestne/PROJECTS/OUTPUT/PostOperative/Alena_February/LM2_n21_Covariate_scannerstrength_left_ATL_only_Raw_new_data/cor_var.mat'
+  grp_loc = '/home/ekaestne/PROJECTS/OUTPUT/PostOperative/Alena_February/LM2_n21_Covariate_scannerstrength_left_ATL_only_Raw_new_data/grp_var.mat'
+  cov_loc = '/home/ekaestne/PROJECTS/OUTPUT/PostOperative/Alena_February/LM2_n21_Covariate_scannerstrength_left_ATL_only_Raw_new_data/cov_var.mat'
   iG = 1
-  out_put_loc = '/home/ekaestne/PROJECTS/OUTPUT/PostOperative/Alena_February/LM2_n21_Covariate_none_ATL_only_Raw'
-  fst_nme = 'left' # 3_left # left
+  out_put_loc = '/home/ekaestne/PROJECTS/OUTPUT/PostOperative/Alena_February/LM2_n21_Covariate_scannerstrength_left_ATL_only_Raw_new_data'
+  fst_nme = 'left' # 3_left # left # 'left_dominant'
   
   library( R.matlab )
   library( rstatix )
@@ -31,132 +31,132 @@ ejk_surface_correlation <- function( lhs_srf_var_loc,
   library( tidyr )
   library(jtools)
   
-  ## Load Data ###################################################################################################################################################
-  # Correlation Variable
-  cor_var = readMat(cor_loc) 
-  cor_var_nme = names( cor_var$cor.var[,,1] )
-  cor_var = as.data.frame( lapply(cor_var$cor.var, unlist, use.names=FALSE), 
-                           fix.empty.names=FALSE, stringsAsFactors=FALSE, col.names=cor_var_nme )
-  cor_var_nme = cor_var_nme[-1]
-  
-  # Group Variable
-  grp_var = readMat(grp_loc) 
-  grp_var_nme = names( grp_var$grp.var[,,1] )
-  grp_var = as.data.frame( lapply(grp_var$grp.var, unlist, use.names=FALSE), 
-                           fix.empty.names=FALSE, stringsAsFactors=FALSE, col.names=grp_var_nme )
-  for (iGR in 2:ncol(grp_var))
-  {
-    grp_var[,iGR] = factor( grp_var[,iGR], exclude='N/A')
-  }
-  grp_var_nme = grp_var_nme[-1]
-  
-  # Covariates
-  if (cov_loc!=''){
-  cov_var = readMat(cov_loc) 
-  cov_var_nme = names( cov_var$cov.var[,,1] )
-  cov_var = as.data.frame( lapply(cov_var$cov.var, unlist, use.names=FALSE), 
-                           fix.empty.names=FALSE, stringsAsFactors=FALSE, col.names=cov_var_nme )
-  for (iCV in 2:ncol(cov_var))
-  {
-    if ( is.character(cov_var[1,iCV]) ) {
-      cov_var[,iCV] = factor( cov_var[,iCV], exclude='N/A')
-    }
-  }
-  cov_var_nme = cov_var_nme[-1]
-  num_cov = length(cov_var_nme)
-  }
-  
-  ## ANCOVA #################################################################################################################################################
-  srf_dta_nme = c('lhs_dep_var', 'rhs_dep_var')
-  
-  for( iH in 1:2){
+      ## Load Data ###################################################################################################################################################
+      # Correlation Variable
+      cor_var = readMat(cor_loc) 
+      cor_var_nme = names( cor_var$cor.var[,,1] )
+      cor_var = as.data.frame( lapply(cor_var$cor.var, unlist, use.names=FALSE), 
+                               fix.empty.names=FALSE, stringsAsFactors=FALSE, col.names=cor_var_nme )
+      cor_var_nme = cor_var_nme[-1]
+      
+      # Group Variable
+      grp_var = readMat(grp_loc) 
+      grp_var_nme = names( grp_var$grp.var[,,1] )
+      grp_var = as.data.frame( lapply(grp_var$grp.var, unlist, use.names=FALSE), 
+                               fix.empty.names=FALSE, stringsAsFactors=FALSE, col.names=grp_var_nme )
+      for (iGR in 2:ncol(grp_var))
+      {
+        grp_var[,iGR] = factor( grp_var[,iGR], exclude='N/A')
+      }
+      grp_var_nme = grp_var_nme[-1]
+      
+      # Covariates
+      if (cov_loc!=''){
+      cov_var = readMat(cov_loc) 
+      cov_var_nme = names( cov_var$cov.var[,,1] )
+      cov_var = as.data.frame( lapply(cov_var$cov.var, unlist, use.names=FALSE), 
+                               fix.empty.names=FALSE, stringsAsFactors=FALSE, col.names=cov_var_nme )
+      for (iCV in 2:ncol(cov_var))
+      {
+        if ( is.character(cov_var[1,iCV]) ) {
+          cov_var[,iCV] = factor( cov_var[,iCV], exclude='N/A')
+        }
+      }
+      cov_var_nme = cov_var_nme[-1]
+      num_cov = length(cov_var_nme)
+      }
+      
+      ## ANCOVA #################################################################################################################################################
+      srf_dta_nme = c('lhs_dep_var', 'rhs_dep_var')
+      
+      for( iH in 1:2){
+        
+        # Dependent Variable
+        if (iH==1 ){ 
+          srf_dta = readMat(lhs_srf_var_loc)
+          dep_var = t(as.data.frame( lapply(srf_dta$srf.dta.sbj, unlist, use.names=FALSE), 
+                                     fix.empty.names=FALSE, stringsAsFactors=FALSE ))
+          srf_dta = srf_dta$srf.dta 
+          } else if (iH==2){ 
+          srf_dta = readMat(rhs_srf_var_loc) 
+          dep_var = t(as.data.frame( lapply(srf_dta$srf.dta.sbj, unlist, use.names=FALSE), 
+                                     fix.empty.names=FALSE, stringsAsFactors=FALSE ))
+          srf_dta = srf_dta$srf.dta }
+        
+        colnames(dep_var) = c('sbj.nme')
     
-    # Dependent Variable
-    if (iH==1 ){ 
-      srf_dta = readMat(lhs_srf_var_loc)
-      dep_var = t(as.data.frame( lapply(srf_dta$srf.dta.sbj, unlist, use.names=FALSE), 
-                                 fix.empty.names=FALSE, stringsAsFactors=FALSE ))
-      srf_dta = srf_dta$srf.dta 
-      } else if (iH==2){ 
-      srf_dta = readMat(rhs_srf_var_loc) 
-      dep_var = t(as.data.frame( lapply(srf_dta$srf.dta.sbj, unlist, use.names=FALSE), 
-                                 fix.empty.names=FALSE, stringsAsFactors=FALSE ))
-      srf_dta = srf_dta$srf.dta }
+        dir.create( paste(out_put_loc,sep=''), showWarnings = FALSE)
+        
+        # Set up backend for parallelizing
+        ncores <- detectCores() - 2
+        cl <- makeCluster(ncores)
+        registerDoParallel(cl)
+        
+        # Data merge
+        use_dta = merge( dep_var, cor_var, by="sbj.nme" );
+        use_dta = merge( use_dta, grp_var, by="sbj.nme" );
+        if ( cov_loc!='' ){ use_dta = merge( use_dta, cov_var, by="sbj.nme" ) }
+        
+        # Run test for each vertex individually
+        output <- foreach( iV = 1:163842, .combine = 'combine', .packages = c("tidyr", "broom", "emmeans", "pracma", "stringr","jtools"), .multicombine=TRUE, #
+                           .init=list(list(), list()) ) %dopar% {
+                             
+                             # Put together data
+                             use_dta_col = as.data.frame(srf_dta[, iV], fix.empty.names=FALSE )
+                             colnames(use_dta_col) = c(srf_dta_nme[iH])
+                             use_dta_col = cbind( dep_var, use_dta_col )
+                             use_dta_par = merge( use_dta, use_dta_col, by="sbj.nme" )
+                             use_dta_par = subset( use_dta_par, match(use_dta_par[[grp_var_nme[1]]],fst_nme)==1 )
+                             
+                             # Setup # equ_txt = paste( ' ~ ', srf_dta_nme[iH], ' + ', sep='')
+                             equ_txt = paste(  srf_dta_nme[iH], ' ~ ', sep='')
+                             if (cov_loc!=''){
+                             for (iCV in 1:length(cov_var_nme)){ equ_txt = paste( equ_txt, cov_var_nme[iCV], ' + ', sep='') }
+                             }
+                             equ_txt = paste( equ_txt, cor_var_nme[iG], sep='')
+                             equ_txt = as.formula( equ_txt )
+                             
+                             # Running lm()  #analysis = cor.test( formula=equ_txt, data=use_dta_par )
+                             analysis = lm( formula=equ_txt, data=use_dta_par )
+                             
+                             ptl_hld = summ(analysis, part.corr=TRUE)
     
-    colnames(dep_var) = c('sbj.nme')
-
-    dir.create( paste(out_put_loc,sep=''), showWarnings = FALSE)
+                             # Putting result into one list
+                             rvl <- ptl_hld$coeftable[ nrow(ptl_hld$coeftable), 5] # analysis$estimate
+                             pvl <- summary(analysis)$coefficients[nrow(summary(analysis)$coefficients),4] # analysis$p.value
     
-    # Set up backend for parallelizing
-    ncores <- detectCores() - 2
-    cl <- makeCluster(ncores)
-    registerDoParallel(cl)
+                             # Current progress
+                             list( rvl, pvl )
+                             
+                           }
+        
+        # Free Up CPU and Memory
+        stopCluster(cl)
+        if (iH==1 ){ 
+        iV = 5483
+        } else if (iH==2){ 
+        iV = 39922
+        }
+        use_dta_col = as.data.frame(srf_dta[, iV], fix.empty.names=FALSE )
+        colnames(use_dta_col) = c(srf_dta_nme[iH])
+        use_dta_col = cbind( dep_var, use_dta_col )
+        use_dta_par = merge( use_dta, use_dta_col, by="sbj.nme" )
+        use_dta_par = subset( use_dta_par, match(use_dta_par[[grp_var_nme[1]]],fst_nme)==1 )
+        write.csv(use_dta_par, paste(out_put_loc,"/","exact_data_",iH,".csv",sep=''))
+        
+        rm('srf_dta','use_dta', 'dep_var')
+        
+        # Create the file names of the variables 
+        rvl_fle_nme = paste( out_put_loc,"/", "rvalues_" , srf_dta_nme[iH], "_", fst_nme, ".mat", sep = "")
+        pvl_fle_nme = paste( out_put_loc,"/", "pvalues_" , srf_dta_nme[iH], "_", fst_nme, ".mat", sep = "")
     
-    # Data merge
-    use_dta = merge( dep_var, cor_var, by="sbj.nme" );
-    use_dta = merge( use_dta, grp_var, by="sbj.nme" );
-    if ( cov_loc!='' ){ use_dta = merge( use_dta, cov_var, by="sbj.nme" ) }
+        # Write result into a matrix for matlab
+        output = unlist(output)
+        
+        writeMat(rvl_fle_nme, rvalues = as.numeric( output[seq(1,length(output),2)] ))
+        writeMat(pvl_fle_nme, pvalues = as.numeric( output[seq(2,length(output),2)] ))
     
-    # Run test for each vertex individually
-    output <- foreach( iV = 1:163842, .combine = 'combine', .packages = c("tidyr", "broom", "emmeans", "pracma", "stringr","jtools"), .multicombine=TRUE, #
-                       .init=list(list(), list()) ) %dopar% {
-                         
-                         # Put together data
-                         use_dta_col = as.data.frame(srf_dta[, iV], fix.empty.names=FALSE )
-                         colnames(use_dta_col) = c(srf_dta_nme[iH])
-                         use_dta_col = cbind( dep_var, use_dta_col )
-                         use_dta_par = merge( use_dta, use_dta_col, by="sbj.nme" )
-                         use_dta_par = subset( use_dta_par, match(use_dta_par[[grp_var_nme[1]]],fst_nme)==1 )
-                         
-                         # Setup # equ_txt = paste( ' ~ ', srf_dta_nme[iH], ' + ', sep='')
-                         equ_txt = paste(  srf_dta_nme[iH], ' ~ ', sep='')
-                         if (cov_loc!=''){
-                         for (iCV in 1:length(cov_var_nme)){ equ_txt = paste( equ_txt, cov_var_nme[iCV], ' + ', sep='') }
-                         }
-                         equ_txt = paste( equ_txt, cor_var_nme[iG], sep='')
-                         equ_txt = as.formula( equ_txt )
-                         
-                         # Running lm()  #analysis = cor.test( formula=equ_txt, data=use_dta_par )
-                         analysis = lm( formula=equ_txt, data=use_dta_par )
-                         
-                         ptl_hld = summ(analysis, part.corr=TRUE)
-
-                         # Putting result into one list
-                         rvl <- ptl_hld$coeftable[ nrow(ptl_hld$coeftable), 5] # analysis$estimate
-                         pvl <- summary(analysis)$coefficients[nrow(summary(analysis)$coefficients),4] # analysis$p.value
-
-                         # Current progress
-                         list( rvl, pvl )
-                         
-                       }
-    
-    # Free Up CPU and Memory
-    stopCluster(cl)
-    if (iH==1 ){ 
-    iV = 5483
-    } else if (iH==2){ 
-    iV = 39922
-    }
-    use_dta_col = as.data.frame(srf_dta[, iV], fix.empty.names=FALSE )
-    colnames(use_dta_col) = c(srf_dta_nme[iH])
-    use_dta_col = cbind( dep_var, use_dta_col )
-    use_dta_par = merge( use_dta, use_dta_col, by="sbj.nme" )
-    use_dta_par = subset( use_dta_par, match(use_dta_par[[grp_var_nme[1]]],fst_nme)==1 )
-    write.csv(use_dta_par, paste(out_put_loc,"/","exact_data_",iH,".csv",sep=''))
-    
-    rm('srf_dta','use_dta', 'dep_var')
-    
-    # Create the file names of the variables 
-    rvl_fle_nme = paste( out_put_loc,"/", "rvalues_" , srf_dta_nme[iH], "_", fst_nme, ".mat", sep = "")
-    pvl_fle_nme = paste( out_put_loc,"/", "pvalues_" , srf_dta_nme[iH], "_", fst_nme, ".mat", sep = "")
-
-    # Write result into a matrix for matlab
-    output = unlist(output)
-    
-    writeMat(rvl_fle_nme, rvalues = as.numeric( output[seq(1,length(output),2)] ))
-    writeMat(pvl_fle_nme, pvalues = as.numeric( output[seq(2,length(output),2)] ))
-
-  }
+      }
  
 }
 

@@ -25,7 +25,7 @@ ejk_chk_dir([prj_dir '/' prj_nme '/' 'Data' '/'])
 % Calculate Change Scores
 fcfg = [];
 fcfg.rci = 1;
-[ pst_cog_dta , ~ ] = ejk_post_cognitive(fcfg,sbj_cog,sbj_scn);
+[ pst_cog_dta , pst_cog_cat ] = ejk_post_cognitive(fcfg,sbj_cog,sbj_scn);
 
 % Cognitive Save
 cog_dta_out(:,1) = pst_cog_dta.sbj_nme;
@@ -301,15 +301,21 @@ cell2csv( [prj_dir '/' prj_nme '/' 'Data' '/' 'Clinical' '.csv'], [ cln_dta_nme 
 rcn_hld = mmil_readtext(rcn_fle);
 
 hms_hld = { 'lhs' 'rhs' };
+smt_stp = { '176' '313' '768' };
 
 % Put together load list %%%%%%%%%%%%%%%
+clear sbj_srf_out
 for iS = 1:size(sbj_dem.sbj_nme, 1)
     rcn_row = strcmpi( rcn_hld(:,1), sbj_dem.sbj_nme{iS});
     
     sbj_srf_out{iS,1} = sbj_dem.sbj_nme{iS};
     sbj_srf_out{iS,2} = '/home/mmilmcdRSI/data/';
-    sbj_srf_out{iS,3} = rcn_hld{ rcn_row, 3};
-      
+    if ~isempty(find(rcn_row))
+        sbj_srf_out{iS,3} = rcn_hld{ rcn_row, 3};
+    else
+        sbj_srf_out{iS,3} = '';
+    end
+    
 end
 
 cell2csv( [ prj_dir '/' prj_nme '/' 'Data' '/' 'sbj_srf_out.csv' ], sbj_srf_out)
@@ -317,7 +323,7 @@ cell2csv( [ prj_dir '/' prj_nme '/' 'Data' '/' 'sbj_srf_out.csv' ], sbj_srf_out)
 % Load data %%%%%%%%%%%%%%%
 sbj_srf_out = mmil_readtext([ prj_dir '/' prj_nme '/' 'Data' '/' 'sbj_srf_out.csv' ]);
 
-% MRI
+% MRI %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 tic;
 fcfg = [];
 
@@ -339,7 +345,37 @@ for iH = 1:numel(hms_hld)
 end
 toc
 
-% DTI
+% QC
+dta_hld = mmil_readtext( [prj_dir '/' prj_nme '/' 'Data' '/' 'cort_thick_ctx_aparc_annot' '.csv']);
+    dta_sbj = dta_hld(2:end,1);
+    dta_lbl = dta_hld(1,5:end);
+    dta_hld = cell2mat(dta_hld(2:end,5:end));
+
+fcfg = [];
+
+for iST = 2%1:numel(smt_stp)
+    for iH = 1:numel(hms_hld)
+        roi_col = string_find( dta_lbl, [hms_hld{iH}(1:2) '_']);
+        
+        fcfg.hms     = hms_hld{iH}(1:2);
+        fcfg.dta_hld = [ prj_dir '/' prj_nme '/' 'Data' '/' 'surf' '_' 'aMRI_thickness' '_' smt_stp{iST} '_' fcfg.hms 's.mat'];
+        
+        fcfg.prc_loc = '/home/ekaestner/gitrep/MMIL/EXTERNAL/freesurfer';
+        fcfg.prc_nme = '.aparc.annot';
+        fcfg.prc_lbl = { 'entorhinal' 'fusiform' 'inferiortemporal' 'superiortemporal' 'supramarginal' 'parstriangularis'};
+        
+        fcfg.roi_sbj = dta_sbj;
+        fcfg.roi_lbl = cellfun( @(x) x(4:end), dta_lbl(roi_col), 'uni', 0);
+        fcfg.roi_hld = dta_hld( :, roi_col );
+        
+        fcfg.out_dir     = [ prj_dir '/' prj_nme '/' 'Data' '/' 'QC' '/' 'surf' '/' 'aMRI_thickness' '/'];
+        fcfg.out_pre_fix = [ fcfg.hms 's' '_' smt_stp{iST}];
+        
+        ejk_qc_surfaces_roi(fcfg)
+    end
+end
+
+% DTI %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 tic;
 fcfg = [];
 
@@ -361,6 +397,35 @@ for iH = 1:numel(hms_hld)
 end
 toc
 
+% QC
+dta_hld = mmil_readtext( [prj_dir '/' prj_nme '/' 'Data' '/' 'wmparc_FA_wm_aparc_annot' '.csv']);
+    dta_sbj = dta_hld(2:end,1);
+    dta_lbl = dta_hld(1,5:end);
+    dta_hld = cell2mat(dta_hld(2:end,5:end));
+
+fcfg = [];
+
+for iST = 2%1:numel(smt_stp)
+    for iH = 1:numel(hms_hld)
+        roi_col = string_find( dta_lbl, [hms_hld{iH}(1:2) '_']);
+        
+        fcfg.hms     = hms_hld{iH}(1:2);
+        fcfg.dta_hld = [ prj_dir '/' prj_nme '/' 'Data' '/' 'surf' '_' 'wmparc_fa' '_' fcfg.hms 's_sm' smt_stp{iST} '.mat'];
+        
+        fcfg.prc_loc = '/home/ekaestner/gitrep/MMIL/EXTERNAL/freesurfer';
+        fcfg.prc_nme = '.aparc.annot';
+        fcfg.prc_lbl = { 'entorhinal' 'fusiform' 'inferiortemporal' 'superiortemporal' 'supramarginal' 'parstriangularis'};
+        
+        fcfg.roi_sbj = dta_sbj;
+        fcfg.roi_lbl = cellfun( @(x) x(4:end), dta_lbl(roi_col), 'uni', 0);
+        fcfg.roi_hld = dta_hld( :, roi_col );
+        
+        fcfg.out_dir     = [ prj_dir '/' prj_nme '/' 'Data' '/' 'QC' '/' 'surf' '/' 'surf_wmparc_fa' '/'];
+        fcfg.out_pre_fix = [ fcfg.hms 's' '_' smt_stp{iST}];
+        
+        ejk_qc_surfaces_roi(fcfg)
+    end
+end
 
 
 
