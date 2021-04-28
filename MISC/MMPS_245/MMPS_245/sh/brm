@@ -1,9 +1,0 @@
-#! /bin/sh
-# (next line not seen by tcl) \
-exec tclsh $0 ${1+"$@"}
-
-if {$argc != 1} {
-  puts "use: brm <backslashed-pattern-that-matches-too-many-for-csh>"
-  return
-}
-foreach file [lsort [glob [lindex $argv 0]]] { puts $file; exec rm $file }

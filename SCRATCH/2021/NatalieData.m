@@ -70,6 +70,46 @@ end
 cell2csv('/home/ekaestner/Dropbox/McDonald Lab/Erik/Projects/McDLab/pst_opr/Emory_Slah_Explore/combo_data.csv',sbj_dta_out)
 clear sbj_dta_out
 
+%%
+sbj_cph = mmil_readtext('/home/ekaestner/Dropbox/McDonald Lab/Erik/Projects/McDLab/pst_opr/Emory_Slah_Explore/subject_cipher_add.csv');
+
+ntl_dta = mmil_readtext('/home/ekaestner/Dropbox/McDonald Lab/Erik/Projects/McDLab/pst_opr/Emory_Slah_Explore/NatalieData.csv');
+    ntl_col = ntl_dta(1,:);
+    ntl_dta = ntl_dta(2:end,:);
+
+usd_out_cme = mmil_readtext('/home/ekaestner/Dropbox/McDonald Lab/Erik/Projects/McDLab/pst_opr/Emory_Slah_Explore/Emory_Slah_Explore/ucsd_preprocessing_summary.csv');
+
+size(sbj_cph);
+size(ntl_dta);
+size(usd_out_cme);
+
+out_dta = cell( size(sbj_cph,1), 3);
+chk_sbj = cell( size(sbj_cph,1), 5);
+for iS = 1:size(sbj_cph,1)
+    
+    ntl_ind = find(strcmpi( ntl_dta(:,2), sbj_cph{iS,2} ));
+    usd_ind = find(strcmpi( usd_out_cme(:,1), sbj_cph{iS,4} ));
+    
+    out_dta{iS,1} = sbj_cph{iS,1};
+    out_dta{iS,2} = ntl_dta{ntl_ind,3};
+    if ~isempty(usd_ind)
+        out_dta{iS,3} = usd_out_cme{usd_ind,3};
+    else
+        out_dta{iS,3} = '';
+    end
+    
+    chk_sbj{iS,1} = sbj_cph{iS,1};
+    chk_sbj{iS,2} = ntl_dta{ntl_ind,2};
+    if ~isempty(usd_ind)
+        chk_sbj{iS,3} = usd_out_cme{usd_ind,1};
+    else
+        chk_sbj{iS,3} = '';
+    end
+    
+end
+
+cell2csv('/home/ekaestner/Dropbox/McDonald Lab/Erik/Projects/McDLab/pst_opr/Emory_Slah_Explore/Emory_Slah_Explore/dan_spreadsheet.csv',out_dta);
+cell2csv('/home/ekaestner/Dropbox/McDonald Lab/Erik/Projects/McDLab/pst_opr/Emory_Slah_Explore/Emory_Slah_Explore/dan_spreadsheet_subject_check.csv',chk_sbj);
 
 
 

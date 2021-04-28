@@ -1,5 +1,0 @@
-# make all files in cwd executable
-svn ps svn:executable yes *
-
-# make all files in cwd non-executable
-svn propdel svn:executable *

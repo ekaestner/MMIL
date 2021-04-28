@@ -1,7 +1,0 @@
-#!/bin/csh
-
-cd $1
-echo "command = " $2
-echo "cwd = " `pwd`
-maj -r "try, eval(fileread('${2}.m')); catch, disp(lasterr), end, exit"
-echo "finished"

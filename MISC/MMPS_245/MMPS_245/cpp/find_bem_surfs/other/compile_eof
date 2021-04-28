@@ -1,2 +1,0 @@
-g++ -O3 main_eof.cpp mri.cpp mesh.cpp statistical.cpp 
-

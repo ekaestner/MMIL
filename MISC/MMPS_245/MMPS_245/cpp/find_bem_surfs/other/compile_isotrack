@@ -1,2 +1,0 @@
-g++ -O3 main_isotrack.cpp mri.cpp mesh.cpp isotrack.cpp
-

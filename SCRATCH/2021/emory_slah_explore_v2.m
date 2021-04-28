@@ -301,6 +301,40 @@ for iF = 1:numel(dta_img_dir)
     
 end
 
+%% Put together classifications
+scn_typ_hld = mmil_readtext('/home/ekaestner/Dropbox/McDonald Lab/Erik/Projects/McDLab/pst_opr/Emory_Slah_Explore/Emory_Slah_Explore/ucsd_preprocessing.csv');
+    scn_typ_hld_col = scn_typ_hld(1,2:end);
+    scn_typ_hld     = scn_typ_hld(2:end,2:end);
+    scn_typ_hld( cellfun( @isempty, scn_typ_hld) ) = {''};
+    
+scn_tot_hld = mmil_readtext('/home/ekaestner/Dropbox/McDonald Lab/Erik/Projects/McDLab/pst_opr/Emory_Slah_Explore/Emory_Slah_Explore/emory_slah_table_v2.csv');
+
+for iS = 1:size(scn_tot_hld,1)
+    
+    col_ind = strcmpi( scn_typ_hld_col, scn_tot_hld{iS,1} );
+    
+    typ_hld = unique( scn_typ_hld(:,col_ind) );
+    typ_out{iS,1} = strcat(' ',typ_hld,' ;');
+    typ_out{iS,1} = cat(2,typ_out{iS,1}{:});
+    
+end
+
+cell2csv('/home/ekaestner/Dropbox/McDonald Lab/Erik/Projects/McDLab/pst_opr/Emory_Slah_Explore/Emory_Slah_Explore/03_emory_slah_table_v2.csv', [ scn_tot_hld  typ_out ]);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
