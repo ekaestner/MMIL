@@ -1,6 +1,0 @@
-#!/bin/csh
-
-set h_vmem = '30.0G'
-
-qmajjobs_memlimit $1 $h_vmem
-

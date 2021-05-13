@@ -1,2 +1,0 @@
-g++ -O3 subjectPlotter.cpp -lglut -lGL -lGLU -lX11 -lXmu -lXi -lm -L /usr/X11R6/lib/
-

@@ -1,6 +1,0 @@
-"command","batchname","parms","type","cluster"
-"MMIL_Process_Exams",,,"matlab","qmatjobs2"
-"MMIL_Freesurfer_Recon_Exams",,,"matlab","qcshjobs2"
-"MMIL_IcoResamp_FSRecon_Exams",,,"matlab","qmatjobs"
-"MMIL_Analyze_MRI_Exams",,,"matlab","qmatjobs"
-"MMIL_Summarize_MRI_Analysis",,,"matlab",

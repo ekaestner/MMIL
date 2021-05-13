@@ -33,7 +33,27 @@ for iS = 1:numel(sbj_dir)
     for iSC = 1:numel(neu_hld.(mmil_spec_char(sbj_dir{iS},{'-' '.'})))
         neu_hld.(mmil_spec_char(sbj_dir{iS},{'-' '.'})){iSC} = neu_hld.(mmil_spec_char(sbj_dir{iS},{'-' '.'})){iSC}(1:und_ind{iSC}(end)-1);
         if strcmpi(neu_hld.(mmil_spec_char(sbj_dir{iS},{'-' '.'})){iSC}(end-1:end),'_2'); neu_hld.(mmil_spec_char(sbj_dir{iS},{'-' '.'})){iSC} = neu_hld.(mmil_spec_char(sbj_dir{iS},{'-' '.'})){iSC}(1:end-2); end
+        %         if strcmpi(neu_hld.(mmil_spec_char(sbj_dir{iS},{'-' '.'})){iSC}(end-1:end),'_1'); neu_hld.(mmil_spec_char(sbj_dir{iS},{'-' '.'})){iSC} = neu_hld.(mmil_spec_char(sbj_dir{iS},{'-' '.'})){iSC}(1:end-2); end
+        neu_hld.(mmil_spec_char(sbj_dir{iS},{'-' '.'})){iSC} = strrep(neu_hld.(mmil_spec_char(sbj_dir{iS},{'-' '.'})){iSC},'repeat','Repeat');
+        neu_hld.(mmil_spec_char(sbj_dir{iS},{'-' '.'})){iSC} = strrep(neu_hld.(mmil_spec_char(sbj_dir{iS},{'-' '.'})){iSC},'t1','T1');
+    end
+    
+    scn_tot_hld = [ scn_tot_hld numel(neu_hld.(mmil_spec_char(sbj_dir{iS},{'-' '.'}))) ];
+    sbj_tot_hld = { sbj_tot_hld{:} neu_hld.(mmil_spec_char(sbj_dir{iS},{'-' '.'})){:} };
+    
+end
 
+sbj_tot_hld = sort(sbj_tot_hld);
+tbl_hld = tabulate(sbj_tot_hld);
+sbj_tot_hld = sort(unique(sbj_tot_hld));
+
+cell2csv( '/home/ekaestne/Downloads/Emory_Slah_Explore/emory_slah_table_v2.csv', tbl_hld(:,1:2))
+
+%%
+tot_scn_num = max(scn_tot_hld);
+tot_sbj_num = max(cell2mat(tbl_hld(:,2)));
+
+scn_out_hld = cell( size(tbl_hld,1), tot_sbj_num+1);
 scn_out_hld(:,1) = tbl_hld(:,1);
 sbj_out_hld = cell( numel(sbj_dir), tot_scn_num+1);
 sbj_out_hld(:,1) = sbj_dir';
@@ -124,7 +144,7 @@ for iS = 1:numel(sbj_nme)
                     if isempty(srs_ind)
                         out_hld{ sbj_row, scn_col } = 'MISSING';
                     else
-                        csv_ind = find(strcmpi( srs_inf_csv(:,2),csv_nme_hld{srs_ind}));
+                        csv_ind = find(strcmpi( srs_inf_csv(:,2),csv_nme_hld{srs_ind(1)}));
                         out_hld{ sbj_row, scn_col } = srs_inf_csv{ csv_ind, 4};
                     end
                 end
@@ -379,63 +399,6 @@ for iS = 48:size(scn_cls,1)
         out_tbl{iS,3} = scn_cls{ iS, sum_scn_col_ind(dti_scn_col(1)) };
         out_tbl{iS,4} = scn_cls{ iS, sum_scn_col_ind(dti_scn_col(2)) };
         %%%%%%%
-
-
-sbj_nme = 'FAMOUSFACESEPK238_1205_BITC20160818';
-
-srs_inf_ind     = string_find( srs_inf_fld, sbj_nme );
-unix(['oocalc ' srs_inf_dir '/' srs_inf_fld{srs_inf_ind} '/' 'SeriesInfo.csv']);
-
-[ ~, dbs_out_cmr_ind] = unix(['grep -R ''' sbj_nme '''' ' ' dbs_out_cmr_dir ]);
-[ ~, dbs_out_mtc_ind] = unix(['grep -R ''' sbj_nme '''' ' ' dbs_out_mtc_dir ]);
-if isempty(dbs_out_cmr_ind)
-    ttt = strfind( dbs_out_mtc_ind, 'job_' );
-    sss = strfind( dbs_out_mtc_ind, '.out' );
-    unix(['kwrite ' dbs_out_mtc_dir '/' dbs_out_mtc_ind(ttt(1):sss(1)+3) ]);
-else
-    ttt = strfind( dbs_out_cmr_ind, 'job_' );
-    sss = strfind( dbs_out_cmr_ind, '.out' );
-    unix(['kwrite ' dbs_out_cmr_dir '/' dbs_out_cmr_ind(ttt(1):sss(1)+3) ]);
-end
-
-%% Final spreadsheet (??)
-sbj_dir = dir(dta_dir);
-sbj_dir = {sbj_dir(:).name};
-
-scn_cls = mmil_readtext('/home/ekaestne/Downloads/Emory_Slah_Explore/ucsd_preprocessing.csv');
-scn_cls_col = scn_cls(1,:); scn_cls_col{1} = '';
-scn_cls     = scn_cls(2:end,:);
-
-sum_scn_col = { 'bitc_diff__Matt_LT_LB_60dn'       'bitc_diff__Matt_LT_LB_60up' ...
-    'cmrr_mb_diff1.75mmMB3AP'          'cmrr_mb_diff1.75mmMB3PA' ...
-    'cmrr_mbep2d_diff1.75mmAP3Bvalues' 'cmrr_mbep2d_diff1.75mmPA3Bvalues' };
-sum_scn_col_ind = find(ismember( scn_cls_col, sum_scn_col ));
-
-scn_seq_nme = { 'bitc' '' 'cmrr_mb' '' 'cmrr_mbep2d' '' };
-
-col_nme = { 'SubjID' 'Sequence' 'For_Outcome' 'Rev_Outcome' ...
-    'For_Name' 'For_Num' 'For_B0' 'For_B1000' 'For_B2000' ...
-    'Rev_Name' 'Rev_Num' 'Rev_B0' 'Rev_B1000' 'Rev_B2000'};
-out_tbl = cell( size(scn_cls,1), numel(col_nme));
-for iS = 48:size(scn_cls,1)
-    
-    sbj_dir_use = sbj_dir( string_find( sbj_dir, scn_cls{iS,1}) );
-    sbj_dir_use( string_find(sbj_dir_use,'copy_fix') ) = [];
-    
-    dti_scn_col = find( ~cellfun(@isempty,scn_cls( iS, sum_scn_col_ind)) );
-    if numel(dti_scn_col)==2
-        
-        scn_dir = dir([ dta_dir '/' sbj_dir_use{1}]);
-        scn_dir = {scn_dir(:).name};
-        
-        % FIRST %%%%%%
-        out_tbl{iS,1} = scn_cls{iS,1};
-        
-        out_tbl{iS,2} = scn_seq_nme{ dti_scn_col(1) };
-        
-        out_tbl{iS,3} = scn_cls{ iS, sum_scn_col_ind(dti_scn_col(1)) };
-        out_tbl{iS,4} = scn_cls{ iS, sum_scn_col_ind(dti_scn_col(2)) };
-        %%%%%%%
         
         % FORWARD %%%%%%
         scn_dir_for = find(~cellfun(@isempty,regexp( scn_dir, [ '^' sum_scn_col{dti_scn_col(1)} '_\d'] )));
@@ -499,12 +462,13 @@ for iS = 48:size(scn_cls,1)
         out_tbl{iS,3} = 'MISSING';
         out_tbl{iS,4} = 'MISSING';
     end
-    
-    tme_hld = toc;
-        fprintf('%s : %i\n',[ dta_dir '/' dta_img_dir{iF} ],tme_hld)
-    
 end
 
+<<<<<<< HEAD
+cell2csv('/home/ekaestne/Downloads/Emory_Slah_Explore/Emory_Scan_Classifications.csv', [ col_nme ; out_tbl ]);
+
+%% Classify add
+=======
 %% Put together classifications
 scn_typ_hld = mmil_readtext('/home/ekaestner/Dropbox/McDonald Lab/Erik/Projects/McDLab/pst_opr/Emory_Slah_Explore/Emory_Slah_Explore/ucsd_preprocessing.csv');
     scn_typ_hld_col = scn_typ_hld(1,2:end);
@@ -534,6 +498,7 @@ cell2csv('/home/ekaestner/Dropbox/McDonald Lab/Erik/Projects/McDLab/pst_opr/Emor
 
 
 
+>>>>>>> ce65e6b2eb10687eeb205019c18f4de404f19ab4
 
 
 
