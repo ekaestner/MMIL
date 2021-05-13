@@ -61,13 +61,20 @@ naming_hiearchical_correlation
 naming_logistic_regression
 
 %% Tables/Figures
+% Table 1: Pre-operative table
+Naming_Table_1
 
-
-% Table 2: Cognitive
+% Table 2: Post-operative table
 Naming_Table_2
 
+% Table 3: Cognitive scores
+Naming_Table_3
 
+% Table 4: Pre-operative correlations 
+Naming_Table_4
 
+% Table 5: Post-operative correlations
+Naming_Table_5
 
 
 

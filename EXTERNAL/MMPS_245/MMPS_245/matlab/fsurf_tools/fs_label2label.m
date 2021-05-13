@@ -108,8 +108,9 @@ end;
 mmil_mkdir(parms.outdir);
 
 if parms.forceflag || ~exist(parms.fname_out,'file')
+    
   % construct the unix command
-  cmd = sprintf('setenv SUBJECTS_DIR %s\n',parms.subjdir); 
+  cmd = sprintf('export SUBJECTS_DIR=''%s''\n',parms.subjdir); % cmd = sprintf('setenv SUBJECTS_DIR %s\n',parms.subjdir);
   cmd = sprintf('%smri_label2label',cmd);
   if ismember(parms.source_subj,{'fsaverage','ico'})
     cmd = sprintf('%s --srcsubject ico',cmd);
