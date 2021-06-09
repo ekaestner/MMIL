@@ -74,8 +74,8 @@ mes_nme = { 'Hippocampus' 'ILF'       'IFOF'      'Fusiform' };
 mes_col = [ lft_hip_col   lft_ilf_col lft_ifo_col rgh_fus_col ];
 
 %%
-grp_nme = { 'tle_post_3T_ATLonly_left' 'tle_post_3T_ATLonly_right' };
-grp_col = { rgb('royal purple')       rgb('light magenta') };
+grp_nme = { 'tle_post_3T_ATLonly_left' }; %'tle_post_3T_ATLonly_right' };
+grp_col = { rgb('royal purple')       }; %rgb('light magenta') };
 
 %% 
 for iT = 1:numel(cog_nme)
@@ -102,7 +102,7 @@ for iT = 1:numel(cog_nme)
         fcfg.trd_lne = ones(1,numel(grp_nme));
         
         fcfg.out_dir = '/home/ekaestner/Dropbox/McDonald Lab/Erik/Projects/McDLab/pst_opr/Naming/Manuscript/Figures/Figure4/';
-        fcfg.out_nme = [ cog_nme{iT} '_' mes_nme{iN} ];
+        fcfg.out_nme = [ cog_nme{iT} '_' mes_nme{iN} '_left_only' ];
         
         ejk_scatter(fcfg)
         

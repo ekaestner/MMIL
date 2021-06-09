@@ -7,12 +7,14 @@ ejk_cross_cor <- function( dta_one_loc,
   
   # https://cran.r-project.org/web/packages/tidyLPA/vignettes/Introduction_to_tidyLPA.html
   
-  #dta_one_loc = '/home/ekaestne/PROJECTS/OUTPUT/PostOperative/Naming/SpecificCor/DTI/wmparc_FA_wm/Raw/tle_post_3T_ATLonly_left/dta_one.mat'
-  #dta_two_loc = '/home/ekaestne/PROJECTS/OUTPUT/PostOperative/Naming/SpecificCor/DTI/wmparc_FA_wm/Raw/tle_post_3T_ATLonly_left/dta_two.mat'
-  #out_put_loc = '/home/ekaestne/PROJECTS/OUTPUT/PostOperative/Naming/SpecificCor/DTI/wmparc_FA_wm/Raw/tle_post_3T_ATLonly_left/'
+  #dta_one_loc = '/home/ekaestne/PROJECTS/OUTPUT/PostOperative/Naming_final/SpecificCor/MRI/subcort_vol/Raw/tle_controls_pre_3T_allSurg_all/dta_one.mat'
+  #dta_two_loc = '/home/ekaestne/PROJECTS/OUTPUT/PostOperative/Naming_final/SpecificCor/MRI/subcort_vol/Raw/tle_controls_pre_3T_allSurg_all/dta_two.mat'
+  #out_put_loc = '/home/ekaestne/PROJECTS/OUTPUT/PostOperative/Naming_final/SpecificCor/MRI/subcort_vol/Raw/tle_controls_pre_3T_allSurg_all/'
   #cor_typ     = 'spearman'
   #pvl_cut = .05
   #pvl_lib = .15 
+  shf_pvl = 1
+  shf_num = 10000
   
   library( 'R.matlab' )  
   library('corrplot')
@@ -59,11 +61,45 @@ ejk_cross_cor <- function( dta_one_loc,
   crs_cor_pvl = crs_cor_dta_frm$P[ row_ind, col_ind ]
   crs_cor_num = crs_cor_dta_frm$n[ row_ind, col_ind ]
   
+  # Shuffle control  ####################################################################################
+  shf_cor_pvl = crs_cor_pvl
+  
+  if (shf_pvl==1) {
+    for (iC in 1:ncol(crs_cor_pvl)){
+      for (iR in 1:nrow(crs_cor_pvl)){
+        if (!is.na(crs_cor_pvl[iR,iC]) & (crs_cor_pvl[iR,iC]<.05)){
+          
+          dta_one_tmp_cmp = dta_use[[dta_one_nme[iR]]]
+          dta_two_tmp_cmp = dta_use[[dta_two_nme[iC]]]
+          
+          ind_use = !(is.nan(dta_one_tmp_cmp)) & !(is.nan(dta_two_tmp_cmp))
+          
+          dta_one_tmp_cmp = dta_one_tmp_cmp[ind_use]
+          dta_two_tmp_cmp = dta_two_tmp_cmp[ind_use]
+          
+          rnd_hld <- numeric(shf_num)
+          for (iSH in 1:shf_num){
+            
+            dta_one_tmp = dta_one_tmp_cmp
+            dta_two_tmp = sample(dta_two_tmp_cmp, length(dta_one_tmp), replace = FALSE)
+            
+            rnd_hld[iSH] = cor( dta_one_tmp, dta_two_tmp, method=cor_typ, use="complete.obs" )
+            
+          }
+          
+          shf_cor_pvl[iR,iC] <- length( rnd_hld[rnd_hld >= crs_cor_rvl[iR,iC]])/shf_num
+          
+        } else{shf_cor_pvl[iR,iC]=NaN}
+      }
+    }
+  }
+  
   # TABLE OUTPUT  ####################################################################################
   write.csv( crs_cor_rvl, paste( out_put_loc, '/', 'cross_correlation_rvalues.csv', sep='') )
   write.csv( crs_cor_pvl, paste( out_put_loc, '/', 'cross_correlation_pvalues.csv', sep='') )
   write.csv( crs_cor_num, paste( out_put_loc, '/', 'cross_correlation_n.csv', sep='') )
-
+  if (shf_pvl==1) { write.csv( shf_cor_pvl, paste( out_put_loc, '/', 'cross_correlation_pvalues_shuffle.csv', sep=''), na = "NaN" )}
+  
   cor_rvl_nrm <- as.data.frame(as.table(crs_cor_rvl))
   
   jpeg(paste( out_put_loc, '/', 'cross_correlation_visualization.jpg', sep=''), width=1080, height=1080)

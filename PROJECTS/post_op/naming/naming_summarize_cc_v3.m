@@ -15,12 +15,11 @@ roi_int{1} = { 'AgeAtSurgery' 'Educ' 'AgeOfSeizureOnset' 'NumAEDs' 'SeizureFreq'
 mes_dir{2} = 'Cognitive'; mes_typ_dir{2} = {'TLE_Controls_pre_pre' 'LTLE_Controls_pre_pre' 'RTLE_Controls_pre_pre' 'LTLE_pre_post' 'RTLE_pre_post'}; mes_sub_dir{2} = '';
 roi_int{2} = { 'bnt.raw.scr' 'ant.mem.raw.scr' };
 
-mes_dir{3} = 'MRI'; mes_typ_dir{3} = 'subcort_vol_ICV_cor'; mes_sub_dir{3} = 'Raw';
+mes_dir{3} = 'MRI'; mes_typ_dir{3} = 'subcort_vol'; mes_sub_dir{3} = 'Raw';
 roi_int{3} = { 'xLeft.Hippocampus' 'xRight.Hippocampus' };
 
-mes_dir{4} = 'MRI'; mes_typ_dir{4} = 'cort_thick_ctx'; mes_sub_dir{4} = 'Raw';
-roi_int{4} = { 'xlh.fusiform' ...
-               'xrh.fusiform' };
+mes_dir{4} = 'MRI'; mes_typ_dir{4} = 'subcort_vol_ICV_cor'; mes_sub_dir{4} = 'Raw';
+roi_int{4} = { 'xLeft.Hippocampus' 'xRight.Hippocampus' };
 
 mes_dir{5} = 'DTI'; mes_typ_dir{5} = 'fiber_FA'; mes_sub_dir{5} = 'Raw';
 roi_int{5} = { 'xL.ILF' 'xL.IFO' 'xR.ILF' 'xR.IFO' };

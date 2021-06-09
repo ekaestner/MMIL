@@ -13,6 +13,7 @@ ejk_surface_correlation <- function( lhs_srf_var_loc,
   rhs_srf_var_loc = '/home/ekaestne/PROJECTS/OUTPUT/PostOperative/Naming/Data/surf_wmparc_fa_rhs_sm313.mat'
   cor_loc = '/home/ekaestne/PROJECTS/OUTPUT/PostOperative/Naming/SurfaceCorrelation/LTLE_post_post/ant_mem_raw_scr_pst/cor_var.mat'
   grp_loc = '/home/ekaestne/PROJECTS/OUTPUT/PostOperative/Naming/SurfaceCorrelation/LTLE_post_post/ant_mem_raw_scr_pst/grp_var.mat'
+  cov_loc = ''
   iG = 1
   out_put_loc = '/home/ekaestne/PROJECTS/OUTPUT/PostOperative/Naming/SurfaceCorrelation/LTLE_post_post/ant_mem_raw_scr_pst_spearman/'
   fst_nme = 'tle_post_3T_ATLonly_left' # 3_left # left # 'left_dominant'

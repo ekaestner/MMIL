@@ -106,7 +106,7 @@ clear lhs_new_ctb rhs_new_ctb
 % Save old ROIs for checking
 for iK = 1:numel(kep_ind)
     lhs_new_loc( lhs_prc_loc==kep_ind(iK) ) = iK;
-    rhs_new_loc( lhs_prc_loc==kep_ind(iK) ) = iK;
+    rhs_new_loc( rhs_prc_loc==kep_ind(iK) ) = iK;
     
     lhs_new_ctb.struct_names{iK,1} = lhs_prc_ctb.struct_names{kep_ind(iK),1};
     rhs_new_ctb.struct_names{iK,1} = rhs_prc_ctb.struct_names{kep_ind(iK),1};
@@ -153,10 +153,49 @@ for iV = 1:size(lhs_sve_ctb,1)
 end
     
 % Save %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-fs_write_annotation([ fsr_dir '/' avg_sbj '/' 'label' '/' 'lh' '.' 'new_fus' '.aparc.annot' ], ...
+fs_write_annotation([ fsr_dir '/' avg_sbj '/' 'label' '/' 'lh' '.' 'new_fus_cor' '.aparc.annot' ], ...
                      lhs_new_loc, lhs_sve_ctb, lhs_new_ctb)
-fs_write_annotation([ fsr_dir '/' avg_sbj '/' 'label' '/' 'rh' '.' 'new_fus' '.aparc.annot' ], ...
+fs_write_annotation([ fsr_dir '/' avg_sbj '/' 'label' '/' 'rh' '.' 'new_fus_cor' '.aparc.annot' ], ...
                       rhs_new_loc, rhs_sve_ctb, rhs_new_ctb)
+       
+%% Figure of ROIs
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+fcfg = [];
+
+fcfg.fsr_dir = fsr_dir; 
+fcfg.fsr_nme = avg_sbj;
+
+fcfg.roi_loc = [ fsr_dir '/' avg_sbj '/' 'label' ];
+fcfg.prc_nme = '.new_fus.aparc.annot';
+
+fcfg.inc_reg = { 'new_fusiform' };
+
+fcfg.sph = { 'lh' 'rh' };
+fcfg.sph_vew = { 'lat' 'ven' 'med' };
+
+fcfg.out_dir = [ fsr_dir '/' 'roi_new_fus' '/'];
+fcfg.out_nme  = 'roi_new_fus';
+
+ejk_roi_plot(fcfg);
+                  
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+fcfg = [];
+
+fcfg.fsr_dir = fsr_dir; 
+fcfg.fsr_nme = avg_sbj;
+
+fcfg.roi_loc = [ fsr_dir '/' avg_sbj '/' 'label' ];
+fcfg.prc_nme = '.new_fus_cor.aparc.annot';
+
+fcfg.inc_reg = { 'new_fusiform' };
+
+fcfg.sph = { 'lh' 'rh' };
+fcfg.sph_vew = { 'lat' 'ven' 'med' };
+
+fcfg.out_dir = [ fsr_dir '/' 'roi_new_fus_cor' '/'];
+fcfg.out_nme  = 'roi_new_fus_cor';
+
+ejk_roi_plot(fcfg);
                   
 %% Resample (fsaverage to individual subject)
 % LHS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

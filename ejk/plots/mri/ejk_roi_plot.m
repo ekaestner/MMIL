@@ -30,6 +30,8 @@ if ~isfield(cfg,'sph');     cfg.sph = { 'lh' 'rh' }; end
 if ~isfield(cfg,'sph_vew'); cfg.sph_vew = { 'lat' 'ven' 'med' }; end
 if ~isfield(cfg,'sph_vew'); cfg.sph_vew = { 'lat' 'ven' 'med' }; end
 
+ejk_chk_dir(cfg.out_dir)
+
 %% Load Pieces
 % load annotations
 [~,albl,~] = fs_read_annotation([ cfg.roi_loc '/' cfg.sph{1} cfg.prc_nme ]);
