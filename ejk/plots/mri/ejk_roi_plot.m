@@ -62,6 +62,13 @@ srf_brn{2}.surf_brain.faces = srf_brn{2}.faces;
 num_col = numel(albl);
 dst_col = distinguishable_colors(num_col);
 
+if isfield(cfg,'roi_col')
+    for iRO = 1:numel(cfg.inc_reg)
+        roi_ind = find(strcmpi(albl,cfg.inc_reg{iRO}));
+        dst_col(roi_ind,:) = cfg.roi_col{iRO};
+    end
+end
+
 col{1} = rgb('light grey');
 for iR = 1:size(pct_hld,1)
     col{iR + 1} = dst_col(iR,:);
@@ -84,6 +91,13 @@ tbl_pct(isnan(tbl_pct)) = 0;
 
 num_col = numel(albl);
 dst_col = distinguishable_colors(num_col);
+
+if isfield(cfg,'roi_col')
+    for iRO = 1:numel(cfg.inc_reg)
+        roi_ind = find(strcmpi(albl,cfg.inc_reg{iRO}));
+        dst_col(roi_ind,:) = cfg.roi_col{iRO};
+    end
+end
 
 col{1} = rgb('light grey');
 for iR = 1:size(pct_hld,1)

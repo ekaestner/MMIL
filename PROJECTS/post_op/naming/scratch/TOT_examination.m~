@@ -209,74 +209,21 @@ figure('Position',[0 0 1080 1080],'Units','pixels','Visible','off');
 for iP = 1:numel(ind_one)
     subplot(3,3,iP)
     [rvl_hld, pvl_hld] = corr(cog_dta_hld(:,ind_one(iP)),cog_dta_hld(:,ind_two(iP)),'type','spearman','row','complete');
-    scatter(cog_dta_hld(:,ind_one(iP)),cog_dta_hld(:,ind_two(iP)),'filled');
-    title( sprintf([ mmil_spec_char(cog_dta_hld_col{ind_one(iP)},{'_'},{' '}) '-BY-' mmil_spec_char(cog_dta_hld_col{ind_two(iP)},{'_'},{' '}) '\n r=' num2str(roundsd(rvl_hld,2)) ' p=' num2str(roundsd(pvl_hld,2)) ]) );
+    scatter(cog_dta_hld(:,ind_one(iP)),cog_dta_hld(:,ind_two(iP)));
+    title( sprintf([ cog_dta_hld_col{ind_one(iP)} '-BY-' cog_dta_hld_col{ind_two(iP)} '\n r=' num2str(roundsd(rvl_hld,2)) 'p=' num2str(roundsd(pvl_hld,2)) ]) );
 end
 tightfig();
 print(gcf,[ tot_dir '/' 'cognitive_cor.png' ],'-dpng')
 close all
 
 %% Pre-L %%%%%%%%%%%%%%%%%%%%%%%%%
-ind_one = [ 1 3 5 1 3 5 1 3 5];
-ind_two = [ 1 1 1 3 3 3 5 5 5];
-
-figure('Position',[0 0 1080 1080],'Units','pixels','Visible','off');
-for iP = 1:numel(ind_one)
-    subplot(3,3,iP)
-    [rvl_hld, pvl_hld] = corr(cog_dta_hld(:,ind_one(iP)),neu_bio_hld(:,ind_two(iP)),'type','spearman','row','complete');
-    scatter(cog_dta_hld(:,ind_one(iP)),neu_bio_hld(:,ind_two(iP)),'filled');
-    title( sprintf([ mmil_spec_char(cog_dta_hld_col{ind_one(iP)},{'_'},{' '}) '-BY-' mmil_spec_char(neu_bio_hld_col{ind_two(iP)},{'_'},{' '}) '\n r=' num2str(roundsd(rvl_hld,2)) ' p=' num2str(roundsd(pvl_hld,2)) ]) );
-end
-tightfig();
-print(gcf,[ tot_dir '/' 'neurobio_pre_left.png' ],'-dpng')
-close all
 
 %% Pre-R %%%%%%%%%%%%%%%%%%%%%%%%%
-ind_one = [ 1 3 5 1 3 5 1 3 5];
-ind_two = [ 2 2 2 4 4 4 6 6 6];
-
-figure('Position',[0 0 1080 1080],'Units','pixels','Visible','off');
-for iP = 1:numel(ind_one)
-    subplot(3,3,iP)
-    [rvl_hld, pvl_hld] = corr(cog_dta_hld(:,ind_one(iP)),neu_bio_hld(:,ind_two(iP)),'type','spearman','row','complete');
-    scatter(cog_dta_hld(:,ind_one(iP)),neu_bio_hld(:,ind_two(iP)),'filled');
-    title( sprintf([ mmil_spec_char(cog_dta_hld_col{ind_one(iP)},{'_'},{' '}) '-BY-' mmil_spec_char(neu_bio_hld_col{ind_two(iP)},{'_'},{' '}) '\n r=' num2str(roundsd(rvl_hld,2)) ' p=' num2str(roundsd(pvl_hld,2)) ]) );
-end
-tightfig();
-print(gcf,[ tot_dir '/' 'neurobio_pre_right.png' ],'-dpng')
-close all
 
 %% Post-L %%%%%%%%%%%%%%%%%%%%%%%%%
-ind_one = [ 2 4 6 2 4 6 2 4 6];
-ind_two = [ 1 1 1 3 3 3 5 5 5];
-
-figure('Position',[0 0 1080 1080],'Units','pixels','Visible','off');
-for iP = 1:numel(ind_one)
-    subplot(3,3,iP)
-    [rvl_hld, pvl_hld] = corr(cog_dta_hld(:,ind_one(iP)),neu_bio_hld(:,ind_two(iP)),'type','spearman','row','complete');
-    scatter(cog_dta_hld(:,ind_one(iP)),neu_bio_hld(:,ind_two(iP)),'filled');
-    title( sprintf([ mmil_spec_char(cog_dta_hld_col{ind_one(iP)},{'_'},{' '}) '-BY-' mmil_spec_char(neu_bio_hld_col{ind_two(iP)},{'_'},{' '}) '\n r=' num2str(roundsd(rvl_hld,2)) ' p=' num2str(roundsd(pvl_hld,2)) ]) );
-end
-tightfig();
-print(gcf,[ tot_dir '/' 'neurobio_post_left.png' ],'-dpng')
-close all
 
 %% Post-R %%%%%%%%%%%%%%%%%%%%%%%%%
-ind_one = [ 2 4 6 2 4 6 2 4 6];
-ind_two = [ 2 2 2 4 4 4 6 6 6];
 
-figure('Position',[0 0 1080 1080],'Units','pixels','Visible','off');
-for iP = 1:numel(ind_one)
-    subplot(3,3,iP)
-    [rvl_hld, pvl_hld] = corr(cog_dta_hld(:,ind_one(iP)),neu_bio_hld(:,ind_two(iP)),'type','spearman','row','complete');
-    scatter(cog_dta_hld(:,ind_one(iP)),neu_bio_hld(:,ind_two(iP)),'filled');
-    title( sprintf([ mmil_spec_char(cog_dta_hld_col{ind_one(iP)},{'_'},{' '}) '-BY-' mmil_spec_char(neu_bio_hld_col{ind_two(iP)},{'_'},{' '}) '\n r=' num2str(roundsd(rvl_hld,2)) ' p=' num2str(roundsd(pvl_hld,2)) ]) );
-end
-tightfig();
-print(gcf,[ tot_dir '/' 'neurobio_post_right.png' ],'-dpng')
-close all
-
-%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%5
 %%%%%%%%%%%%%%%%%%%%%%%%%%%
 figure()
 subplot(2,2,1)

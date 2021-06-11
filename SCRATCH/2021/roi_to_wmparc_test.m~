@@ -133,79 +133,35 @@ lhs_new_ctb.table(iK+1,:) = lhs_prc_ctb.table(end,:);
 rhs_new_ctb.table(iK+1,:) = rhs_prc_ctb.table(end,:);
 
 % New ROI - ?hs_non_lap_fus %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-lhs_new_loc(lhs_non_lap_fus) = iK + 2;
-rhs_new_loc(rhs_non_lap_fus) = iK + 2;
+lhs_new_loc(lhs_ovr_lap_fus) = iK + 2;
+rhs_new_loc(rhs_ovr_lap_fus) = iK + 2;
 
 lhs_new_ctb.struct_names{iK+2,1} = 'non_overlapping_fusiform';
 rhs_new_ctb.struct_names{iK+2,1} = 'non_overlapping_fusiform';
 
-lhs_new_ctb.table(iK+2,:) = lhs_prc_ctb.table(end-1,:);
-rhs_new_ctb.table(iK+2,:) = rhs_prc_ctb.table(end-1,:);
+lhs_new_ctb.table(iK+1,:) = lhs_prc_ctb.table(end-1,:);
+rhs_new_ctb.table(iK+1,:) = rhs_prc_ctb.table(end-1,:);
 
 % New ROI - ?hs_non_fus %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-lhs_new_loc(lhs_non_fus) = iK + 3;
-rhs_new_loc(rhs_non_fus) = iK + 3;
+lhs_new_loc(lhs_ovr_lap_fus) = iK + 3;
+rhs_new_loc(rhs_ovr_lap_fus) = iK + 3;
 
 lhs_new_ctb.struct_names{iK+3,1} = 'rest_of_new_roi';
 rhs_new_ctb.struct_names{iK+3,1} = 'rest_of_new_roi';
 
-lhs_new_ctb.table(iK+3,:) = lhs_prc_ctb.table(end-2,:);
-rhs_new_ctb.table(iK+3,:) = rhs_prc_ctb.table(end-2,:);
+lhs_new_ctb.table(iK+1,:) = lhs_prc_ctb.table(end-2,:);
+rhs_new_ctb.table(iK+1,:) = rhs_prc_ctb.table(end-2,:);
 
 % New ROI - everything else %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Load
-[ lhs_old_loc, ~, lhs_old_ctb ]          = fs_read_annotation([ '/home/ekaestner/gitrep/MMIL/EXTERNAL/freesurfer' '/' 'lh' '.aparc.annot' ]);
-[ rhs_old_loc, ~, rhs_old_ctb ]          = fs_read_annotation([ '/home/ekaestner/gitrep/MMIL/EXTERNAL/freesurfer' '/' 'rh' '.aparc.annot' ]);
 
-% Label lhs
-prc_ded_reg = find(lhs_new_loc==0);
-org_ded_reg = find(lhs_old_loc==0);
-prc_ded_reg = setxor(prc_ded_reg, org_ded_reg);
 
-lhs_new_loc( prc_ded_reg ) = 9;
-lhs_new_lbl{9} = 'deadzone';
-
-lhs_new_ctb.numEntries = 9;
-lhs_new_ctb.struct_names{9} = 'deadzone';
-lhs_new_ctb.table = [ lhs_new_ctb.table ; lhs_old_ctb.table(20,:) ];
-
-% Label rhs
-prc_ded_reg = find(rhs_new_loc==0);
-org_ded_reg = find(rhs_old_loc==0);
-prc_ded_reg = setxor(prc_ded_reg, org_ded_reg);
-
-rhs_new_loc( prc_ded_reg ) = 9;
-rhs_new_lbl{9} = 'deadzone';
-
-rhs_new_ctb.numEntries = 9;
-rhs_new_ctb.struct_names{9} = 'deadzone';
-rhs_new_ctb.table = [ rhs_new_ctb.table ; rhs_old_ctb.table(20,:) ];
-
-% Ctab nonsense
-lhs_sve_ctb = zeros(size(lhs_new_loc));
-rhs_sve_ctb = zeros(size(rhs_new_loc));
-for iV = 1:size(lhs_sve_ctb,1)
-    
-    if lhs_new_loc(iV)==0
-        lhs_sve_ctb(iV)=0;
-    else
-        lhs_sve_ctb(iV) = lhs_new_ctb.table( lhs_new_loc(iV),1) + lhs_new_ctb.table( lhs_new_loc(iV),2)*2^8 + lhs_new_ctb.table( lhs_new_loc(iV),3)*2^16;
-    end
-    
-    if rhs_new_loc(iV)==0
-        rhs_sve_ctb(iV)=0;
-    else
-        rhs_sve_ctb(iV) = rhs_new_ctb.table( rhs_new_loc(iV),1) + rhs_new_ctb.table( rhs_new_loc(iV),2)*2^8 + rhs_new_ctb.table( rhs_new_loc(iV),3)*2^16;
-    end
-    
-end
 
 % Finish Table %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 lhs_new_ctb.numEntries = numel(lhs_new_ctb.struct_names);
 rhs_new_ctb.numEntries = numel(rhs_new_ctb.struct_names);
 
-lhs_new_ctb.orig_tab = lhs_new_ctb.orig_tab;
-rhs_new_ctb.orig_tab = rhs_new_ctb.orig_tab;
+lhs_new_ctb.orig_tab = lhs_prc_ctb.orig_tab;
+rhs_new_ctb.orig_tab = rhs_prc_ctb.orig_tab;
 
 % Setup for saving
 lhs_sve_ctb = zeros(size(lhs_new_loc));
@@ -261,8 +217,7 @@ fcfg.fsr_nme = avg_sbj;
 fcfg.roi_loc = [ fsr_dir '/' avg_sbj '/' 'label' ];
 fcfg.prc_nme = '.new_fus_cor.aparc.annot';
 
-fcfg.inc_reg = { 'new_fusiform'       'non_overlapping_fusiform' 'rest_of_new_roi' };
-fcfg.roi_col = { rgb('light magenta') rgb('cerulean')            rgb('dark magenta') };
+fcfg.inc_reg = { 'new_fusiform' };
 
 fcfg.sph = { 'lh' 'rh' };
 fcfg.sph_vew = { 'lat' 'ven' 'med' };
