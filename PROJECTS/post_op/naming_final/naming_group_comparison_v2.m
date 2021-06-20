@@ -21,8 +21,9 @@ run_typ = { [ 1 1 2 1 1 ] ... % epd,          pre,  3T, Non-Surgical, all patien
             [ 1 2 2 2 1 ] ... % epd,          post, 3T, ATL,          all patients 
             [ 1 2 2 2 2 ] ... % epd,          post, 3T, ATL,          L/R split
             [ 2 1 2 1 1 ] ... % controls/epd, pre,  3T, Non-Surgical, all patients 
-            [ 3 1 2 1 1 ] ...  % controls,     pre,  3T, Non-Surgical, all  
-            [ 2 1 2 1 3 ] }; % controls/epd, pre,  3T, Non-Surgical, L/R split including controls
+            [ 3 1 2 1 1 ] ... % controls,     pre,  3T, Non-Surgical, all  
+            [ 2 1 2 1 3 ] ... % controls/epd, pre,  3T, Non-Surgical, L/R split including controls
+            }; 
 
 cln_dta = mmil_readtext([ prj_dir '/' prj_nme '/' 'Data' '/' 'Clinical.csv' ]);
 cln_dta_col = cln_dta(1,2:end);

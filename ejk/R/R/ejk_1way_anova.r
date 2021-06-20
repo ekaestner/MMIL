@@ -113,7 +113,7 @@ for ( iG in 1:length(grp_var_nme) )
     pvl_tbl$df_den[iV]      = ttt$DFd
     #pvl_tbl$method[iV]      = ttt$method
     
-    pvl_tbl$report[iV]      = paste('F(',signif(ttt$DFn,digits=3),',',signif(ttt$DFd,digits=3),')=',signif(ttt$F,digits=3),', p=',signif(ttt$p,digits=2),sep='')
+    pvl_tbl$report[iV]      = paste('F(',signif(ttt$DFn,digits=3),';',signif(ttt$DFd,digits=3),')=',signif(ttt$F,digits=3),'; p=',signif(ttt$p,digits=2),sep='')
     
     pvl_tbl$par_eta_sq[iV]  = signif(ttt$pes,digits=3)
     

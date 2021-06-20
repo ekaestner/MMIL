@@ -38,6 +38,12 @@ naming_clean_v2
 %% Group Comparison
 naming_group_comparison_v2
 
+% Clinical
+naming_correlation_clinical_v2
+
+% Cognitive
+naming_correlation_cognitive_v2
+
 %% Cross Correlations
 naming_correlation_v3
 

@@ -12,7 +12,7 @@ ejk_cross_cor <- function( dta_one_loc,
   #out_put_loc = '/home/ekaestne/PROJECTS/OUTPUT/PostOperative/Naming_final/SpecificCor/MRI/subcort_vol/Raw/tle_controls_pre_3T_allSurg_all/'
   #cor_typ     = 'spearman'
   #pvl_cut = .05
-  #pvl_lib = .15 
+  # pvl_lib = .15 
   shf_pvl = 1
   shf_num = 10000
   

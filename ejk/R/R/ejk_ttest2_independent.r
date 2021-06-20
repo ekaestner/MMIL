@@ -80,7 +80,7 @@ for ( iG in 1:length(grp_var_nme) )
     pvl_tbl$alternative[iV] = ttt$alternative
     pvl_tbl$method[iV]      = ttt$method
     
-    pvl_tbl$report[iV]      = paste('t(',signif(ttt$parameter,digits=3),')=',signif(ttt$statistic,digits=3),', p=',signif(ttt$p.value,digits=2),sep='')
+    pvl_tbl$report[iV]      = paste('t(',signif(ttt$parameter,digits=3),')=',signif(ttt$statistic,digits=3),'; p=',signif(ttt$p.value,digits=2),sep='')
     
     pvl_tbl$cohensd[iV]     = chd_val$effsize
     

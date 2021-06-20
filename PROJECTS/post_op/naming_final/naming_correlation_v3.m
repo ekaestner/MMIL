@@ -20,12 +20,6 @@ cog_dta_col = cog_dta(1,2:end);
 cog_dta_sbj = cog_dta(2:end,1);
 cog_dta     = cog_dta(2:end,2:end);
 
-%% Cognitive
-naming_correlation_cognitive
-
-%% Clinical
-naming_correlation_clinical
-
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%5
 %% DTI
 for iG = 1:numel(run_grp)
