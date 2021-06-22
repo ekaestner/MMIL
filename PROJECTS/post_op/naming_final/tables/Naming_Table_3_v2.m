@@ -91,4 +91,4 @@ row_lbl = { 'BNT Pre-operative correct (total sample)' 'BNT Pre-operative correc
 out_tbl = [ col_lbl ; row_lbl tbl_out ];
 
 %%
-cell2csv( [ out_dir '/' 'Table3.csv' ], tbl_out)
+cell2csv( [ out_dir '/' 'Table3.csv' ], out_tbl)

@@ -74,7 +74,7 @@ num_sbj = { 'N' numel(grp.('tle_post_3T_ATLonly_left')) numel(grp.('tle_post_3T_
 out_tbl = [ col_lbl ; num_sbj ; row_lbl tbl_out ];
 
 %%
-cell2csv( [ out_dir '/' 'Table2.csv' ], tbl_out)
+cell2csv( [ out_dir '/' 'Table2.csv' ], out_tbl)
 
 
 

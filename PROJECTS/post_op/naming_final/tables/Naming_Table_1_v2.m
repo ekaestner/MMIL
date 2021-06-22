@@ -48,7 +48,7 @@ num_sbj = { 'N' numel(grp.('controls_pre_3T_allSurg_all')) numel(grp.('tle_pre_3
 out_tbl = [ col_lbl ; num_sbj ; row_lbl tbl_out ];
 
 %%
-cell2csv( [ out_dir '/' 'Table1.csv' ], tbl_out)
+cell2csv( [ out_dir '/' 'Table1.csv' ], out_tbl)
 
 
 

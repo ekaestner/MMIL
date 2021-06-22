@@ -142,3 +142,7 @@ fcfg.lbl_two = strcat( 'group_', cln_dta_col(use_dta_col));
 fcfg.out_dir = [ out_put '/' 'Clinical' '/' 'Fisher' '/' cmp_out{1}];
 
 ejk_fisher_test( fcfg );
+
+%% Correlations %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
