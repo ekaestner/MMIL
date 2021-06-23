@@ -9,23 +9,20 @@ run_grp = { 'tle_controls_pre_3T_allSurg_all'   ...
 ejk_chk_dir([ dta_dir '/' 'Summary' '/' 'apriori']);
 
 %% Include
-mes_dir{1} = 'Clinical'; mes_typ_dir{1} = {'TLE_Controls_pre_pre' 'LTLE_Controls_pre_pre' 'RTLE_Controls_pre_pre' 'LTLE_post_post' 'RTLE_post_post'}; mes_sub_dir{1} = '';
+mes_dir{1} = 'Clinical'; mes_typ_dir{1} = {'Correlation/TLE_Controls_pre_cln' 'Correlation/LTLE_Controls_pre_cln' 'Correlation/RTLE_Controls_pre_cln' 'Correlation/LTLE_post_cln' 'Correlation/RTLE_post_cln'}; mes_sub_dir{1} = '';
 roi_int{1} = { 'AgeAtSurgery' 'Educ' 'AgeOfSeizureOnset' 'NumAEDs' 'SeizureFreq' };
 
-mes_dir{2} = 'Cognitive'; mes_typ_dir{2} = {'TLE_Controls_pre_pre' 'LTLE_Controls_pre_pre' 'RTLE_Controls_pre_pre' 'LTLE_pre_post' 'RTLE_pre_post'}; mes_sub_dir{2} = '';
+mes_dir{2} = 'Cognitive'; mes_typ_dir{2} = {'Correlation/TLE_Controls_pre_pre' 'Correlation/LTLE_Controls_pre_pre' 'Correlation/RTLE_Controls_pre_pre' 'Correlation/LTLE_pre_post' 'Correlation/RTLE_pre_post'}; mes_sub_dir{2} = '';
 roi_int{2} = { 'bnt.raw.scr' 'ant.mem.raw.scr' };
 
-mes_dir{3} = 'MRI'; mes_typ_dir{3} = 'subcort_vol'; mes_sub_dir{3} = 'Raw';
+mes_dir{3} = 'MRI'; mes_typ_dir{4} = 'subcort_vol_ICV_cor'; mes_sub_dir{4} = 'Raw';
 roi_int{3} = { 'xLeft.Hippocampus' 'xRight.Hippocampus' };
 
-mes_dir{4} = 'MRI'; mes_typ_dir{4} = 'subcort_vol_ICV_cor'; mes_sub_dir{4} = 'Raw';
-roi_int{4} = { 'xLeft.Hippocampus' 'xRight.Hippocampus' };
+mes_dir{4} = 'DTI'; mes_typ_dir{5} = 'fiber_FA'; mes_sub_dir{5} = 'Raw';
+roi_int{4} = { 'xL.ILF' 'xL.IFO' 'xR.ILF' 'xR.IFO' };
 
-mes_dir{5} = 'DTI'; mes_typ_dir{5} = 'fiber_FA'; mes_sub_dir{5} = 'Raw';
-roi_int{5} = { 'xL.ILF' 'xL.IFO' 'xR.ILF' 'xR.IFO' };
-
-mes_dir{6} = 'DTI'; mes_typ_dir{6} = 'wmparc_FA_wm'; mes_sub_dir{6} = 'Raw';
-roi_int{6} = { 'xlh.fusiform' ...
+mes_dir{5} = 'DTI'; mes_typ_dir{6} = 'wmparc_FA_wm'; mes_sub_dir{6} = 'Raw';
+roi_int{5} = { 'xlh.fusiform' ...
                'xrh.fusiform' };         
 
 % Concatenate

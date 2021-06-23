@@ -2,10 +2,10 @@ clear; clc;
 
 %%
 prj_dir = '/home/ekaestne/PROJECTS/OUTPUT';
-prj_nme = 'PostOperative/Naming_final';
+prj_nme = 'PostOperative/Naming_final_sample';
 
 %%
-red_cap_fle = '/home/ekaestne/PROJECTS/DATA/csv/redcap/Redcap_2021_06_03.csv';
+red_cap_fle = '/home/ekaestne/PROJECTS/DATA/csv/redcap/Redcap_2021_06_22.csv';
 
 aln_dom_fle = '/home/ekaestne/PROJECTS/DATA/csv/redcap/Alena_Dominance.csv';
 
@@ -38,16 +38,17 @@ naming_clean_v2
 %% Group Comparison
 naming_group_comparison_v2
 
+%% Cross Correlations
 % Clinical
 naming_correlation_clinical_v2
 
 % Cognitive
 naming_correlation_cognitive_v2
 
-%% Cross Correlations
+% Neurobio
 naming_correlation_v3
 
-naming_summarize_cc_v3
+naming_summarize_cc_v4
 %%%%%%%%
 %% Surface Correlations
 naming_surface_correlations
@@ -72,7 +73,9 @@ Naming_Table_3_v2
 Naming_Table_4_v2
 
 % Table 5: Post-operative correlations
-Naming_Table_5_v2
+Naming_Table_5_1_v2
+
+Naming_Table_5_2_v2
 
 
 

@@ -1,4 +1,6 @@
-out_dir = '/home/ekaestne/PROJECTS/OUTPUT/PostOperative/Naming_final/Tables';
+out_dir =  [ prj_dir '/' prj_nme '/' 'Tables' ];
+
+clear out_tbl
 
 load( [ prj_dir '/' prj_nme '/' 'groups.mat' ] )
 

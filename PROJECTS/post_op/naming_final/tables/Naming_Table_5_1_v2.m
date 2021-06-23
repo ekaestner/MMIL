@@ -1,13 +1,15 @@
-out_dir = '/home/ekaestne/PROJECTS/OUTPUT/PostOperative/Naming_final/Tables';
+out_dir =  [ prj_dir '/' prj_nme '/' 'Tables' ];
 
 load( [ prj_dir '/' prj_nme '/' 'groups.mat' ] )
 
+clear out_tbl
+
 %% Out Table - OUTPUT (r-value)
 clear dta_inp
-dta_inp{1} = mmil_readtext('/home/ekaestne/PROJECTS/OUTPUT/PostOperative/Naming_final/SpecificCor/MRI/subcort_vol_ICV_cor/Raw/tle_post_3T_ATLonly_left/cross_correlation_rvalues.csv');
-dta_inp{2} = mmil_readtext('/home/ekaestne/PROJECTS/OUTPUT/PostOperative/Naming_final/SpecificCor/MRI/subcort_vol_ICV_cor/Raw/tle_post_3T_ATLonly_left/cross_correlation_rvalues.csv');
-dta_inp{3} = mmil_readtext('/home/ekaestne/PROJECTS/OUTPUT/PostOperative/Naming_final/SpecificCor/DTI/fiber_FA/Raw/tle_post_3T_ATLonly_left/cross_correlation_rvalues.csv');
-dta_inp{4} = mmil_readtext('/home/ekaestne/PROJECTS/OUTPUT/PostOperative/Naming_final/SpecificCor/DTI/wmparc_FA_wm/Raw/tle_post_3T_ATLonly_left/cross_correlation_rvalues.csv');
+dta_inp{1} = mmil_readtext([ prj_dir '/' prj_nme '/' '/SpecificCor/MRI/subcort_vol_ICV_cor/Raw/tle_post_3T_ATLonly_left/cross_correlation_rvalues.csv']);
+dta_inp{2} = mmil_readtext([ prj_dir '/' prj_nme '/' '/SpecificCor/MRI/subcort_vol_ICV_cor/Raw/tle_post_3T_ATLonly_left/cross_correlation_rvalues.csv']);
+dta_inp{3} = mmil_readtext([ prj_dir '/' prj_nme '/' '/SpecificCor/DTI/fiber_FA/Raw/tle_post_3T_ATLonly_left/cross_correlation_rvalues.csv']);
+dta_inp{4} = mmil_readtext([ prj_dir '/' prj_nme '/' '/SpecificCor/DTI/wmparc_FA_wm/Raw/tle_post_3T_ATLonly_left/cross_correlation_rvalues.csv']);
 
 % %%%
 fcfg = [];
@@ -55,10 +57,10 @@ tbl_out = ejk_create_table( fcfg );
 
 %% Supp TABLE 1 - Significance (p-value)
 clear dta_inp
-dta_inp{1} = mmil_readtext('/home/ekaestne/PROJECTS/OUTPUT/PostOperative/Naming_final/SpecificCor/MRI/subcort_vol_ICV_cor/Raw/tle_post_3T_ATLonly_left/cross_correlation_pvalues.csv');
-dta_inp{2} = mmil_readtext('/home/ekaestne/PROJECTS/OUTPUT/PostOperative/Naming_final/SpecificCor/MRI/subcort_vol_ICV_cor/Raw/tle_post_3T_ATLonly_left/cross_correlation_pvalues.csv');
-dta_inp{3} = mmil_readtext('/home/ekaestne/PROJECTS/OUTPUT/PostOperative/Naming_final/SpecificCor/DTI/fiber_FA/Raw/tle_post_3T_ATLonly_left/cross_correlation_pvalues.csv');
-dta_inp{4} = mmil_readtext('/home/ekaestne/PROJECTS/OUTPUT/PostOperative/Naming_final/SpecificCor/DTI/wmparc_FA_wm/Raw/tle_post_3T_ATLonly_left/cross_correlation_pvalues.csv');
+dta_inp{1} = mmil_readtext([ prj_dir '/' prj_nme '/' '/SpecificCor/MRI/subcort_vol_ICV_cor/Raw/tle_post_3T_ATLonly_left/cross_correlation_pvalues.csv']);
+dta_inp{2} = mmil_readtext([ prj_dir '/' prj_nme '/' '/SpecificCor/MRI/subcort_vol_ICV_cor/Raw/tle_post_3T_ATLonly_left/cross_correlation_pvalues.csv']);
+dta_inp{3} = mmil_readtext([ prj_dir '/' prj_nme '/' '/SpecificCor/DTI/fiber_FA/Raw/tle_post_3T_ATLonly_left/cross_correlation_pvalues.csv']);
+dta_inp{4} = mmil_readtext([ prj_dir '/' prj_nme '/' '/SpecificCor/DTI/wmparc_FA_wm/Raw/tle_post_3T_ATLonly_left/cross_correlation_pvalues.csv']);
 
 % %%%
 fcfg = [];
@@ -106,7 +108,7 @@ tbl_pvl = ejk_create_table( fcfg );
 
 %% Supp TABLE 2 - FDR (summary)
 clear dta_inp
-dta_inp{1} = mmil_readtext('/home/ekaestne/PROJECTS/OUTPUT/PostOperative/Naming_final/SpecificCor/Summary/apriori/include_total_raw_tle_post_3T_ATLonly_left_FDR.csv');
+dta_inp{1} = mmil_readtext([ prj_dir '/' prj_nme '/' '/SpecificCor/Summary/apriori/include_total_raw_tle_post_3T_ATLonly_left_FDR.csv']);
     dta_inp{1} = dta_inp{1}(:,4:end);
 
     % %%%
