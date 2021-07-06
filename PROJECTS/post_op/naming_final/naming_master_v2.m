@@ -53,10 +53,8 @@ naming_summarize_cc_v4
 %% Surface Correlations
 naming_surface_correlations
 
-%% Hiearchical Correlation
-naming_hiearchical_correlation
-
 %% Logistic Regression
+%%%%%%%%
 naming_logistic_regression
 
 %% Tables/Figures

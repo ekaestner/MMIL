@@ -104,7 +104,7 @@ for iG = 1:numel(run_grp)
         fdr_cut_off_grp{iTM} = FDR( hld_pvl(:), .05);        
     end
 
-    for iM = 3:numel(mes_dir)        
+    for iM = 1:numel(mes_dir)        
         % Individual Measures
         fdr_cut_off_ind = FDR( pvl_hld_fdr{iG,iM}, .05 );
         if ~isempty(fdr_cut_off_ind)
@@ -125,7 +125,7 @@ end
 % Concatenate again %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 for iG = 1:numel(run_grp)
     
-    for iM = 3:numel(mes_dir)
+    for iM = 1:numel(mes_dir)
         
         if ~iscell(mes_typ_dir{iM})
             rvl_hld = mmil_readtext([ dta_dir '/' mes_dir{iM} '/' mes_typ_dir{iM} '/' mes_sub_dir{iM} '/' run_grp{iG} '/' 'cross_correlation_rvalues.csv' ]);
@@ -186,7 +186,7 @@ end
 % Concatenate
 for iG = 1:numel(run_grp)
     
-    for iM = 3:numel(mes_dir)
+    for iM = 1:numel(mes_dir)
         
         if ~iscell(mes_typ_dir{iM})
             rvl_hld = mmil_readtext([ dta_dir '/' mes_dir{iM} '/' mes_typ_dir{iM} '/' mes_sub_dir{iM} '/' run_grp{iG} '/' 'cross_correlation_rvalues.csv' ]);
