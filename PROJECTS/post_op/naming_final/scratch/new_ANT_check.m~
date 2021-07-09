@@ -150,10 +150,10 @@ tightfig();
 
 %%
 
-[ trc_sbj(new_grp.grp.(grp_nme{2})) new_cog_dta(new_grp.grp.(grp_nme{2}),3) new_cog_dta(new_grp.grp.(grp_nme{2}),4) neu_dta(new_grp.grp.(grp_nme{2}),neu_col_ind(1)) neu_dta(new_grp.grp.(grp_nme{2}),neu_col_ind(2)) ]
+[ trc_sbj(new_grp.grp.(grp_nme{2})) new_cog_dta(new_grp.grp.(grp_nme{2}),3) new_cog_dta(new_grp.grp.(grp_nme{2}),4) neu_dta(new_grp.grp.(grp_nme{2}),neu_col_ind(1)) neu_dta(new_grp.grp.(grp_nme{2}),neu_col_ind(1)) ]
 
 
-[ trc_sbj(new_grp.grp.(grp_nme{3})) new_cog_dta(new_grp.grp.(grp_nme{3}),3) new_cog_dta(new_grp.grp.(grp_nme{3}),4) neu_dta(new_grp.grp.(grp_nme{3}),neu_col_ind(1)) neu_dta(new_grp.grp.(grp_nme{3}),neu_col_ind(2)) ]
+[ trc_sbj(new_grp.grp.(grp_nme{3})) new_cog_dta(new_grp.grp.(grp_nme{3}),3) new_cog_dta(new_grp.grp.(grp_nme{3}),4) neu_dta(new_grp.grp.(grp_nme{3}),neu_col_ind(1)) neu_dta(new_grp.grp.(grp_nme{3}),neu_col_ind(1)) ]
 
 
 

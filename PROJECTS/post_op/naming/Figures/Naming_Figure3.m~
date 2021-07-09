@@ -78,12 +78,12 @@ for iT = 1:numel(cog_nme)
         % Data Gather
         for iG = 1:numel(grp_nme)
             if iG==1
-                use_ind = intersect(grp.(grp_nme{iG}),grp_num);
+                use_ind = [];
             else
                 use_ind = grp.(grp_nme{iG});
             end
-            ydt{iG} = cell2mat(prd_dta( use_ind, mes_col(iN) ));
-            xdt{iG} = cell2mat(prd_dta( use_ind, cog_col(iT) ));
+            ydt{iG} = cell2mat(prd_dta( , mes_col(iN) ));
+            xdt{iG} = cell2mat(prd_dta( grp.(grp_nme{iG}), cog_col(iT) ));
         end
         
         % Data Plot

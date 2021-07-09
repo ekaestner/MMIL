@@ -49,15 +49,16 @@ naming_correlation_cognitive_v2
 naming_correlation_v3
 
 naming_summarize_cc_v4
-%%%%%%%%
+
 %% Surface Correlations
+%%%%%%%%
 naming_surface_correlations
+%%%%%%%%
 
 %% Logistic Regression
-%%%%%%%%
-naming_logistic_regression
+naming_logistic_regression_v2
 
-%% Tables/Figures
+%% Tables
 % Table 1: Pre-operative table
 Naming_Table_1_v2
 
@@ -75,7 +76,7 @@ Naming_Table_5_1_v2
 
 Naming_Table_5_2_v2
 
-
+%% Figures
 
 
 

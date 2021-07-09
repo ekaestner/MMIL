@@ -43,8 +43,8 @@ prd_dta_col = [ cog_dta_col cln_dta_col mri_dta_col fib_dta_col wmp_dta_col ];
 prd_dta     = [ cog_dta     cln_dta     mri_dta     fib_dta     wmp_dta ];
 
 %% 
-bnt_pre_scr_col = find(strcmpi( prd_dta_col, 'bnt_raw_scr' ));
-ant_pre_scr_col = find(strcmpi( prd_dta_col, 'ant_mem_raw_scr' ));
+bnt_pst_scr_col = find(strcmpi( prd_dta_col, 'bnt_raw_scr_pst' ));
+ant_pst_scr_col = find(strcmpi( prd_dta_col, 'ant_mem_raw_scr_pst' ));
 
 lft_hip_col = find(strcmpi( prd_dta_col, 'Left_Hippocampus' ));
 rgh_hip_col = find(strcmpi( prd_dta_col, 'Right_Hippocampus' ));
@@ -59,32 +59,24 @@ lft_fus_col = find(strcmpi( prd_dta_col, 'lh_fusiform' ));
 rgh_fus_col = find(strcmpi( prd_dta_col, 'rh_fusiform' ));
 
 cog_nme = { 'BNT'           'ANT' };
-cog_col = [ bnt_pre_scr_col ant_pre_scr_col ];
+cog_col = [ bnt_pst_scr_col ant_pst_scr_col ];
 
 mes_nme = { 'Hippocampus' 'ILF'       'IFOF'      'Fusiform' };
-mes_col = [ lft_hip_col   lft_ilf_col lft_ifo_col  lft_fus_col ];
+mes_col = [ lft_hip_col   lft_ilf_col lft_ifo_col rgh_fus_col ];
 
 %%
-grp_nme = { 'tle_controls_pre_3T_allSurg_all' 'controls_pre_3T_allSurg_all' 'tle_pre_3T_allSurg_left' 'tle_pre_3T_allSurg_right' };
-grp_col = { rgb('black')                      rgb('light grey')              rgb('royal purple')       rgb('light magenta') };
-
-grp_num = [ grp.controls_pre_3T_allSurg_all ; grp.tle_pre_3T_allSurg_left ; grp.tle_pre_3T_allSurg_right ];
-
+grp_nme = { 'tle_post_3T_ATLonly_left' }; %'tle_post_3T_ATLonly_right' };
+grp_col = { rgb('royal purple')       }; %rgb('light magenta') };
 
 %% 
 for iT = 1:numel(cog_nme)
     for iN = 1:numel(mes_nme)
-              
+       
         % Data Gather
         for iG = 1:numel(grp_nme)
-            if iG==1
-                use_ind = intersect(grp.(grp_nme{iG}),grp_num);
-            else
-                use_ind = grp.(grp_nme{iG});
-            end
-            ydt{iG} = cell2mat(prd_dta( use_ind, mes_col(iN) ));
-            xdt{iG} = cell2mat(prd_dta( use_ind, cog_col(iT) ));
-        end
+           ydt{iG} = cell2mat(prd_dta( grp.(grp_nme{iG}), mes_col(iN) )); 
+           xdt{iG} = cell2mat(prd_dta( grp.(grp_nme{iG}), cog_col(iT) )); 
+        end        
         
         % Data Plot
         fcfg = [];
@@ -100,21 +92,14 @@ for iT = 1:numel(cog_nme)
         
         fcfg.trd_lne = ones(1,numel(grp_nme));
         
-        fcfg.out_dir = '/home/ekaestner/Dropbox/McDonald Lab/Erik/Projects/McDLab/atl_nme/figures/Figure3/';
-        fcfg.out_nme = [ cog_nme{iT} '_' mes_nme{iN} ];
+        fcfg.out_dir = '/home/ekaestner/Dropbox/McDonald Lab/Erik/Projects/McDLab/atl_nme/figures/Figure4';
+        fcfg.out_nme = [ cog_nme{iT} '_' mes_nme{iN} '_left_only' ];
         
         ejk_scatter(fcfg)
         
         
     end    
 end
-
-
-
-
-
-
-
 
 
 

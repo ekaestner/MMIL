@@ -27,6 +27,4 @@ fcfg.dta_col = 2;
        ~cellfun(@isnan,cog_dta(grp.tle_post_3T_ATLonly_all,4)))) / numel(grp.tle_post_3T_ATLonly_all))*100
    
 
-setxor(cog_dta_sbj(~cellfun(@isnan,cog_dta(grp.tle_post_3T_ATLonly_all,3))), cog_dta_sbj(~cellfun(@isnan,cog_dta(grp.tle_post_3T_ATLonly_all,4))))
-[cog_dta_sbj(grp.tle_post_3T_ATLonly_left) cog_dta( grp.tle_post_3T_ATLonly_left, 3:4 )]
-[cog_dta_sbj(grp.tle_post_3T_ATLonly_right) cog_dta( grp.tle_post_3T_ATLonly_right, 3:4 )]
+~cellfun(@isnan,cog_dta(grp.tle_post_3T_ATLonly_all,3)) & ~cellfun(@isnan,cog_dta(grp.tle_post_3T_ATLonly_all,4))

@@ -5,7 +5,7 @@ ejk_fisher_test <- function( dta_one_loc,
   # https://cran.r-project.org/web/packages/tidyLPA/vignettes/Introduction_to_tidyLPA.html
   
   #dta_one_loc = '/home/ekaestne/PROJECTS/OUTPUT/PostOperative/Naming_final/SpecificCor/Clinical/Fisher/TLE_Controls_pre_fishers/dta_one.mat'
-  #dta_two_loc = '/home/ekaestne/PROJECTS/OUTPUT/PostOperative/Naming_final/SpecificCor/Clinical/Fisher/TLE_Controls_pre_fishers/dta_two.mat'
+  #dta_two_loc = '/home/ekaestne/PROJECTS/OUT PUT/PostOperative/Naming_final/SpecificCor/Clinical/Fisher/TLE_Controls_pre_fishers/dta_two.mat'
   #out_put_loc = '/home/ekaestne/PROJECTS/OUTPUT/PostOperative/Naming_final/SpecificCor/Clinical/Fisher/TLE_Controls_pre_fishers/'
 
   library( 'R.matlab' )  

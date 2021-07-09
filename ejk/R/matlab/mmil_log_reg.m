@@ -10,7 +10,7 @@ clear trg_dta fol_dta rmv_mtx_trg rmv_mtx_fol
 trg_grp = cell(0);
 fol_grp = cell(0);
 
-for iS = 2:size(fcfg.sbj_grp,1)
+for iS = 1:size(fcfg.sbj_grp,1)
     if     strcmpi(fcfg.sbj_grp{iS,2},fcfg.lbl_ord{1})
         trg_grp{end+1,1} = fcfg.sbj_grp{iS,1};
     elseif strcmpi(fcfg.sbj_grp{iS,2},fcfg.lbl_ord{2})
@@ -263,9 +263,9 @@ for iP = 1:numel(fcfg.mdl_cmp_plt)
     
     col_fct = find(ismember(raw_dta(1,:),nme_fct));
     for iC = 1:numel(col_fct) 
-        lvl_hld = unique(cell2mat(raw_dta(2:end,col_fct(iC))));
+        lvl_hld = unique(cell2mat(raw_dta(1:end,col_fct(iC))));
         for iL = 1:numel(lvl_hld)
-            rep_ind{iL} = find(cell2mat(cellfun(@(x) x==lvl_hld(iL),raw_dta(2:end,col_fct(iC)),'uni',0)))+1;
+            rep_ind{iL} = find(cell2mat(cellfun(@(x) x==lvl_hld(iL),raw_dta(1:end,col_fct(iC)),'uni',0)))+1;
         end
         for iL = 1:numel(lvl_hld)    
             raw_dta(rep_ind{iL},col_fct(iC)) = var_fct(iL);

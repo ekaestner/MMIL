@@ -98,7 +98,7 @@ lcfg.nrm_grp = 0;
 
 lcfg.mdl_cmp_plt = { [1 2 3 4] }; % 3
 lcfg.mld_cmp_col = { { rgb('teal') rgb('burnt orange') rgb('light brown')  rgb('gold')} }; %rgb('purple')
-lcfg.mdl_cmp_nme = { [ 'BNT' '_' 'Logistic' '_' 'Explore_inc'] };
+lcfg.mdl_cmp_nme = { [ 'BNT' '_' 'Logistic' '_' 'Explore'] };
 
 lcfg.out_dir = out_dir;
 
@@ -122,7 +122,7 @@ lcfg.nrm_grp = 0;
 
 lcfg.mdl_cmp_plt = { [1 2 ] }; % 3
 lcfg.mld_cmp_col = { { rgb('teal') rgb('burnt orange') } }; %rgb('purple')
-lcfg.mdl_cmp_nme = { [ 'BNT' '_' 'Logistic' '_' 'Current_inc'] };
+lcfg.mdl_cmp_nme = { [ 'BNT' '_' 'Logistic' '_' 'Current'] };
 
 lcfg.out_dir = out_dir;
 
@@ -171,8 +171,6 @@ fcfg.out_nme = 'scatter_clinical';
 ejk_scatter(fcfg)
 
 %% L-TLE - ANT
-inc_sbj = intersect( grp.tle_post_3T_ATLonly_left ,cog_sbj_ant );
-
 % Setup Explore %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 lcfg = [];
 
@@ -182,7 +180,7 @@ lcfg.lbl_ord = { 'Impaired' 'NoChange' };
 lcfg.dta     = [ prd_dta_sbj( inc_sbj,1) prd_dta( inc_sbj, [ ant_scr_col edu_col lft_ilf_col rgh_fus_col lft_ifo_col lft_hip_col ] ) ];
 lcfg.dta_lbl = [ {'sbj_nme'}             prd_dta_col( 1,   [ ant_scr_col edu_col lft_ilf_col rgh_fus_col lft_ifo_col lft_hip_col ]) ];
 
-lcfg.mdl     = { { 'ant_mem_raw_scr' 'Educ' }  ...
+lcfg.mdl     = { { 'ant_raw_scr' 'Educ' }  ...
                  { 'L_ILF' 'rh_fusiform' } ...
                  { 'L_ILF' 'L_IFO' }       ...
                  { 'Left_Hippocampus' 'rh_fusiform' } }; 
@@ -195,7 +193,7 @@ lcfg.nrm_grp = 0;
 
 lcfg.mdl_cmp_plt = { [1 2 3 4] }; % 3
 lcfg.mld_cmp_col = { { rgb('teal') rgb('burnt orange') rgb('light brown')  rgb('gold')} }; %rgb('purple')
-lcfg.mdl_cmp_nme = { [ 'ANT' '_' 'Logistic' '_' 'Explore_inc'] };
+lcfg.mdl_cmp_nme = { [ 'ANT' '_' 'Logistic' '_' 'Explore'] };
 
 lcfg.out_dir = out_dir;
 
@@ -207,19 +205,19 @@ lcfg = [];
 lcfg.sbj_grp = [  prd_dta_sbj( inc_sbj,1) cog_cat_ant(inc_sbj,1) ];
 lcfg.lbl_ord = { 'Impaired' 'NoChange' };
 
-lcfg.dta     = [ prd_dta_sbj( inc_sbj,1) prd_dta( inc_sbj, [ ant_scr_col edu_col lft_ilf_col lft_ifo_col ] ) ];
-lcfg.dta_lbl = [ {'sbj_nme'}             prd_dta_col( 1,   [ ant_scr_col edu_col lft_ilf_col lft_ifo_col ]) ];
+lcfg.dta     = [ prd_dta_sbj( inc_sbj,1) prd_dta( inc_sbj, [ ant_scr_col edu_col lft_ilf_col rgh_fus_col lft_ifo_col ] ) ];
+lcfg.dta_lbl = [ {'sbj_nme'}             prd_dta_col( 1,   [ ant_scr_col edu_col lft_ilf_col rgh_fus_col lft_ifo_col ]) ];
 
-lcfg.mdl     = { { 'ant_mem_raw_scr' 'Educ' }  ...
-                 { 'L_ILF'           'L_IFO' } }; 
+lcfg.mdl     = { { 'ant_raw_scr' 'Educ' }  ...
+                 { 'L_ILF'       'L_IFO' } }; 
 lcfg.mdl_nme = { 'Clinical' ...
                  'WhiteMatter' };
 
 lcfg.nrm_grp = 0;
 
 lcfg.mdl_cmp_plt = { [1 2 ] }; % 3
-lcfg.mld_cmp_col = { { rgb('teal') rgb('light brown') } }; %rgb('purple')
-lcfg.mdl_cmp_nme = { [ 'ANT' '_' 'Logistic' '_' 'Current_inc'] };
+lcfg.mld_cmp_col = { { rgb('teal') rgb('burnt orange') } }; %rgb('purple')
+lcfg.mdl_cmp_nme = { [ 'ANT' '_' 'Logistic' '_' 'Current'] };
 
 lcfg.out_dir = out_dir;
 
@@ -228,7 +226,7 @@ mmil_log_reg(lcfg)
 % Scatter Check - White %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 fcfg = [];
         
-fcfg.xdt     = { cell2mat(lcfg.dta( strcmpi(lcfg.sbj_grp(:,2),'Impaired'),5)) cell2mat(lcfg.dta(strcmpi(lcfg.sbj_grp(:,2),'NoChange'),5)) };
+fcfg.xdt     = { cell2mat(lcfg.dta( strcmpi(lcfg.sbj_grp(:,2),'Impaired'),6)) cell2mat(lcfg.dta(strcmpi(lcfg.sbj_grp(:,2),'NoChange'),6)) };
 fcfg.ydt     = { cell2mat(lcfg.dta( strcmpi(lcfg.sbj_grp(:,2),'Impaired'),4)) cell2mat(lcfg.dta(strcmpi(lcfg.sbj_grp(:,2),'NoChange'),4)) };
 
 fcfg.trd_lne = [ 0 0 ];
@@ -236,7 +234,7 @@ fcfg.trd_lne = [ 0 0 ];
 fcfg.fce_col = { rgb('red')   rgb('blue') };
 fcfg.edg_col = { rgb('black') rgb('black') };
 
-fcfg.xlb = { 'left IFOF'  };
+fcfg.xlb = { 'right fusiform FA'  };
 fcfg.ylb = { 'left ILF' };
 
 fcfg.ttl = ['ANT'];
@@ -266,5 +264,7 @@ fcfg.out_dir = [ prj_dir '/' prj_nme '/' 'SpecificCor/LogisticRegression/Models/
 fcfg.out_nme = 'scatter_clinical';
 
 ejk_scatter(fcfg)
+
+[ lcfg.sbj_grp prd_dta( inc_sbj,5) lcfg.dta ]
 
 %% R-TLE
