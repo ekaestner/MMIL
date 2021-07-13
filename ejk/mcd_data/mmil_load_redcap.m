@@ -212,6 +212,8 @@ sbj_srg.srg_typ     = cell(size(sbj_hld,1)-1,1);
     srg_typ_col     = 'surgery_name'; srg_typ_col = strcmpi(sbj_hld(1,:),srg_typ_col);  
 sbj_srg.eng_out     = cell(size(sbj_hld,1)-1,1); 
     eng_out_col     = 'y1_simple_engel'; eng_out_col = strcmpi(sbj_hld(1,:),eng_out_col);  
+sbj_srg.wda_lng     = cell(size(sbj_hld,1)-1,1); 
+    lng_wda_out_col     = 'wada_language'; lng_wda_out_col = strcmpi(sbj_hld(1,:),lng_wda_out_col);
     
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Subject Demographics
@@ -326,7 +328,8 @@ for iS = 2:size(sbj_hld,1)
     sbj_srg.srg_age(iS-1,1) = sbj_hld{iS,srg_age_col};
     sbj_srg.srg_sde{iS-1,1} = sbj_hld{iS,srg_sde_col};
     sbj_srg.srg_typ{iS-1,1} = sbj_hld{iS,srg_typ_col}; 
-    sbj_srg.eng_out{iS-1,1} = sbj_hld{iS,eng_out_col};     
+    sbj_srg.eng_out{iS-1,1} = sbj_hld{iS,eng_out_col}; 
+    try; sbj_srg.wda_lng{iS-1,1} = sbj_hld{iS,lng_wda_out_col}; catch; end
 end
 
 %% Additioanl Calculations
@@ -336,10 +339,21 @@ for iS = 1:size(sbj_dem.sbj_nme,1)
        ( ~isempty(sbj_dem.sbj_age{iS,1})     && ~strcmpi(sbj_dem.sbj_age{iS,1},'') )
         
         scn_dte = cellfun(@(x) str2num(x),regexp(sbj_dem.sbj_scn_dte{iS,1},'-','split'));
-        scn_dte = (scn_dte(1)*365) + (scn_dte(2)*30) + scn_dte(3);
+        if numel(scn_dte)==1 
+            scn_dte = cellfun(@(x) str2num(x),regexp(sbj_dem.sbj_scn_dte{iS,1},'/','split')); 
+            scn_dte = (scn_dte(3)*365) + (scn_dte(1)*30) + scn_dte(2);    
+        elseif numel(scn_dte)==3 
+            scn_dte = (scn_dte(1)*365) + (scn_dte(2)*30) + scn_dte(3);    
+        end   
+        
         
         brt_dte = cellfun(@(x) str2num(x),regexp(sbj_dem.sbj_age{iS,1},'-','split'));
-        brt_dte = (brt_dte(1)*365) + (brt_dte(2)*30) + brt_dte(3);
+        if numel(brt_dte)==1; 
+            brt_dte = cellfun(@(x) str2num(x),regexp(sbj_dem.sbj_age{iS,1},'/','split'));
+            brt_dte = (brt_dte(3)*365) + (brt_dte(1)*30) + brt_dte(2);    
+        elseif numel(brt_dte)==3
+            brt_dte = (brt_dte(1)*365) + (brt_dte(2)*30) + brt_dte(3);
+        end
         
         sbj_dem.sbj_age{iS,1} = roundsd((scn_dte - brt_dte) / 365,3);
     else
