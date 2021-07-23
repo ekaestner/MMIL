@@ -170,12 +170,12 @@ pst_dom_tbl{ 9, iG+1} = [num2str(crs_tbl(strcmpi(crs_lbl(:,1),'A'),strcmpi(crs_l
 
 end
 
-pre_dom_tbl{1,2} = 'L-TLE'; pre_dom_tbl{1,3} = 'R-TLE';
-pre_dom_tbl{2,1} = 'Dominance (Typical/Atypical)'; pre_dom_tbl{3,1} = 'Type (Wada/fMRI/Hand)';
-pre_dom_tbl{5,1} = 'BNT: Typical (Decline/None)'; pre_dom_tbl{6,1} = 'BNT: Atypical (Decline/None)';
-pre_dom_tbl{8,1} = 'ANT: Typical (Decline/None)'; pre_dom_tbl{9,1} = 'ANT: Atypical (Decline/None)';
+pst_dom_tbl{1,2} = 'L-TLE'; pst_dom_tbl{1,3} = 'R-TLE';
+pst_dom_tbl{2,1} = 'Dominance (Typical/Atypical)'; pst_dom_tbl{3,1} = 'Type (Wada/fMRI/Hand)';
+pst_dom_tbl{5,1} = 'BNT: Typical (Decline/None)'; pst_dom_tbl{6,1} = 'BNT: Atypical (Decline/None)';
+pst_dom_tbl{8,1} = 'ANT: Typical (Decline/None)'; pst_dom_tbl{9,1} = 'ANT: Atypical (Decline/None)';
 
-cell2csv('/home/ekaestner/Dropbox/McDonald Lab/Erik/Projects/McDLab/atl_nme/scratch/lang_lat/post-surgical_table.csv',pre_dom_tbl);
+cell2csv('/home/ekaestner/Dropbox/McDonald Lab/Erik/Projects/McDLab/atl_nme/scratch/lang_lat/post-surgical_table.csv',pst_dom_tbl);
 
 %% 
 dom_col = find(strcmpi( prd_dta_col, 'lang_dom' ));
@@ -463,7 +463,7 @@ end
 plt_grp = { 'tle_controls_pre_3T_allSurg_all' 'controls_pre_3T_allSurg_all' 'tle_pre_3T_allSurg_left' 'tle_pre_3T_allSurg_right' 'tle_post_3T_ATLonly_left' 'tle_post_3T_ATLonly_right' };
 cog_typ = [ 1                                 1                             1                         1                          2                          2 ];
 
-ylm = { [20 55] [-4.5 3.5] };
+ylm = { [20 60] [-4.5 3.5] };
 
 grp_col = { rgb('Blue') rgb('teal') };
 
@@ -581,10 +581,10 @@ inc_sbj = intersect( grp.tle_post_3T_ATLonly_left , cog_sbj_ant );
 % Scatter Check - White 
 fcfg = [];
         
-fcfg.xdt     = {  cell2mat(prd_dta(intersect(intersect(find(strcmpi(cog_cat_ant_pst,'Impaired')),typ_dom_num),grp.tle_post_3T_ATLonly_left),rgh_fus_col)) ...
-                  cell2mat(prd_dta(intersect(intersect(find(strcmpi(cog_cat_ant_pst,'NoChange')),typ_dom_num),grp.tle_post_3T_ATLonly_left),rgh_fus_col)) ...
-                  cell2mat(prd_dta(intersect(intersect(find(strcmpi(cog_cat_ant_pst,'Impaired')),abn_dom_num),grp.tle_post_3T_ATLonly_left),rgh_fus_col)) ...
-                  cell2mat(prd_dta(intersect(intersect(find(strcmpi(cog_cat_ant_pst,'NoChange')),abn_dom_num),grp.tle_post_3T_ATLonly_left),rgh_fus_col)) };
+fcfg.xdt     = {  cell2mat(prd_dta(intersect(intersect(find(strcmpi(cog_cat_ant_pst,'Impaired')),typ_dom_num),grp.tle_post_3T_ATLonly_left),lft_ifo_col)) ...
+                  cell2mat(prd_dta(intersect(intersect(find(strcmpi(cog_cat_ant_pst,'NoChange')),typ_dom_num),grp.tle_post_3T_ATLonly_left),lft_ifo_col)) ...
+                  cell2mat(prd_dta(intersect(intersect(find(strcmpi(cog_cat_ant_pst,'Impaired')),abn_dom_num),grp.tle_post_3T_ATLonly_left),lft_ifo_col)) ...
+                  cell2mat(prd_dta(intersect(intersect(find(strcmpi(cog_cat_ant_pst,'NoChange')),abn_dom_num),grp.tle_post_3T_ATLonly_left),lft_ifo_col)) };
 fcfg.ydt     = {  cell2mat(prd_dta(intersect(intersect(find(strcmpi(cog_cat_ant_pst,'Impaired')),typ_dom_num),grp.tle_post_3T_ATLonly_left),lft_ilf_col)) ...
                   cell2mat(prd_dta(intersect(intersect(find(strcmpi(cog_cat_ant_pst,'NoChange')),typ_dom_num),grp.tle_post_3T_ATLonly_left),lft_ilf_col)) ...
                   cell2mat(prd_dta(intersect(intersect(find(strcmpi(cog_cat_ant_pst,'Impaired')),abn_dom_num),grp.tle_post_3T_ATLonly_left),lft_ilf_col)) ...
@@ -596,7 +596,7 @@ fcfg.mkr_typ  = { 'o'          'o'          '>'          '>' };
 fcfg.fce_col = { rgb('red')   rgb('blue')  rgb('red')   rgb('blue')  };
 fcfg.edg_col = { rgb('black') rgb('black') rgb('black') rgb('black') };
 
-fcfg.xlb = { 'right fusiform FA'  };
+fcfg.xlb = { 'left IFOF'  };
 fcfg.ylb = { 'left ILF' };
 
 fcfg.ttl = ['ANT'];

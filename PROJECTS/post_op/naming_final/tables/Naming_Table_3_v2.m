@@ -1,4 +1,6 @@
-out_dir =  [ prj_dir '/' prj_nme '/' 'Tables' ];
+out_dir =  '/home/ekaestner/Dropbox/McDonald Lab/Erik/Projects/McDLab/atl_nme/tables/Table3';
+
+cog_cut = -1.5;
 
 clear out_tbl
 
@@ -10,17 +12,17 @@ fcfg.dta_col = 2;
 [ cog_dta, cog_dta_sbj, cog_dta_col] = ejk_dta_frm( fcfg );
 
 dta_inp{1} = mmil_readtext([ prj_dir '/' prj_nme '/' 'Data' '/' 'Cognitive_QC.csv']);
-dta_inp{2} = mmil_readtext('/home/ekaestne/PROJECTS/OUTPUT/PostOperative/Naming_final/SpecificCor/Cognitive/ANOVA/Pre_Omnibus_anova/TLE.Controls.pre.anova/output_table.csv');
-dta_inp{3} = mmil_readtext('/home/ekaestne/PROJECTS/OUTPUT/PostOperative/Naming_final/SpecificCor/Cognitive/ttest/Post_TLE_ttest/TLE.post.ttest/output_table.csv');
-dta_inp{4} = mmil_readtext('/home/ekaestne/PROJECTS/OUTPUT/PostOperative/Naming_final/SpecificCor/Cognitive/Fisher/output_table.csv');
+dta_inp{2} = mmil_readtext('/home/ekaestne/PROJECTS/OUTPUT/PostOperative/Naming_final_sample/SpecificCor/Cognitive/ANOVA/Pre_Omnibus_anova/TLE.Controls.pre.anova/output_table.csv');
+dta_inp{3} = mmil_readtext('/home/ekaestne/PROJECTS/OUTPUT/PostOperative/Naming_final_sample/SpecificCor/Cognitive/ttest/Post_TLE_ttest/TLE.post.ttest/output_table.csv');
+dta_inp{4} = mmil_readtext('/home/ekaestne/PROJECTS/OUTPUT/PostOperative/Naming_final_sample/SpecificCor/Cognitive/Fisher/output_table.csv');
 
 %%
 dcl_dta = cog_dta;
 for iR = 1:size(dcl_dta,1)
     for iC = 1:size(dcl_dta,2)
-        if dcl_dta{iR,iC} <= -1.5
+        if dcl_dta{iR,iC} <= cog_cut
             dcl_dta{iR,iC} = 'Impaired';
-        elseif  dcl_dta{iR,iC} > -1.5
+        elseif  dcl_dta{iR,iC} > cog_cut
             dcl_dta{iR,iC} = 'NotImpaired';
         elseif  isnan(dcl_dta{iR,iC})
             dcl_dta{iR,iC} = '';

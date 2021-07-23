@@ -6,7 +6,7 @@ dta_dir = [ prj_dir '/' prj_nme '/' 'Data' ];
 
 out_dir = [ prj_dir '/' prj_nme '/' 'SpecificCor' '/' 'LogisticRegression' '/' ]; ejk_chk_dir( out_dir );
 
-cat_cut = -1.5;
+cat_cut = -1.28;
 
 %% Load Data
 fcfg = [];

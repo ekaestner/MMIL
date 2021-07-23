@@ -120,6 +120,8 @@ for iG = 1:numel(run_grp)
         end
     end    
     
+    clear fdr_cut_off_grp
+    
 end
 
 % Concatenate again %%%%%%%%%%%%%%%%%%%%%%%%%%%%%

@@ -12,15 +12,24 @@ fcfg.dta_loc = [ prj_dir '/' prj_nme '/' 'Data' '/' 'Cognitive_QC.csv'];
 fcfg.dta_col = 2;
 [ cog_dta, cog_dta_sbj, cog_dta_col] = ejk_dta_frm( fcfg );
 
+%%
+cln_dta( strcmpi(cln_dta(:,13),'L') ,13) = {'Y'};
+cln_dta( strcmpi(cln_dta(:,13),'R') ,13) = {'Y'};
+cln_dta( strcmpi(cln_dta(:,13),'N/A') ,13) = {'N'};
+cln_dta( cellfun(@isempty,cln_dta(:,13)) ,13) = {'N'};
+
 %% Pre-Surgical Dataset %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 cmp_grp = { { 'controls_pre_3T_allSurg_all' 'tle_pre_3T_allSurg_left' 'tle_pre_3T_allSurg_right' } };
 cmp_nme = { { 'HC'                          'LTLE'                    'RTLE' } };
 
-%% ANOVA
+cmp_grp_sub = { { 'tle_pre_3T_allSurg_left' 'tle_pre_3T_allSurg_right' } };
+cmp_nme_sub = { { 'LTLE'                    'RTLE' } };
+
+%% ANOVA - ALL
 cmp_out = { 'TLE_Controls_pre_anova' };
 
 % Age, Education, WTAR
-[~, use_dta_col ] = intersect( cln_dta_col, { 'AgeAtSurgery' 'Educ' });
+[~, use_dta_col ] = intersect( cln_dta_col, { 'AgeAtImaging' 'Educ' });
 
 fcfg = [];
 fcfg.grp     = grp;
@@ -45,16 +54,76 @@ for iG = 1:numel(cmp_out)
     ejk_1way_anova( cfg )
 end
 
-%% Fisher's test
+%% ANOVA - TLE-only
+cmp_out = { 'tle_pre_3T_allSurg_left_right' };
+
+% Age, Education, WTAR
+[~, use_dta_col ] = intersect( cln_dta_col, { 'AgeAtImaging' 'Educ' 'AgeOfSeizureOnset' 'NumAEDs' 'SeizureFreq' });
+
+fcfg = [];
+fcfg.grp     = grp;
+fcfg.grp_inc = cmp_grp_sub;
+fcfg.grp_nme = cmp_nme_sub;
+fcfg.dta = cln_dta(:,use_dta_col);
+fcfg.sbj = cln_dta_sbj;
+[ grp_dta, grp_typ, grp_sbj ] = ejk_group_create( fcfg );
+
+% Test
+fcfg = [];
+
+fcfg.sbj_nme = grp_sbj{1};
+
+fcfg.dta     = grp_dta{1};
+fcfg.dta_nme = cln_dta_col(:,use_dta_col);
+
+fcfg.grp     = grp_typ{1};
+fcfg.grp_nme = cmp_out(1);
+
+fcfg.out_dir = [ out_put '/' 'Clinical' '/' 'ttest' '/' 'Pre_TLE_ttest' '/'];
+
+ejk_ttest2_independent( fcfg );
+
+%% Fisher's test - ALL
 cmp_out = { 'TLE_Controls_pre_fishers' };
 
 % Sex, Handedness, Race, Ethnicity
-[~, use_dta_col ] = intersect( cln_dta_col, { 'Sex' 'Handedness' });
+[~, use_dta_col ] = intersect( cln_dta_col, { 'Sex' 'Handedness' 'LanguageDominance' });
 
 fcfg = [];
 fcfg.grp     = grp;
 fcfg.grp_inc = cmp_grp;
 fcfg.grp_nme = cmp_nme;
+fcfg.dta = cln_dta(:,use_dta_col);
+fcfg.sbj = cln_dta_sbj;
+[ grp_dta, grp_typ, grp_sbj ] = ejk_group_create( fcfg );
+
+grp_dta{1}( cellfun(@isempty,grp_dta{1})) = {NaN};
+
+% Caluclate Fishers
+fcfg = [];
+            
+fcfg.sbj = grp_sbj{1};
+
+fcfg.dta_one = grp_dta{1};
+fcfg.lbl_one = cln_dta_col(use_dta_col);
+
+fcfg.dta_two = repmat(grp_typ{1},1,numel(use_dta_col));
+fcfg.lbl_two = strcat( 'group_', cln_dta_col(use_dta_col));
+
+fcfg.out_dir = [ out_put '/' 'Clinical' '/' 'Fisher' '/' cmp_out{1}];
+
+ejk_fisher_test( fcfg );
+
+%% Fisher's test - TLE-only
+cmp_out = { 'TLE_pre_fishers' };
+
+% Sex, Handedness, Race, Ethnicity
+[~, use_dta_col ] = intersect( cln_dta_col, { 'Sex' 'Handedness' 'MTS' 'EngelOutcome' 'LanguageDominance' });
+
+fcfg = [];
+fcfg.grp     = grp;
+fcfg.grp_inc = cmp_grp_sub;
+fcfg.grp_nme = cmp_nme_sub;
 fcfg.dta = cln_dta(:,use_dta_col);
 fcfg.sbj = cln_dta_sbj;
 [ grp_dta, grp_typ, grp_sbj ] = ejk_group_create( fcfg );
@@ -85,7 +154,7 @@ cmp_nme = { { 'LTLE'                     'RTLE' } };
 cmp_out = { 'TLE_post_ttest' };
 
 % Age, Education, WTAR, Age Onset, Duration, # ASMs, Seizure Frequency
-[~, use_dta_col ] = intersect( cln_dta_col, { 'AgeAtSurgery' 'Educ' 'AgeOfSeizureOnset' 'NumAEDs' 'SeizureFreq' });
+[~, use_dta_col ] = intersect( cln_dta_col, { 'AgeAtSurgery' 'Educ' 'AgeOfSeizureOnset' 'NumAEDs' 'SeizureFreq' 'AgeAtImaging' });
 
 fcfg = [];
 fcfg.grp     = grp;
@@ -114,7 +183,7 @@ ejk_ttest2_independent( fcfg );
 cmp_out = { 'TLE_post_fishers' };
 
 % Sex, Handedness, Race, Ethnicity, MTS, Engel
-[~, use_dta_col ] = intersect( cln_dta_col, { 'Sex' 'Handedness' 'MTS' 'EngelOutcome' });
+[~, use_dta_col ] = intersect( cln_dta_col, { 'Sex' 'Handedness' 'MTS' 'EngelOutcome' 'LanguageDominance' });
 
 fcfg = [];
 fcfg.grp     = grp;
@@ -171,13 +240,13 @@ cog_col_one = { [ 1 2 ] ...
                 [ 3 4 ] ...
                 [ 3 4 ] };
 
-cln_col_two = { [ 4 5 6 7 8 ] ...
-                [ 4 5 6 7 8 ] ...
-                [ 4 5 6 7 8 ] ...
-                [ 4 5 6 7 8 ] ...
-                [ 4 5 6 7 8 ] ...
-                [ 4 5 6 7 8 ] ...
-                [ 4 5 6 7 8 ] };
+cln_col_two = { [ 4 5 6 7 8 15] ...
+                [ 4 5 6 7 8 15] ...
+                [ 4 5 6 7 8 15] ...
+                [ 4 5 6 7 8 15] ...
+                [ 4 5 6 7 8 15] ...
+                [ 4 5 6 7 8 15] ...
+                [ 4 5 6 7 8 15] };
             
 % Run correlations %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 for iG = 1:numel(cmp_out)

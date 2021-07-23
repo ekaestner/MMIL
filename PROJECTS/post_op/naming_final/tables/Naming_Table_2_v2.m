@@ -1,4 +1,4 @@
-out_dir =  [ prj_dir '/' prj_nme '/' 'Tables' ];
+out_dir =  '/home/ekaestner/Dropbox/McDonald Lab/Erik/Projects/McDLab/atl_nme/tables/Table2';
 
 clear out_tbl
 
@@ -10,8 +10,9 @@ fcfg.dta_col = 2;
 [ cln_dta, cln_dta_sbj, cln_dta_col] = ejk_dta_frm( fcfg );
 
 dta_inp{1} = mmil_readtext([ prj_dir '/' prj_nme '/' 'Data' '/' 'Clinical.csv']);
-dta_inp{2} = mmil_readtext('/home/ekaestne/PROJECTS/OUTPUT/PostOperative/Naming_final/SpecificCor/Clinical/ttest/Post_TLE_ttest/TLE.post.ttest/output_table.csv');
-dta_inp{3} = mmil_readtext('/home/ekaestne/PROJECTS/OUTPUT/PostOperative/Naming_final/SpecificCor/Clinical/Fisher/TLE_post_fishers/output_table.csv');
+dta_inp{2} = mmil_readtext('/home/ekaestne/PROJECTS/OUTPUT/PostOperative/Naming_final_sample/SpecificCor/Clinical/ttest/Post_TLE_ttest/TLE.post.ttest/output_table.csv');
+dta_inp{3} = mmil_readtext('/home/ekaestne/PROJECTS/OUTPUT/PostOperative/Naming_final_sample/SpecificCor/Clinical/Fisher/TLE_post_fishers/output_table.csv');
+dta_inp{4} = mmil_readtext('/home/ekaestner/Dropbox/McDonald Lab/Erik/Projects/McDLab/atl_nme/scratch/lang_lat/post-surgical_table.csv');
 
 %%
 dta_inp{1}( strcmpi(dta_inp{1}(:,14),'L') ,14) = {'Y'};
@@ -26,9 +27,9 @@ dta_inp{1}( strcmpi(dta_inp{1}(:,15),'IV') ,15) = {'II+'};
 %%
 fcfg = [];
 
-fcfg.tbl(1,:) = { 'mean/std,1,tle_post_3T_ATLonly_left,AgeAtSurgery' ...
-                 'mean/std,1,tle_post_3T_ATLonly_right,AgeAtSurgery' ...
-                 'copy,2,AgeAtSurgery,report'};
+fcfg.tbl(1,:) = { 'mean/std,1,tle_post_3T_ATLonly_left,AgeAtImaging' ...
+                 'mean/std,1,tle_post_3T_ATLonly_right,AgeAtImaging' ...
+                 'copy,2,AgeAtImaging,report'};
 
 fcfg.tbl(2,:) = { 'mean/std,1,tle_post_3T_ATLonly_left,Educ' ...
                  'mean/std,1,tle_post_3T_ATLonly_right,Educ' ...
@@ -62,6 +63,10 @@ fcfg.tbl(9,:) = { 'count,1,tle_post_3T_ATLonly_left,EngelOutcome,I/II+' ...
                  'count,1,tle_post_3T_ATLonly_right,EngelOutcome,I/II+' ...
                  'copy,3,EngelOutcome,report'};
              
+fcfg.tbl(10,:) = { 'count,1,tle_post_3T_ATLonly_left,LanguageDominance,T/A' ...
+                  'count,1,tle_post_3T_ATLonly_right,LanguageDominance,T/A' ...
+                  'copy,3,LanguageDominance,report'};
+             
 fcfg.dta = dta_inp;
 fcfg.grp = grp;
 
@@ -69,7 +74,7 @@ tbl_out = ejk_create_table( fcfg );
 
 %%
 col_lbl = { '' 'L-TLE' 'R-TLE' 'Test' };
-row_lbl = { 'Age' 'Education' 'Sex (M/F)' 'Handedness (R/L)' 'Age of Onset' '# current ASMs' 'MTS (Y/N)' 'Seizure Frequency' 'Engel Outcome (I/II+)' }';
+row_lbl = { 'Age' 'Education' 'Sex (M/F)' 'Handedness (R/L)' 'Age of Onset' '# current ASMs' 'MTS (Y/N)' 'Seizure Frequency' 'Engel Outcome (I/II+)' 'Dominance (T/A)'}';
 
 num_sbj = { 'N' numel(grp.('tle_post_3T_ATLonly_left')) numel(grp.('tle_post_3T_ATLonly_right')) ''};
 

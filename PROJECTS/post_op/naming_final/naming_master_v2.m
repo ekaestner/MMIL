@@ -51,9 +51,7 @@ naming_correlation_v3
 naming_summarize_cc_v4
 
 %% Surface Correlations
-%%%%%%%%
-naming_surface_correlations
-%%%%%%%%
+naming_surface_correlations_v2
 
 %% Logistic Regression
 naming_logistic_regression_v2
@@ -69,12 +67,12 @@ Naming_Table_2_v2
 Naming_Table_3_v2
 
 % Table 4: Pre-operative correlations 
-Naming_Table_4_v2
+Naming_Table_4_v3
 
 % Table 5: Post-operative correlations
-Naming_Table_5_1_v2
+Naming_Table_5_1_v3
 
-Naming_Table_5_2_v2
+Naming_Table_5_2_v3
 
 %% Figures
 
