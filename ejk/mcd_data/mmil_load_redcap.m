@@ -95,7 +95,24 @@ sbj_scn.sbj_frm_ri2 = nan(size(sbj_hld,1)-1,1);
    
 %% Setup Subject Cognitive Scores
 sbj_cog.sbj_nme         = cell(size(sbj_hld,1)-1,1); 
-
+sbj_cog.neu_psy_tst_dte = cell(size(sbj_hld,1)-1,1); 
+    neu_psy_tst_dte_col =  'npsych_date'; neu_psy_tst_dte_col = strcmpi(sbj_hld(1,:),neu_psy_tst_dte_col);
+sbj_cog.neu_psy_tst_dte_gap = nan(size(sbj_hld,1)-1,1); 
+sbj_cog.neu_psy_tst_dte_pst = cell(size(sbj_hld,1)-1,1); 
+    neu_psy_tst_dte_pst_col =  'post_npsych_date'; neu_psy_tst_dte_pst_col = strcmpi(sbj_hld(1,:),neu_psy_tst_dte_pst_col);
+sbj_cog.neu_psy_tst_dte_pst_gap = nan(size(sbj_hld,1)-1,1); 
+sbj_cog.neu_psy_tst_dte_pst = cell(size(sbj_hld,1)-1,1); 
+    neu_psy_tst_dte_pst_col =  'post_npsych_date'; neu_psy_tst_dte_pst_col = strcmpi(sbj_hld(1,:),neu_psy_tst_dte_pst_col);
+sbj_cog.wms_ver_log_mem = cell(size(sbj_hld,1)-1,1); 
+    wms_ver_col_log_mem =  'wms_version'; wms_ver_col_log_mem = strcmpi(sbj_hld(1,:),wms_ver_col_log_mem);
+sbj_cog.wms_ver_vpa = cell(size(sbj_hld,1)-1,1); 
+    wms_ver_col_vpa =  'wms_version'; wms_ver_col_vpa = strcmpi(sbj_hld(1,:),wms_ver_col_vpa);    
+sbj_cog.wms_ver_log_mem_pst = cell(size(sbj_hld,1)-1,1); 
+    wms_ver_log_mem_pst_col =  'post_wms_version'; wms_ver_log_mem_pst_col = strcmpi(sbj_hld(1,:),wms_ver_log_mem_pst_col); 
+sbj_cog.wms_ver_log_mem_pst = cell(size(sbj_hld,1)-1,1); 
+    wms_ver_log_mem_pst_col =  'post_wms_version'; wms_ver_log_mem_pst_col = strcmpi(sbj_hld(1,:),wms_ver_log_mem_pst_col); 
+sbj_cog.wms_ver_vpa_pst = cell(size(sbj_hld,1)-1,1); 
+    wms_ver_vpa_pst_col =  'post_wms_version'; wms_ver_vpa_pst_col = strcmpi(sbj_hld(1,:),wms_ver_vpa_pst_col); 
 sbj_cog.log_mem_raw_scr_one     = nan(size(sbj_hld,1)-1,1); 
     log_mem_scr_one_raw_col     = 'lm1_recall_raw'; log_mem_scr_one_raw_col = strcmpi(sbj_hld(1,:),log_mem_scr_one_raw_col);  
 sbj_cog.log_mem_nor_scr_one     = nan(size(sbj_hld,1)-1,1); 
@@ -187,8 +204,16 @@ sbj_cog.swt_acc_nor_scr     = nan(size(sbj_hld,1)-1,1);
 sbj_cog.swt_acc_raw_scr_pst = nan(size(sbj_hld,1)-1,1); 
     swt_acc_raw_scr_pst_col =  'post_switching_accuracy'; swt_acc_raw_scr_pst_col = strcmpi(sbj_hld(1,:),swt_acc_raw_scr_pst_col);
 sbj_cog.swt_acc_nor_scr_pst = nan(size(sbj_hld,1)-1,1); 
-    swt_acc_nor_scr_pst_col =  'post_switching_accuracy_ss'; swt_acc_nor_scr_pst_col = strcmpi(sbj_hld(1,:),swt_acc_nor_scr_pst_col);
-   
+    swt_acc_nor_scr_pst_col =  'post_switching_accuracy_ss'; swt_acc_nor_scr_pst_col = strcmpi(sbj_hld(1,:),swt_acc_nor_scr_pst_col);  
+sbj_cog.wtr_int_raw_scr     = nan(size(sbj_hld,1)-1,1); 
+    wtr_int_raw_scr_col     =  'wtar_raw'; wtr_int_raw_scr_col = strcmpi(sbj_hld(1,:),wtr_int_raw_scr_col);
+sbj_cog.wtr_int_nor_scr     = nan(size(sbj_hld,1)-1,1); 
+    wtr_int_nor_scr_col     =  'wtar_iq'; wtr_int_nor_scr_col = strcmpi(sbj_hld(1,:),wtr_int_nor_scr_col);    
+sbj_cog.wtr_int_raw_scr_pst = nan(size(sbj_hld,1)-1,1); 
+    wtr_int_raw_scr_pst_col =  'post_wtar_raw'; wtr_int_raw_scr_pst_col = strcmpi(sbj_hld(1,:),wtr_int_raw_scr_pst_col);
+sbj_cog.wtr_int_nor_scr_pst = nan(size(sbj_hld,1)-1,1); 
+    wtr_int_nor_scr_pst_col =  'post_wtar_iq'; wtr_int_nor_scr_pst_col = strcmpi(sbj_hld(1,:),wtr_int_nor_scr_pst_col);
+    
 %% Setup Subject Emotional Scores
 sbj_emo.sbj_nme         = cell(size(sbj_hld,1)-1,1); 
 
@@ -201,7 +226,8 @@ sbj_emo.ndi     = nan(size(sbj_hld,1)-1,1);
     
 %% Setup Subject Surgical Scores    
 sbj_srg.sbj_nme = cell(size(sbj_hld,1)-1,1); 
-
+sbj_srg.srg_dte = cell(size(sbj_hld,1)-1,1); 
+    srg_dte_col =  'date_surgery'; srg_dte_col = strcmpi(sbj_hld(1,:),srg_dte_col);
 sbj_srg.srg_prf     = nan(size(sbj_hld,1)-1,1); 
     srg_prf_col     = 'surgery_performed'; srg_prf_col = strcmpi(sbj_hld(1,:),srg_prf_col); 
 sbj_srg.srg_age     = nan(size(sbj_hld,1)-1,1); 
@@ -265,6 +291,12 @@ end
 %% Subject Cognitive Information
 for iS = 2:size(sbj_hld,1)
     sbj_cog.sbj_nme{iS-1,1}         = sbj_hld{iS,sbj_nme_col};
+    sbj_cog.neu_psy_tst_dte{iS-1,1}     = sbj_hld{iS,neu_psy_tst_dte_col};
+    sbj_cog.neu_psy_tst_dte_pst{iS-1,1} = sbj_hld{iS,neu_psy_tst_dte_pst_col};
+    sbj_cog.wms_ver_log_mem{iS-1,1}         = sbj_hld{iS,wms_ver_col_log_mem};
+    sbj_cog.wms_ver_vpa{iS-1,1}         = sbj_hld{iS,wms_ver_col_vpa};
+    sbj_cog.wms_ver_log_mem_pst{iS-1,1}     = sbj_hld{iS,wms_ver_log_mem_pst_col};
+    sbj_cog.wms_ver_vpa_pst{iS-1,1}     = sbj_hld{iS,wms_ver_vpa_pst_col};    
     sbj_cog.log_mem_raw_scr_one(iS-1,1)     = sbj_hld{iS,log_mem_scr_one_raw_col};
     sbj_cog.log_mem_nor_scr_one(iS-1,1)     = sbj_hld{iS,log_mem_scr_one_nor_col};
     sbj_cog.log_mem_raw_scr_one_pst(iS-1,1) = sbj_hld{iS,log_mem_scr_one_pst_raw_col};
@@ -310,7 +342,11 @@ for iS = 2:size(sbj_hld,1)
     sbj_cog.swt_acc_raw_scr(iS-1,1)     = sbj_hld{iS,swt_acc_raw_scr_col};
     sbj_cog.swt_acc_nor_scr(iS-1,1)     = sbj_hld{iS,swt_acc_nor_scr_col};
     sbj_cog.swt_acc_raw_scr_pst(iS-1,1) = sbj_hld{iS,swt_acc_raw_scr_pst_col};  
-    sbj_cog.swt_acc_nor_scr_pst(iS-1,1) = sbj_hld{iS,swt_acc_nor_scr_pst_col};  
+    sbj_cog.swt_acc_nor_scr_pst(iS-1,1) = sbj_hld{iS,swt_acc_nor_scr_pst_col};
+    sbj_cog.wtr_int_raw_scr(iS-1,1)     = sbj_hld{iS,wtr_int_raw_scr_col};
+    sbj_cog.wtr_int_nor_scr(iS-1,1)     = sbj_hld{iS,wtr_int_nor_scr_col};
+    sbj_cog.wtr_int_raw_scr_pst(iS-1,1) = sbj_hld{iS,wtr_int_raw_scr_pst_col};  
+    sbj_cog.wtr_int_nor_scr_pst(iS-1,1) = sbj_hld{iS,wtr_int_nor_scr_pst_col};
 end
 
 %% Subject Emotional
@@ -324,6 +360,7 @@ end
 %% Subject Surgery
 for iS = 2:size(sbj_hld,1)
     sbj_srg.sbj_nme{iS-1,1} = sbj_hld{iS,sbj_nme_col};
+    sbj_srg.srg_dte{iS-1,1} = sbj_hld{iS,srg_dte_col};
     sbj_srg.srg_prf(iS-1,1) = sbj_hld{iS,srg_prf_col};
     sbj_srg.srg_age(iS-1,1) = sbj_hld{iS,srg_age_col};
     sbj_srg.srg_sde{iS-1,1} = sbj_hld{iS,srg_sde_col};
@@ -332,8 +369,8 @@ for iS = 2:size(sbj_hld,1)
     try; sbj_srg.wda_lng{iS-1,1} = sbj_hld{iS,lng_wda_out_col}; catch; end
 end
 
-%% Additioanl Calculations
-% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Additional Calculations
+% Age %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 for iS = 1:size(sbj_dem.sbj_nme,1)
     if ( ~isempty(sbj_dem.sbj_scn_dte{iS,1}) && ~strcmpi(sbj_dem.sbj_scn_dte{iS,1},'') ) && ...
        ( ~isempty(sbj_dem.sbj_age{iS,1})     && ~strcmpi(sbj_dem.sbj_age{iS,1},'') )
@@ -363,7 +400,58 @@ end
     
 sbj_dem.sbj_age = cell2mat(sbj_dem.sbj_age);
 
-% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Duration %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+for iS = 1:size(sbj_dem.sbj_nme,1)
+    sbj_sze.sbj_sze_dur(iS,1) = sbj_dem.sbj_age(iS,1) - sbj_sze.sbj_age_ons(iS,1);
+end
+
+% Test Intervals %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+for iS = 1:size(sbj_dem.sbj_nme,1)
+    % Surgery -to- PostNeuroPsych
+    if ~isempty(sbj_srg.srg_dte{iS,1}) && ~isempty(sbj_cog.neu_psy_tst_dte_pst{iS,1})
+        srg_dte = cellfun(@(x) str2num(x),regexp(sbj_srg.srg_dte{iS,1},'-','split'));
+        if numel(srg_dte)==1
+            srg_dte = cellfun(@(x) str2num(x),regexp(sbj_dem.sbj_srg_dte{iS,1},'/','split'));
+            srg_dte = (srg_dte(3)*365) + (srg_dte(1)*30) + srg_dte(2);
+        elseif numel(srg_dte)==3
+            srg_dte = (srg_dte(1)*365) + (srg_dte(2)*30) + srg_dte(3);
+        end
+        
+        cog_dte = cellfun(@(x) str2num(x),regexp(sbj_cog.neu_psy_tst_dte_pst{iS,1},'-','split'));
+        if numel(cog_dte)==1;
+            cog_dte = cellfun(@(x) str2num(x),regexp(sbj_dem.sbj_age{iS,1},'/','split'));
+            cog_dte = (cog_dte(3)*365) + (cog_dte(1)*30) + cog_dte(2);
+        elseif numel(cog_dte)==3
+            cog_dte = (cog_dte(1)*365) + (cog_dte(2)*30) + cog_dte(3);
+        end
+        
+        sbj_cog.neu_psy_tst_dte_pst_gap(iS,1) = roundsd((srg_dte - cog_dte) / 365,3);
+    end
+    
+    % MRI -to- PreNeuroPsych
+    if ~isempty(sbj_dem.sbj_scn_dte{iS,1}) && ~isempty(sbj_cog.neu_psy_tst_dte{iS,1})
+        scn_dte = cellfun(@(x) str2num(x),regexp(sbj_dem.sbj_scn_dte{iS,1},'-','split'));
+        if numel(scn_dte)==1
+            scn_dte = cellfun(@(x) str2num(x),regexp(sbj_dem.sbj_scn_dte{iS,1},'/','split'));
+            scn_dte = (scn_dte(3)*365) + (scn_dte(1)*30) + scn_dte(2);
+        elseif numel(scn_dte)==3
+            scn_dte = (scn_dte(1)*365) + (scn_dte(2)*30) + scn_dte(3);
+        end
+        
+        cog_dte = cellfun(@(x) str2num(x),regexp(sbj_cog.neu_psy_tst_dte{iS,1},'-','split'));
+        if numel(cog_dte)==1;
+            cog_dte = cellfun(@(x) str2num(x),regexp(sbj_dem.sbj_age{iS,1},'/','split'));
+            cog_dte = (cog_dte(3)*365) + (cog_dte(1)*30) + cog_dte(2);
+        elseif numel(cog_dte)==3
+            cog_dte = (cog_dte(1)*365) + (cog_dte(2)*30) + cog_dte(3);
+        end
+        
+        sbj_cog.neu_psy_tst_dte_gap(iS,1) = roundsd((scn_dte - cog_dte) / 365,3);
+    end
+    
+end
+
+% Sex %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 sbj_sex_hld = {0 'F' ; 1 'M' };
 sbj_hnd_hld = {7 'R' ; 8 'L' };
 
@@ -372,7 +460,7 @@ for iS = 1:size(sbj_dem.sbj_nme,1)
     try sbj_dem.sbj_hnd{iS,1} = sbj_hnd_hld{cell2mat(sbj_hnd_hld(:,1))==sbj_dem.sbj_hnd{iS,1},2}; catch sbj_dem.sbj_hnd{iS,1} = ''; end % 7 = right, 8 = left
 end
 
-% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% MTS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 sbj_sde_ons_hld = {1 'L'   ; 2 'R' };
 sbj_mts_hld     = {1 'N/A' ; 2 'L' ; 3 'R'};
 
@@ -381,7 +469,7 @@ for iS = 1:size(sbj_dem.sbj_nme,1)
     try sbj_sze.sbj_mts{iS,1}     = sbj_mts_hld{cell2mat(sbj_mts_hld(:,1))        == sbj_sze.sbj_mts{iS,1},2};     catch sbj_sze.sbj_mts{iS,1} = ''; end % 1 = no, 2 = left MTS, 3 = right MTS
 end
 
-% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Surgery %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 srg_typ_hld = {1 'diagnostic' ; 2 'ATL' ; 3 'ATL +' ; 4 'amygdalohippocampectomy' ; 5 'neuroablation (hippocampus & amygdala)' ; 6 'neuroablation (hippocampus & amygdala +)' ; 7 'lesionectomy' ; 8 'lesionectomy +' ; 9 'extratemporal resection' ; 10 'multi-lobar resection' ; 11 'hemispherectomy' ; 12 'neocortical resection only' ; 13 'corpus callosotomy' ; 14 'multiple subpial transections' ; 998 'other' ; 999 'unknown' };
 eng_out_hld = {1 'I' ; 2 'II' ; 3 'III' ; 4 'IV' };
 srg_sde_hld = {1 'L' ; 2 'R' }; 

@@ -1,6 +1,8 @@
-function [ dta_out ] = ejk_extract_mmps_roi( cfg )
+function [ dta_out, wrn_out ] = ejk_extract_mmps_roi( cfg )
 
 if ~isfield(cfg,'roi_nme'); cfg.roi_nme = []; end
+
+wrn_out = cell(0); wrn_cnt = 1;
 
 %% Load Files
 roi_hld = mmil_readtext( cfg.fle_nme );
@@ -41,16 +43,38 @@ dta_out(1,col_plc) = roi_hld(1, col_use);
 for iS = 1:numel(cfg.sbj_nme)
     
     sbj_row = find( strcmpi( roi_hld(:,1), cfg.sbj_nme{iS}) ) ;
+    if isempty(sbj_row); sbj_row = string_find( roi_hld(:,1), cfg.sbj_nme(iS)); end
     
     sbj_rcn     = rcn_hld( strcmpi( rcn_hld(:,1), cfg.sbj_nme{iS}), 3 ) ;
     if ~isempty(sbj_rcn) && ~isempty(sbj_rcn{1}) && ~isempty(sbj_row)
         sbj_rcn_num = strnearest( sbj_rcn, roi_hld( sbj_row, rcn_col));
         sbj_row = sbj_row( sbj_rcn_num{1});
         
+        if ~strcmpi( sbj_rcn{1}, roi_hld{sbj_row,rcn_col})
+            
+            exp_cut = strfind( sbj_rcn{1}, '_');
+            obt_cut = strfind( roi_hld{sbj_row,rcn_col}, '_');
+            if      numel(exp_cut) > numel(obt_cut)
+                exp_hld = sbj_rcn{1}(1:numel(roi_hld{sbj_row,rcn_col}));
+                obt_hld = roi_hld{sbj_row,rcn_col};
+            elseif  numel(exp_cut) < numel(obt_cut)
+                exp_hld = sbj_rcn{1};
+                obt_hld = roi_hld{sbj_row,rcn_col}(1:numel(sbj_rcn{1}));
+            else
+                exp_hld = sbj_rcn{1};
+                obt_hld = roi_hld{sbj_row,rcn_col};
+            end
+            
+            if ~strcmpi(exp_hld,obt_hld)
+            wrn_out{wrn_cnt,1} = ['EXPECTED: ' sbj_rcn{1} ' ; ' 'OBTAINED: ' roi_hld{sbj_row,rcn_col} ];
+            wrn_cnt = wrn_cnt + 1;
+            end
+        end
+            
         dta_out(iS+1,1) = roi_hld(sbj_row,1);
         dta_out(iS+1,2) = roi_hld(sbj_row,rcn_col);
-        dta_out(iS+1,3) = roi_hld(sbj_row,fld_str_col);
-        dta_out(iS+1,4) = roi_hld(sbj_row,mps_col);
+        if ~isempty(fld_str_col); dta_out(iS+1,3) = roi_hld(sbj_row,fld_str_col); end;
+        if ~isempty(mps_col); dta_out(iS+1,4) = roi_hld(sbj_row,mps_col); end;
         dta_out(iS+1,col_plc) = roi_hld(sbj_row, col_use);
     else
         dta_out(iS+1,1) = cfg.sbj_nme(iS);

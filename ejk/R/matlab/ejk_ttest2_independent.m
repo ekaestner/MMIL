@@ -15,7 +15,7 @@ function ejk_ttest2_independent( cfg )
 %% Save Data
 dep_var.sbj_nme = cfg.sbj_nme;
 for iD = 1:numel(cfg.dta_nme)
-    dep_var.(cfg.dta_nme{iD}) = cfg.dta(:,iD);
+    try dep_var.(cfg.dta_nme{iD}) = cfg.dta(:,iD); catch sprintf('Failure Field Name: %s \n',cfg.dta_nme{iD}); end
 end
 
 grp_var.sbj_nme   = cfg.sbj_nme;

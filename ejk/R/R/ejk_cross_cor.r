@@ -7,9 +7,9 @@ ejk_cross_cor <- function( dta_one_loc,
   
   # https://cran.r-project.org/web/packages/tidyLPA/vignettes/Introduction_to_tidyLPA.html
   
-  #dta_one_loc = '/home/ekaestne/PROJECTS/OUTPUT/PostOperative/Naming_final/SpecificCor/MRI/subcort_vol/Raw/tle_controls_pre_3T_allSurg_all/dta_one.mat'
-  #dta_two_loc = '/home/ekaestne/PROJECTS/OUTPUT/PostOperative/Naming_final/SpecificCor/MRI/subcort_vol/Raw/tle_controls_pre_3T_allSurg_all/dta_two.mat'
-  #out_put_loc = '/home/ekaestne/PROJECTS/OUTPUT/PostOperative/Naming_final/SpecificCor/MRI/subcort_vol/Raw/tle_controls_pre_3T_allSurg_all/'
+  #dta_one_loc = '/home/ekaestne/PROJECTS/OUTPUT/slh_atl_mem/InitialAnalysis/Neurobio_compare/Correlation_subset/Cognitive/TLE_Controls_pre_cog/subcort_vol_238_LateralityIndex/dta_one.mat'
+  #dta_two_loc = '/home/ekaestne/PROJECTS/OUTPUT/slh_atl_mem/InitialAnalysis/Neurobio_compare/Correlation_subset/Cognitive/TLE_Controls_pre_cog/subcort_vol_238_LateralityIndex/dta_two.mat'
+    #out_put_loc = '/home/ekaestne/PROJECTS/OUTPUT/slh_atl_mem/InitialAnalysis/Neurobio_compare/Correlation_subset/Cognitive/TLE_Controls_pre_cog/subcort_vol_238_LateralityIndex/'
   #cor_typ     = 'spearman'
   #pvl_cut = .05
   # pvl_lib = .15 

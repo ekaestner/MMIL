@@ -23,8 +23,8 @@ roi_nme = { 'aparc.a2009s.annot' 'aparc.annot' };
 rcn_fle = '/home/ekaestner/gitrep/MMIL/EXTERNAL/McD/mmilmcdRSI_freesurfer_recons.csv';
 
 mri_fle     = '/home/ekaestne/PROJECTS/DATA/csv/ROIHOLD/MRI_all_mmilmcdRSI_2020_12_17.csv';
-mri_mse     = { 'subcort_vol' 'subcort_vol_ICV_cor'   };
-mri_roi_use = { [ 0 ]         [ -1 ] };
+mri_mse     = { 'subcort_vol' 'subcort_vol_ICV_cor' 'cort_thick_ctx'  };
+mri_roi_use = { [ 0 ]         [ -1 ]                [ 2 ] };
 
 dti_fle     = '/home/ekaestne/PROJECTS/DATA/csv/ROIHOLD/DTI_all_mmilmcdRSI_2020_12_17_v2.csv';
 dti_mse     = { 'wmparc_FA_wm' 'fiber_FA'  };

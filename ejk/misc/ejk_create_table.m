@@ -51,6 +51,7 @@ for iR = 1:size(cfg.tbl,1)
                 clear num_hld
             case 'copy'
                 if ~any(strcmpi(cfg.dta{str2num(cut_hld{2})}(:,1),cut_hld{3})); cut_hld{3} = mmil_spec_char(cut_hld{3},{'_'},{'.'}); end
+                if ~any(strcmpi(cfg.dta{str2num(cut_hld{2})}(:,1),cut_hld{3})); cut_hld_hld = cut_hld{3}; cut_hld{3} = cut_hld{4}; cut_hld{4} = cut_hld_hld; end
                 tbl_out{iR,iC} = cfg.dta{str2num(cut_hld{2})}{strcmpi(cfg.dta{str2num(cut_hld{2})}(:,1),cut_hld{3}),strcmpi(cfg.dta{str2num(cut_hld{2})}(1,:),cut_hld{4})};
             case 'empty'
                 tbl_out{iR,iC} = '-';

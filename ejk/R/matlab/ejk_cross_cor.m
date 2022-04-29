@@ -6,12 +6,12 @@ if ~isfield(cfg,'force_plot'); cfg.force_plot = 0; end
 %%
 dta_one.sbj_nme = cfg.sbj_nme;
 for iD = 1:numel(cfg.lbl_one)
-    dta_one.(cfg.lbl_one{iD}) = cfg.dta_one(:,iD);
+    try dta_one.(cfg.lbl_one{iD}) = cfg.dta_one(:,iD); catch fprintf('Failure Field Name: %s \n',cfg.lbl_one{iD}); end
 end
 
 dta_two.sbj_nme   = cfg.sbj_nme;
 for iG = 1:numel(cfg.lbl_two)
-    dta_two.(cfg.lbl_two{iG}) = cfg.dta_two(:,iG);
+    try dta_two.(cfg.lbl_two{iG}) = cfg.dta_two(:,iG); catch fprintf('Failure Field Name: %s \n',cfg.lbl_two{iG}); end
 end
 
 ejk_chk_dir(cfg.out_dir)
@@ -64,7 +64,7 @@ elseif cfg.force_plot
     
     for iR = 2:size( rvl_dta, 1)
         for iC = 2:size( rvl_dta, 2)
-            
+            try
             fcfg = [];
             
             fcfg.xdt     = { dta_two.(mmil_spec_char(rvl_dta{1,iC},{'.'})) };
@@ -78,13 +78,15 @@ elseif cfg.force_plot
             fcfg.xlb = { mmil_spec_char(rvl_dta{1,iC},{'.'}) };
             fcfg.ylb = { mmil_spec_char(rvl_dta{iR,1},{'.'}) };
             
+            if ~ischar(class(pvl_dta{iR,iC}))
             fcfg.ttl = ['r = ' num2str(rvl_dta{iR,iC}) '  p = ' num2str(roundsd(pvl_dta{iR,iC},2))];
+            end
             
             fcfg.out_dir = [ cfg.out_dir '/' 'plots' '/'];
             fcfg.out_nme = [ mmil_spec_char(rvl_dta{1,iC},{'.'}) '__BY__' mmil_spec_char(rvl_dta{iR,1},{'.'}) ];
             
             ejk_scatter(fcfg)
-            
+            catch fprintf('WARNING: failed scatter on %s \n',[ mmil_spec_char(rvl_dta{1,iC},{'.'}) '__BY__' mmil_spec_char(rvl_dta{iR,1},{'.'}) ]); end
         end
     end
     

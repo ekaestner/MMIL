@@ -4,16 +4,17 @@ ejk_fisher_test <- function( dta_one_loc,
   
   # https://cran.r-project.org/web/packages/tidyLPA/vignettes/Introduction_to_tidyLPA.html
   
-  #dta_one_loc = '/home/ekaestne/PROJECTS/OUTPUT/PostOperative/Naming_final/SpecificCor/Clinical/Fisher/TLE_Controls_pre_fishers/dta_one.mat'
-  #dta_two_loc = '/home/ekaestne/PROJECTS/OUT PUT/PostOperative/Naming_final/SpecificCor/Clinical/Fisher/TLE_Controls_pre_fishers/dta_two.mat'
-  #out_put_loc = '/home/ekaestne/PROJECTS/OUTPUT/PostOperative/Naming_final/SpecificCor/Clinical/Fisher/TLE_Controls_pre_fishers/'
+  #dta_one_loc = '/home/ekaestne/PROJECTS/OUTPUT/slh_atl_mem/EmoryExplore/stats/Clinical/Fishers/pst_cog/dta_one.mat'
+  #dta_two_loc = '/home/ekaestne/PROJECTS/OUTPUT/slh_atl_mem/EmoryExplore/stats/Clinical/Fishers/pst_cog/dta_two.mat'
+  #out_put_loc = '/home/ekaestne/PROJECTS/OUTPUT/slh_atl_mem/EmoryExplore/stats/Clinical/Fishers'
 
-  library( 'R.matlab' )  
+  library('R.matlab')  
   library('corrplot')
   library('Hmisc')
   library('dplyr')
   library('pracma')
   library('gridExtra')
+  library('stringr')
   
   dta_one = readMat(dta_one_loc) 
   dta_one_nme = names( dta_one$dta.one[,,1] )
@@ -44,18 +45,29 @@ ejk_fisher_test <- function( dta_one_loc,
   
   for (iC in 1:length(dta_one_nme)){
     
-    ttt = fisher.test( table( dta_use[[ dta_one_nme[iC]]], dta_use[[ dta_two_nme[iC]]] ) )
+    if (length(unique(dta_use[[ dta_one_nme[iC]]]))>1 & length(unique(dta_use[[ dta_two_nme[iC]]]))>1){
+      ttt = fisher.test( table( dta_use[[ dta_one_nme[iC]]], dta_use[[ dta_two_nme[iC]]] ), simulate.p.value=TRUE )
     
-    pvl_tbl$DV[iC]          = dta_one_nme[iC]
-    pvl_tbl$pvalue[iC]      = ttt$p.value
-    if (!is.null(ttt$estimate)){ pvl_tbl$statistic[iC]   = ttt$estimate }
-    pvl_tbl$alternative[iC] = ttt$alternative
-    pvl_tbl$method[iC]      = ttt$method
-    if (!is.null(ttt$estimate)){ pvl_tbl$report[iC]      = paste('FET=',signif(ttt$estimate,digits=3),'; p=',signif(ttt$p.value,digits=2),sep='')
-    } else {pvl_tbl$report[iC]      = paste('FET; p=',signif(ttt$p.value,digits=2),sep='')}
+      pvl_tbl$DV[iC]          = dta_one_nme[iC]
+      pvl_tbl$pvalue[iC]      = ttt$p.value
+      if (!is.null(ttt$estimate)){ pvl_tbl$statistic[iC]   = ttt$estimate }
+      pvl_tbl$alternative[iC] = ttt$alternative
+      pvl_tbl$method[iC]      = str_replace(ttt$method,'\n\t','')
+      if (!is.null(ttt$estimate)){ pvl_tbl$report[iC]      = paste('FET=',signif(ttt$estimate,digits=3),'; p=',signif(ttt$p.value,digits=2),sep='')
+      } else {pvl_tbl$report[iC]      = paste('FET; p=',signif(ttt$p.value,digits=2),sep='')}
+    
+    } else {
+      pvl_tbl$DV[iC]          = dta_one_nme[iC]
+      pvl_tbl$pvalue[iC]      = NaN
+      pvl_tbl$statistic[iC]   = NaN
+      pvl_tbl$alternative[iC] = ''
+      pvl_tbl$method[iC]      = ''
+      pvl_tbl$report[iC]      = ''
+    }  
     
     png( paste(out_put_loc,'/',dta_one_nme[iC],'.png',sep='') )
-    p<-tableGrob( table( dta_use[[ dta_one_nme[iC]]], dta_use[[ dta_two_nme[iC]]] ) )
+    tbl_hld = table( dta_use[[ dta_one_nme[iC]]], dta_use[[ dta_two_nme[iC]]], exclude="NA" )
+    p<-tableGrob( tbl_hld )
     grid.arrange(p)
     dev.off()
     

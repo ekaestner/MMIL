@@ -30,3 +30,18 @@ fcfg.dta_col = 2;
 setxor(cog_dta_sbj(~cellfun(@isnan,cog_dta(grp.tle_post_3T_ATLonly_all,3))), cog_dta_sbj(~cellfun(@isnan,cog_dta(grp.tle_post_3T_ATLonly_all,4))))
 [cog_dta_sbj(grp.tle_post_3T_ATLonly_left) cog_dta( grp.tle_post_3T_ATLonly_left, 3:4 )]
 [cog_dta_sbj(grp.tle_post_3T_ATLonly_right) cog_dta( grp.tle_post_3T_ATLonly_right, 3:4 )]
+
+%% Distance between imaging and surgery
+load( [ prj_dir '/' prj_nme '/' 'groups.mat' ] )
+
+fcfg = [];
+fcfg.dta_loc = [ prj_dir '/' prj_nme '/' 'Data' '/' 'Clinical.csv'];
+fcfg.dta_col = 2;
+[ cln_dta, cln_dta_sbj, cln_dta_col] = ejk_dta_frm( fcfg );
+
+fcfg = [];
+fcfg.dta_loc = [ prj_dir '/' prj_nme '/' 'Data' '/' 'Cognitive_QC.csv'];
+fcfg.dta_col = 2;
+[ cog_dta, cog_dta_sbj, cog_dta_col] = ejk_dta_frm( fcfg );
+
+

@@ -63,7 +63,7 @@ end
 
 %% MRI
 for iG = 1:numel(run_grp)
-    for iN = 1:numel(mri_mse)
+    for iN = 3%1:numel(mri_mse)
         for iR = 1:numel(mri_roi_use{iN})
             
             if ~(mri_roi_use{iN}(iR)==0) && ~(mri_roi_use{iN}(iR)==-1)

@@ -4,12 +4,18 @@ function ejk_fisher_test( cfg )
 dta_one.sbj_nme = cfg.sbj;
 for iD = 1:numel(cfg.lbl_one)
     dta_one.(cfg.lbl_one{iD}) = cfg.dta_one(:,iD);
+    if isfield(cfg,'lvl')
+        use_lvl = regexp(cfg.lvl{iD},'/','split');
+        dta_one.(cfg.lbl_one{iD})(~ismember(dta_one.(cfg.lbl_one{iD}),use_lvl)) = {'NA'};
+    end
 end
 
 dta_two.sbj_nme   = cfg.sbj;
 for iG = 1:numel(cfg.lbl_two)
     dta_two.(cfg.lbl_two{iG}) = cfg.dta_two(:,iG);
 end
+
+cfg.out_dir = [ cfg.out_dir '/' cfg.grp_nme];
 
 ejk_chk_dir(cfg.out_dir)
 save( [ cfg.out_dir '/' 'dta_one.mat' ], 'dta_one' )

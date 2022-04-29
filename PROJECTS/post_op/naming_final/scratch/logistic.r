@@ -2,6 +2,7 @@ library( R.matlab )
 library(pscl)
 library(ROCR)
 library(lmtest)
+library(rcompanion)
 
 ####### LOAD #######
 wmp_var_loc = '/home/ekaestne/PROJECTS/OUTPUT/PostOperative/Naming_final_sample/SpecificCor/DTI/wmparc_FA_wm/Raw/tle_post_3T_ATLonly_left/dta_one.mat'
@@ -75,6 +76,8 @@ mdl_hld = glm( V6 ~ V3 + V4, family=binomial(link='logit'), data=dta_hld )
 
 #summary(mdl_hld)
 anova(mdl_hld, test="Chisq")
+lrtest(mdl_hld)
+anova(mdl_hld,update(mdl_hld, ~1), test='Chisq')
 pR2(mdl_hld)
 
 #fit_rsl = predict( mdl_hld, dta_hld, type='response')
@@ -130,6 +133,8 @@ mdl_hld = glm( V6 ~ V3 + V4, family=binomial(link='logit'), data=dta_hld )
 
 #summary(mdl_hld)
 anova(mdl_hld, test="Chisq")
+lrtest(mdl_hld)
+anova(mdl_hld,update(mdl_hld, ~1), test='Chisq')
 pR2(mdl_hld)
 
 #fit_rsl = predict( mdl_hld, dta_hld, type='response')

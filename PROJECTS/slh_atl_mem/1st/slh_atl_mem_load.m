@@ -6,7 +6,7 @@ fcfg.red_fle = red_cap_fle;
 
 % Check who has post operative scores
 sbj_nme_hld = cell(0);
-for iT = cog_tst_inc
+for iT = 1:numel(cog_tst_nme)
     sbj_nme_hld = [ sbj_nme_hld ; sbj_cog.sbj_nme(~isnan(sbj_cog.(cog_tst_nme{iT}))) ];
 end
 sbj_nme = unique(sbj_nme_hld);
@@ -66,7 +66,7 @@ for iM = 1:numel(mri_238_mse)
             
         else
             
-            dta_inp = mmil_readtext( [prj_dir '/' prj_nme '/' 'Data' '/' mri_238_mse{iM-1} '.csv'] );
+            dta_inp = mmil_readtext( [prj_dir '/' prj_nme '/' 'Data' '/' mri_238_mse{iM-1} '_238.csv'] );
             
             fcfg = [];
             
@@ -79,16 +79,16 @@ for iM = 1:numel(mri_238_mse)
         
         % Save
         if mri_238_roi_use{iM}(iR)==0 || mri_238_roi_use{iM}(iR)==-1
-            cell2csv( [prj_dir '/' prj_nme '/' 'Data' '/' mri_238_mse{iM} '.csv'], mri_238_dta)
+            cell2csv( [prj_dir '/' prj_nme '/' 'Data' '/' mri_238_mse{iM} '_238.csv'], mri_238_dta)
         else
-            cell2csv( [prj_dir '/' prj_nme '/' 'Data' '/' mri_238_mse{iM} '_' mmil_spec_char(roi_nme{mri_238_roi_use{iM}(iR)},{'.'}) '.csv'], mri_238_dta)
+            cell2csv( [prj_dir '/' prj_nme '/' 'Data' '/' mri_238_mse{iM} '_' mmil_spec_char(roi_nme{mri_238_roi_use{iM}(iR)},{'.'}) '_238.csv'], mri_238_dta)
         end
         
         % QC
         if mri_238_roi_use{iM}(iR)==0 || mri_238_roi_use{iM}(iR)==-1
-            roi_dir = [prj_dir '/' prj_nme '/' 'Data' '/' 'QC' '/' 'MRI' '/' mri_238_mse{iM} '/' ];
+            roi_dir = [prj_dir '/' prj_nme '/' 'Data' '/' 'QC' '/' 'MRI_238' '/' mri_238_mse{iM} '/' ];
         else
-            roi_dir = [prj_dir '/' prj_nme '/' 'Data' '/' 'QC' '/' 'MRI' '/' mri_238_mse{iM}  '_' mmil_spec_char(roi_nme{mri_238_roi_use{iM}(iR)},{'.'}) '/' ];
+            roi_dir = [prj_dir '/' prj_nme '/' 'Data' '/' 'QC' '/' 'MRI_238' '/' mri_238_mse{iM}  '_' mmil_spec_char(roi_nme{mri_238_roi_use{iM}(iR)},{'.'}) '/' ];
         end
         
         fcfg = [];
@@ -123,16 +123,16 @@ for iM = 1:numel(dti_238_mse)
                 
         % Save
         if dti_238_roi_use{iM}(iR)==0
-            cell2csv( [prj_dir '/' prj_nme '/' 'Data' '/' dti_238_mse{iM} '.csv'], dti_238_dta)
+            cell2csv( [prj_dir '/' prj_nme '/' 'Data' '/' dti_238_mse{iM} '_238.csv'], dti_238_dta)
         else
-            cell2csv( [prj_dir '/' prj_nme '/' 'Data' '/' dti_238_mse{iM} '_' mmil_spec_char(roi_nme{dti_238_roi_use{iM}(iR)},{'.'}) '.csv'], dti_238_dta)
+            cell2csv( [prj_dir '/' prj_nme '/' 'Data' '/' dti_238_mse{iM} '_' mmil_spec_char(roi_nme{dti_238_roi_use{iM}(iR)},{'.'}) '_238.csv'], dti_238_dta)
         end
         
         % QC
         if dti_238_roi_use{iM}(iR)==0
-            roi_dir = [prj_dir '/' prj_nme '/' 'Data' '/' 'QC' '/' 'DTI' '/' dti_238_mse{iM} '/' ];
+            roi_dir = [prj_dir '/' prj_nme '/' 'Data' '/' 'QC' '/' 'DTI_238' '/' dti_238_mse{iM} '/' ];
         else
-            roi_dir = [prj_dir '/' prj_nme '/' 'Data' '/' 'QC' '/' 'DTI' '/' dti_238_mse{iM}  '_' mmil_spec_char(roi_nme{dti_238_roi_use{iM}(iR)},{'.'}) '/' ];
+            roi_dir = [prj_dir '/' prj_nme '/' 'Data' '/' 'QC' '/' 'DTI_238' '/' dti_238_mse{iM}  '_' mmil_spec_char(roi_nme{dti_238_roi_use{iM}(iR)},{'.'}) '/' ];
         end
 
         fcfg = [];
@@ -146,58 +146,58 @@ for iM = 1:numel(dti_238_mse)
     end
 end
 
-%% Load MRI - 238 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-for iM = 1:numel(mri_238_mse)
-    for iR = 1:numel(mri_238_roi_use{iM})
+%% Load MRI - dev %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+for iM = 1:numel(mri_dev_mse)
+    for iR = 1:numel(mri_dev_roi_use{iM})
         
-        if mri_238_roi_use{iM}(iR)>=0
+        if mri_dev_roi_use{iM}(iR)>=0
             
             fcfg = [];
             fcfg.sbj_nme = sbj_nme;
-            fcfg.fle_nme = mri_238_fle;
-            fcfg.mes_nme = mri_238_mse{iM};
+            fcfg.fle_nme = mri_dev_fle;
+            fcfg.mes_nme = mri_dev_mse{iM};
             fcfg.rcn_nme = rcn_fle;
-            if mri_238_roi_use{iM}(iR)==0
+            if mri_dev_roi_use{iM}(iR)==0
                 fcfg.roi_nme = [];
             else
-                fcfg.roi_nme = { [ roi_loc '/' 'lh.' roi_nme{mri_238_roi_use{iM}(iR)}] [ roi_loc '/' 'rh.' roi_nme{mri_238_roi_use{iM}(iR)}] };
+                fcfg.roi_nme = { [ roi_loc '/' 'lh.' roi_nme{mri_dev_roi_use{iM}(iR)}] [ roi_loc '/' 'rh.' roi_nme{mri_dev_roi_use{iM}(iR)}] };
                 fcfg.roi_hms = { 'lh' 'rh' };
             end
             
-            mri_238_dta = ejk_extract_mmps_roi( fcfg );
-            mri_238_dta(1,:) = cellfun(@(x) strrep(x,[mri_238_mse{iM} '_'],''),mri_238_dta(1,:),'uni',0);
+            mri_dev_dta = ejk_extract_mmps_roi( fcfg );
+            mri_dev_dta(1,:) = cellfun(@(x) strrep(x,[mri_dev_mse{iM} '_'],''),mri_dev_dta(1,:),'uni',0);
             
         else
             
-            dta_inp = mmil_readtext( [prj_dir '/' prj_nme '/' 'Data' '/' mri_238_mse{iM-1} '.csv'] );
+            dta_inp = mmil_readtext( [prj_dir '/' prj_nme '/' 'Data' '/' mri_dev_mse{iM-1} '_dev.csv'] );
             
             fcfg = [];
             
             fcfg.dta     = dta_inp;
             fcfg.cor_col = 'IntracranialVolume';
             
-            mri_238_dta = ejk_cor_roi( fcfg );
+            mri_dev_dta = ejk_cor_roi( fcfg );
             
         end
         
         % Save
-        if mri_238_roi_use{iM}(iR)==0 || mri_238_roi_use{iM}(iR)==-1
-            cell2csv( [prj_dir '/' prj_nme '/' 'Data' '/' mri_238_mse{iM} '.csv'], mri_238_dta)
+        if mri_dev_roi_use{iM}(iR)==0 || mri_dev_roi_use{iM}(iR)==-1
+            cell2csv( [prj_dir '/' prj_nme '/' 'Data' '/' mri_dev_mse{iM} '_dev.csv'], mri_dev_dta)
         else
-            cell2csv( [prj_dir '/' prj_nme '/' 'Data' '/' mri_238_mse{iM} '_' mmil_spec_char(roi_nme{mri_238_roi_use{iM}(iR)},{'.'}) '.csv'], mri_238_dta)
+            cell2csv( [prj_dir '/' prj_nme '/' 'Data' '/' mri_dev_mse{iM} '_' mmil_spec_char(roi_nme{mri_dev_roi_use{iM}(iR)},{'.'}) '_dev.csv'], mri_dev_dta)
         end
         
         % QC
-        if mri_238_roi_use{iM}(iR)==0 || mri_238_roi_use{iM}(iR)==-1
-            roi_dir = [prj_dir '/' prj_nme '/' 'Data' '/' 'QC' '/' 'MRI' '/' mri_238_mse{iM} '/' ];
+        if mri_dev_roi_use{iM}(iR)==0 || mri_dev_roi_use{iM}(iR)==-1
+            roi_dir = [prj_dir '/' prj_nme '/' 'Data' '/' 'QC' '/' 'MRI_dev' '/' mri_dev_mse{iM} '/' ];
         else
-            roi_dir = [prj_dir '/' prj_nme '/' 'Data' '/' 'QC' '/' 'MRI' '/' mri_238_mse{iM}  '_' mmil_spec_char(roi_nme{mri_238_roi_use{iM}(iR)},{'.'}) '/' ];
+            roi_dir = [prj_dir '/' prj_nme '/' 'Data' '/' 'QC' '/' 'MRI_dev' '/' mri_dev_mse{iM}  '_' mmil_spec_char(roi_nme{mri_dev_roi_use{iM}(iR)},{'.'}) '/' ];
         end
         
         fcfg = [];
-        fcfg.sbj_nme = mri_238_dta(2:end,1);
-        fcfg.dta     = cell2mat(mri_238_dta(2:end,5:end));
-        fcfg.dta_lbl = mri_238_dta(1,5:end);
+        fcfg.sbj_nme = mri_dev_dta(2:end,1);
+        fcfg.dta     = cell2mat(mri_dev_dta(2:end,5:end));
+        fcfg.dta_lbl = mri_dev_dta(1,5:end);
         fcfg.out_dir = roi_dir;
         fcfg.out_pre_fix = 'MRI';
         ejk_qc_roi(fcfg)
@@ -205,43 +205,43 @@ for iM = 1:numel(mri_238_mse)
     end
 end
 
-%% Load DTI - 238 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-for iM = 1:numel(dti_238_mse)
-    for iR = 1:numel(dti_238_roi_use{iM})
+%% Load DTI - dev %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+for iM = 1:numel(dti_dev_mse)
+    for iR = 1:numel(dti_dev_roi_use{iM})
         
         fcfg = [];
         fcfg.sbj_nme = sbj_nme;
-        fcfg.fle_nme = dti_238_fle;
-        fcfg.mes_nme = dti_238_mse{iM};
+        fcfg.fle_nme = dti_dev_fle;
+        fcfg.mes_nme = dti_dev_mse{iM};
         fcfg.rcn_nme = rcn_fle;
-        if dti_238_roi_use{iM}(iR)==0
+        if dti_dev_roi_use{iM}(iR)==0
             fcfg.roi_nme = [];
         else
-            fcfg.roi_nme = { [ roi_loc '/' 'lh.' roi_nme{dti_238_roi_use{iM}(iR)}] [ roi_loc '/' 'rh.' roi_nme{dti_238_roi_use{iM}(iR)}] };
+            fcfg.roi_nme = { [ roi_loc '/' 'lh.' roi_nme{dti_dev_roi_use{iM}(iR)}] [ roi_loc '/' 'rh.' roi_nme{dti_dev_roi_use{iM}(iR)}] };
             fcfg.roi_hms = { 'lh' 'rh' };
         end
         
-        dti_238_dta = ejk_extract_mmps_roi( fcfg );
-        dti_238_dta(1,:) = cellfun(@(x) strrep(x,[dti_238_mse{iM} '_'],''),dti_238_dta(1,:),'uni',0);
+        dti_dev_dta = ejk_extract_mmps_roi( fcfg );
+        dti_dev_dta(1,:) = cellfun(@(x) strrep(x,[dti_dev_mse{iM} '_'],''),dti_dev_dta(1,:),'uni',0);
                 
         % Save
-        if dti_238_roi_use{iM}(iR)==0
-            cell2csv( [prj_dir '/' prj_nme '/' 'Data' '/' dti_238_mse{iM} '.csv'], dti_238_dta)
+        if dti_dev_roi_use{iM}(iR)==0
+            cell2csv( [prj_dir '/' prj_nme '/' 'Data' '/' dti_dev_mse{iM} '_dev.csv'], dti_dev_dta)
         else
-            cell2csv( [prj_dir '/' prj_nme '/' 'Data' '/' dti_238_mse{iM} '_' mmil_spec_char(roi_nme{dti_238_roi_use{iM}(iR)},{'.'}) '.csv'], dti_238_dta)
+            cell2csv( [prj_dir '/' prj_nme '/' 'Data' '/' dti_dev_mse{iM} '_' mmil_spec_char(roi_nme{dti_dev_roi_use{iM}(iR)},{'.'}) '_dev.csv'], dti_dev_dta)
         end
         
         % QC
-        if dti_238_roi_use{iM}(iR)==0
-            roi_dir = [prj_dir '/' prj_nme '/' 'Data' '/' 'QC' '/' 'DTI' '/' dti_238_mse{iM} '/' ];
+        if dti_dev_roi_use{iM}(iR)==0
+            roi_dir = [prj_dir '/' prj_nme '/' 'Data' '/' 'QC' '/' 'DTI_dev' '/' dti_dev_mse{iM} '/' ];
         else
-            roi_dir = [prj_dir '/' prj_nme '/' 'Data' '/' 'QC' '/' 'DTI' '/' dti_238_mse{iM}  '_' mmil_spec_char(roi_nme{dti_238_roi_use{iM}(iR)},{'.'}) '/' ];
+            roi_dir = [prj_dir '/' prj_nme '/' 'Data' '/' 'QC' '/' 'DTI_dev' '/' dti_dev_mse{iM}  '_' mmil_spec_char(roi_nme{dti_dev_roi_use{iM}(iR)},{'.'}) '/' ];
         end
 
         fcfg = [];
-        fcfg.sbj_nme = dti_238_dta(2:end,1);
-        fcfg.dta     = cell2mat(dti_238_dta(2:end,5:end));
-        fcfg.dta_lbl = dti_238_dta(1,5:end);
+        fcfg.sbj_nme = dti_dev_dta(2:end,1);
+        fcfg.dta     = cell2mat(dti_dev_dta(2:end,5:end));
+        fcfg.dta_lbl = dti_dev_dta(1,5:end);
         fcfg.out_dir = roi_dir;
         fcfg.out_pre_fix = 'DTI';
         ejk_qc_roi(fcfg)
@@ -254,7 +254,7 @@ end
 cln_dta_nme = { 'SubjID'      'VisitID'           'SideOfSeizureFocus' 'FieldStrength' 'AgeAtSurgery' ...
                 'Educ'        'AgeOfSeizureOnset' 'NumAEDs'            'SeizureFreq'   'SurgicalSide' ...
                 'SurgeryType' 'Sex'               'Handedness'         'MTS'           'EngelOutcome' };
-cln_dta_out = [ sbj_dem.sbj_nme           dti_dta(2:end,2)              sbj_sze.sbj_sde_ons           dti_dta(2:end,3)              num2cell(sbj_srg.srg_age) ...
+cln_dta_out = [ sbj_dem.sbj_nme           dti_dev_dta(2:end,2)          sbj_sze.sbj_sde_ons           dti_dev_dta(2:end,3)          num2cell(sbj_srg.srg_age) ...
                 num2cell(sbj_dem.sbj_edu) num2cell(sbj_sze.sbj_age_ons) num2cell(sbj_sze.sbj_aed_num) num2cell(sbj_sze.sbj_sze_frq) sbj_srg.srg_sde ...
                 sbj_srg.srg_typ           sbj_dem.sbj_sex               sbj_dem.sbj_hnd               sbj_sze.sbj_mts               sbj_srg.eng_out          ];
 cell2csv( [prj_dir '/' prj_nme '/' 'Data' '/' 'Clinical' '.csv'], [ cln_dta_nme ; cln_dta_out ]);
