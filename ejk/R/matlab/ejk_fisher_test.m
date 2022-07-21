@@ -26,7 +26,7 @@ sve_cmd = sprintf('.libPaths(.libPaths()[2:5])\n');
 sve_cmd = sprintf('%ssource(''/home/ekaestner/gitrep/MMIL/ejk/R/R/ejk_fisher_test.r'')\n',sve_cmd);
 sve_cmd = sprintf('%sejk_fisher_test( ''%s/dta_one.mat'', ''%s/dta_two.mat'', ''%s'' )', sve_cmd, cfg.out_dir, cfg.out_dir, cfg.out_dir);
 cell2csv( [cfg.out_dir '/example_R_script.r'], {sve_cmd} );
-unix( [ 'Rscript ' cfg.out_dir '/example_R_script.r' ] );
+unix( [ 'Rscript ' mmil_spec_char(cfg.out_dir,{' '},{'\ '}) '/example_R_script.r' ] );
 
 
 end

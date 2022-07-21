@@ -38,19 +38,19 @@ fcfg.dta_loc = [ dta_dir '/' 'msc_cov.csv'];
 [ msc_cov_dta, msc_cov_dta_sbj, msc_cov_dta_col ] = ejk_dta_frm(fcfg);
 
 % Data Column Names %%%%%%%%%%%%%%%%%%%%%
-          % Original       % Rush         % UCSD/UCSF/Emory    % Emory        % CCF        % MUSC/Bonn       % Type
-col_hld = { 'Site'           ''             ''                   ''           ''           ''                'str' ; ...
-            'Side'           'SDx'          'SideOfSeizureFocus' 'side'       'side'       'SideL0R1'        'str' ; ...
-            'Age'            'Age'          'AgeAtSurgery'       'age'        'age'        ''                'num' ; ...
-            'Sex'            'Sex'          'Sex'                'sex'        'sex'        ''                'str' ; ...
-            'Handedness'     'Handedness'   'Handedness'         'handedness' 'handedness' ''                'str' ; ...
-            'Education'      ''             'Educ'               'education'  'education'  ''                'num' ; ...
-            'AO'             'AO'           'AgeOfSeizureOnset'  'onset'      'onset'      ''                'num' ; ...
-            'DURILL'         'DURILL'       ''                   'duration'   'duration'   ''                'num' ; ...
-            'MTS'            'mts'          'MTS'                'mts'        'mts'        ''                'str' ; ...
-            'ASMs'           ''             'NumAEDs'            'AEDs'       'AEDs'       ''                'num' ; ...
-            'Surgery'        'Surgery Type' 'SurgeryType'        ''           ''           'SurgeryLas0Res1' 'str' ; ...
-            'Engel'          'ENGEL'        'EngelOutcome'       ''           ''           ''                'str' };
+          % Original       % Rush         % UCSD/UCSF/Emory    % Emory        % CCF             % MUSC/Bonn                                      % Type
+col_hld = { 'Site'           ''             ''                   ''           ''                ''                                               'str' ; ...
+            'Side'           'SDx'          'SideOfSeizureFocus' 'side'       'side'            'SideL0R1'                                       'str' ; ...
+            'Age'            'Age'          'AgeAtSurgery'       'age'        'age'             'Age'                                            'num' ; ...
+            'Sex'            'Sex'          'Sex'                'sex'        'sex'             'Sex'                                            'str' ; ...
+            'Handedness'     'Handedness'   'Handedness'         'handedness' 'handedness'      'Handedness'                                     'str' ; ...
+            'Education'      'Education'    'Educ'               'education'  'education'       'Education'                                      'num' ; ...
+            'AO'             'AO'           'AgeOfSeizureOnset'  'onset'      'onset'           'Age of Onset'                                   'num' ; ...
+            'DURILL'         'DURILL'       ''                   'duration'   'duration'        'Duration of seizures (years)'                   'num' ; ...
+            'MTS'            'mts'          'MTS'                'mts'        'mts'             'Mesial Temporal Sclerosis'                      'str' ; ...
+            'ASMs'           'ASMs'         'NumAEDs'            'AEDs'       'AEDs'            'Number of Anti-Seizure Meds at time of imaging' 'num' ; ...
+            'Surgery'        'Surgery Type' 'SurgeryType'        ''           'surgery'         'SurgeryLas0Res1'                                'str' ; ...
+            'Engel'          'ENGEL'        'EngelOutcome'       ''           'surgery_outcome' 'Engel'                                          'str' };
 
 
 % Check columns
@@ -101,6 +101,24 @@ for iC = 1:numel(fix_str)
 end
 
 %% Tighten up Rush data
+% Add in new data
+fcfg = [];
+fcfg.dta_loc = [ dta_dir '/' 'missing_data' '/' 'additional_data' '/' 'Rush_data_frame_5_5_2022.csv'];
+[ new_rsh_cov_dta, new_rsh_cov_dta_sbj, new_rsh_cov_dta_col ] = ejk_dta_frm(fcfg);
+    new_rsh_cov_dta_sbj( cellfun(@isnumeric,new_rsh_cov_dta_sbj)) = cellfun(@num2str,new_rsh_cov_dta_sbj( cellfun(@isnumeric,new_rsh_cov_dta_sbj)),'uni',0);
+
+new_fll_nme = { 'Education' 'ASMs' };
+old_fll_nme = { 'Education' 'ASMs' };
+for iS = 1:numel(rsh_cov_dta_sbj)
+    new_ind = strcmpi(new_rsh_cov_dta_sbj,rsh_cov_dta_sbj{iS});
+    if sum(new_ind)==1
+        for iC = 1:numel(new_fll_nme)
+            rsh_cov_dta{iS,strcmpi(rsh_cov_dta_col,old_fll_nme{iC})} = new_rsh_cov_dta{new_ind,strcmpi(new_rsh_cov_dta_col,new_fll_nme{iC})};
+        end
+    end
+end
+
+%
 clear fix_str
 
 fix_str{find(strcmpi(rsh_cov_dta_col,'SDx'))}      = { 3 'L' ; ...
@@ -154,6 +172,24 @@ for iC = 1:numel(fix_str)
 end
 
 %% Tighten up CCF data            
+% Add in new data
+fcfg = [];
+fcfg.dta_loc = [ dta_dir '/' 'missing_data' '/' 'additional_data' '/' 'CNN Paper Update_4-25-2022.csv'];
+[ new_ccf_cov_dta, new_ccf_cov_dta_sbj, new_ccf_cov_dta_col ] = ejk_dta_frm(fcfg);
+    new_ccf_cov_dta_sbj = new_ccf_cov_dta(:,1);
+
+new_fll_nme = { 'Patient Type' 'Seizure Free at 6 Month Follow-Up?' };
+old_fll_nme = { 'surgery'      'surgery_outcome' };
+for iS = 1:numel(ccf_cov_dta_sbj)
+    new_ind = strcmpi(new_ccf_cov_dta_sbj,ccf_cov_dta_sbj{iS});
+    if sum(new_ind)==1
+        for iC = 1:numel(new_fll_nme)
+            ccf_cov_dta{iS,strcmpi(ccf_cov_dta_col,old_fll_nme{iC})} = new_ccf_cov_dta{new_ind,strcmpi(new_ccf_cov_dta_col,new_fll_nme{iC})};
+        end
+    end
+end
+
+%
 clear fix_str
 
 fix_str{find(strcmpi(ccf_cov_dta_col,'side'))}      = { 'Left'  'L' ; ...
@@ -169,6 +205,19 @@ fix_str{find(strcmpi(ccf_cov_dta_col,'handedness'))} = { 'Left'  'L' ; ...
 fix_str{find(strcmpi(ccf_cov_dta_col,'mts'))}        = { 'MTS'    'yes' ; ...
                                                          'NonMTS' 'no'};
 
+fix_str{find(strcmpi(ccf_cov_dta_col,'surgery'))}    = { 'Surgical' 'yes' ; ...
+                                                         'Nonsurgical - EEG Lateralized Left Temporal' 'no'};
+
+fix_str{find(strcmpi(ccf_cov_dta_col,'surgery_outcome'))}  = { 'Yes'    'I' ; ...
+                                                               'Yes (1 year followup)' 'I' ; ...
+                                                               'Yes (4 year followup)' 'I' ; ...
+                                                               'seizure 2 years postop after discontinuing ASMs; 3 years postop questionable seizure activity; followed locally (nonCCF) note from phone call' 'I' ; ...
+                                                               'Non-reoccuring seizures (e.g. post op seizures; seizure off meds)' 'other' ; ...                                                               
+                                                               '1 seizure 9 months after surgery in context of illness; seizure free otherwise (2 years post op)' 'other' ; ...
+                                                               '1 questionable event 6 months after surgery in context of illness; seizure free otherwise (10 months postop)' 'other' ; ...
+                                                               '2 questionable events since surgery (4 months postop)' 'other' ; ...
+                                                               'Seizure free 2 months after postop; pt deceased and no further followup' 'other' ; ...
+                                                               'Deceased (3 days postop)' 'other'};
                                                      
 for iC = 1:numel(fix_str)
     if ~isempty(fix_str{iC})
@@ -204,6 +253,25 @@ for iC = 1:numel(fix_str)
 end
 
 %% Tighten up MUSC/Bonn data
+% Add in new data
+fcfg = [];
+fcfg.dta_loc = [ dta_dir '/' 'missing_data' '/' 'additional_data' '/' 'MUSC_demographics_table.csv'];
+[ new_msc_cov_dta, new_msc_cov_dta_sbj, new_msc_cov_dta_col ] = ejk_dta_frm(fcfg);
+    new_msc_cov_dta(cellfun(@isempty,new_msc_cov_dta(:,strcmpi(new_msc_cov_dta_col,'Mesial Temporal Sclerosis'))),strcmpi(new_msc_cov_dta_col,'Mesial Temporal Sclerosis')) = {0};
+    new_msc_cov_dta(cellfun(@isnumeric,new_msc_cov_dta(:,strcmpi(new_msc_cov_dta_col,'Engel'))),strcmpi(new_msc_cov_dta_col,'Engel')) = cellfun(@num2str,new_msc_cov_dta(cellfun(@isnumeric,new_msc_cov_dta(:,strcmpi(new_msc_cov_dta_col,'Engel'))),strcmpi(new_msc_cov_dta_col,'Engel')),'uni',0);
+    
+new_fll_nme = { 'Mesial Temporal Sclerosis' 'Number of Anti-Seizure Meds at time of imaging' 'Engel' 'Age' 'Sex' 'Handedness' 'Education' 'Age of Onset' 'Duration of seizures (years)' };
+old_fll_nme = { 'Mesial Temporal Sclerosis' 'Number of Anti-Seizure Meds at time of imaging' 'Engel' 'Age' 'Sex' 'Handedness' 'Education' 'Age of Onset' 'Duration of seizures (years)' };
+for iS = 1:numel(msc_cov_dta_sbj)
+    new_ind = strcmpi(new_msc_cov_dta_sbj,msc_cov_dta_sbj{iS});
+    if sum(new_ind)==1
+        for iC = 1:numel(new_fll_nme)
+            msc_cov_dta{iS,strcmpi(msc_cov_dta_col,old_fll_nme{iC})} = new_msc_cov_dta{new_ind,strcmpi(new_msc_cov_dta_col,new_fll_nme{iC})};
+        end
+    end
+end
+
+%
 clear fix_str
 
 fix_str{find(strcmpi(msc_cov_dta_col,'SideL0R1'))}      = { 0 'L' ; ...
@@ -211,7 +279,17 @@ fix_str{find(strcmpi(msc_cov_dta_col,'SideL0R1'))}      = { 0 'L' ; ...
 
 fix_str{find(strcmpi(msc_cov_dta_col,'SurgeryLas0Res1'))}        = { 0 'yes' ; ...
                                                                      1 'yes' };
-                                                                                                            
+                                                                 
+fix_str{find(strcmpi(msc_cov_dta_col,'Sex'))}        = { 0 'F' ; ...
+                                                         1 'M' };  
+                                                                    
+fix_str{find(strcmpi(msc_cov_dta_col,'Handedness'))} = { 0 'L' ; ...
+                                                         1 'R' };  
+                                                     
+fix_str{find(strcmpi(msc_cov_dta_col,'Mesial Temporal Sclerosis'))} = { 0 'no' ; ...
+                                                                        1 'yes' };  
+
+                                                     
 for iC = 1:numel(fix_str)
     if ~isempty(fix_str{iC})
         hld_num = msc_cov_dta(:,iC);
@@ -219,6 +297,34 @@ for iC = 1:numel(fix_str)
         hld_num = cell2mat(hld_num);
         for iT = 1:size(fix_str{iC},1)            
             msc_cov_dta(hld_num==fix_str{iC}{iT,1},iC) = {fix_str{iC}{iT,2}};
+        end
+    end
+end
+
+%
+clear fix_str
+fix_str{find(strcmpi(msc_cov_dta_col,'Engel'))} = { '1'  'I' ; ...
+                                                    '1a' 'I' ; ...
+                                                    '1b' 'I' ; ...
+                                                    '1c' 'I' ; ...
+                                                    '1d' 'I' ; ...
+                                                    '2'  'II' ; ...
+                                                    '2a' 'II' ; ...
+                                                    '2b' 'II' ; ...
+                                                    '2d' 'II' ; ...
+                                                    '3'  'III' ; ...
+                                                    '3a' 'III' ; ...
+                                                    '4'  'IV' ; ...
+                                                    '4b' 'IV'};
+
+for iC = 1:numel(fix_str)
+    if ~isempty(fix_str{iC})
+        for iT = 1:size(fix_str{iC},1)
+            if strcmpi(fix_str{iC}{iT,1},'empty')
+                msc_cov_dta(cellfun(@isempty,msc_cov_dta(:,iC)),iC) = {fix_str{iC}{iT,2}};
+            else
+                msc_cov_dta(strcmpi(msc_cov_dta(:,iC),fix_str{iC}{iT,1}),iC) = {fix_str{iC}{iT,2}};
+            end
         end
     end
 end
@@ -307,9 +413,11 @@ for iS = 1:numel(cov_dta_sbj)
 end
 
 %% Get missing data report
-mss_sbj.sbj = [ out_dta_sbj(isnan(mss_dta(:,2))) out_dta(isnan(mss_dta(:,2)),1) ];
+mss_sbj.sbj     = [ out_dta_sbj(isnan(mss_dta(:,2))) out_dta(isnan(mss_dta(:,2)),1) ];
+mss_sbj_dta.sbj = { '' '' };
 for iC = 2:size(col_hld,1)
-    mss_sbj.(col_hld{iC,1}) = [ out_dta_sbj(mss_dta(:,iC)==-999) out_dta(mss_dta(:,iC)==-999,1) ];
+    mss_sbj.(col_hld{iC,1})     = [ out_dta_sbj(mss_dta(:,iC)==-999) out_dta(mss_dta(:,iC)==-999,1) ];
+    mss_sbj_dta.(col_hld{iC,1}) = [ out_dta_sbj(cellfun(@isempty,out_dta(:,iC))) out_dta(cellfun(@isempty,out_dta(:,iC)),1) ];
 end
 
 % Make table
@@ -317,11 +425,14 @@ tbl_ste = unique(out_dta(:,1));
     tbl_ste_tbl = tabulate(out_dta(:,1));
 tbl_col = fieldnames(mss_sbj);
 
-mss_tbl = cell(numel(tbl_ste),numel(tbl_col));
+mss_tbl     = cell(numel(tbl_ste),numel(tbl_col));
+mss_tbl_dta = cell(numel(tbl_ste),numel(tbl_col));
 for iC = 1:numel(tbl_col)
-    tbl_hld = tabulate(mss_sbj.(tbl_col{iC})(:,2));
+    tbl_hld     = tabulate(mss_sbj.(tbl_col{iC})(:,2));
+    tbl_dta_hld = tabulate(mss_sbj_dta.(tbl_col{iC})(:,2));
     
     for iR = 1:numel(tbl_ste)
+        %
         tbl_ind = strcmpi(tbl_hld(:,1),tbl_ste{iR});
         tot_ind = strcmpi(tbl_ste_tbl(:,1),tbl_ste{iR});
         if sum(tbl_ind)==0
@@ -329,10 +440,21 @@ for iC = 1:numel(tbl_col)
         else
             mss_tbl{iR,iC} = [ num2str(tbl_hld{tbl_ind,2}) ' (' num2str(round(tbl_hld{tbl_ind,2}/tbl_ste_tbl{tot_ind,2}*100)) '%)' ];
         end
+        
+        %
+        tbl_ind = strcmpi(tbl_dta_hld(:,1),tbl_ste{iR});
+        tot_ind = strcmpi(tbl_ste_tbl(:,1),tbl_ste{iR});
+        if sum(tbl_ind)==0
+            mss_tbl_dta{iR,iC} = [ num2str(0) ' (' num2str(0) '%)' ];
+        else
+            mss_tbl_dta{iR,iC} = [ num2str(tbl_dta_hld{tbl_ind,2}) ' (' num2str(round(tbl_dta_hld{tbl_ind,2}/tbl_ste_tbl{tot_ind,2}*100)) '%)' ];
+        end
+        
     end    
 end
 
 cell2csv('/home/ekaestner/Dropbox/McDonald Lab/Erik/Projects/Imaging/cnn_lat/data/missing_data/missing_report.csv',[ {''} tbl_col'  ; tbl_ste mss_tbl])
+cell2csv('/home/ekaestner/Dropbox/McDonald Lab/Erik/Projects/Imaging/cnn_lat/data/missing_data/missing_report_data.csv',[ {''} tbl_col'  ; tbl_ste mss_tbl_dta])
 
 %% Save out individual tables for sending to sites
 ste_nme = unique(out_dta(:,strcmpi(out_dta_col,'Site')));
@@ -347,10 +469,65 @@ sve_dta = out_dta(strcmpi(out_dta(:,strcmpi(out_dta_col,'Site')),'Emory') & isme
 sve_sbj = msc_emy_sbj';
 cell2csv(['/home/ekaestner/Dropbox/McDonald Lab/Erik/Projects/Imaging/cnn_lat/data/missing_data/' 'Emory_from_MUSC' '_data_frame.csv'],[ [{''} out_dta_col] ; sve_sbj sve_dta ])
 
-%% Make Table
-grp_typ = {'L' 'R'};
+%% Add in stats
 grp.L = find(strcmpi(out_dta(:,strcmpi(out_dta_col,'Side')),'L'));
 grp.R = find(strcmpi(out_dta(:,strcmpi(out_dta_col,'Side')),'R'));
+
+for iC = 1:size(out_dta,2)
+    if isnumeric(out_dta{350,iC})
+        out_dta(cellfun(@isempty,out_dta(:,iC)),iC) = {NaN};
+    else
+        out_dta(cellfun(@isempty,out_dta(:,iC)),iC) = {''};
+    end
+end
+
+% ttest2 Test %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+use_dta_col = cellfun(@isnumeric, out_dta(350,:));
+
+fcfg = [];
+fcfg.grp     = grp;
+fcfg.grp_inc = {{'L' 'R'}};
+fcfg.grp_nme = {{'L' 'R'}};
+fcfg.dta = out_dta(:,use_dta_col);
+fcfg.sbj = out_dta_sbj;
+[ grp_dta, grp_typ, grp_sbj ] = ejk_group_create( fcfg );
+
+fcfg = [];
+fcfg.sbj_nme = grp_sbj{1};
+fcfg.dta     = grp_dta{1};
+fcfg.dta_nme = out_dta_col(:,use_dta_col);
+fcfg.grp     = grp_typ{1};
+fcfg.grp_nme = {'side_ttest2'};
+fcfg.out_dir = '/home/ekaestner/Dropbox/McDonald Lab/Erik/Projects/Imaging/cnn_lat/manuscript/tables/demographics';
+ejk_ttest2_independent( fcfg );
+
+% fisher's Test %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+use_dta_col = ~cellfun(@isnumeric, out_dta(350,:));
+
+fcfg = [];
+fcfg.grp     = grp;
+fcfg.grp_inc = {{'L' 'R'}};
+fcfg.grp_nme = {{'L' 'R'}};
+fcfg.dta = out_dta(:,use_dta_col);
+fcfg.sbj = out_dta_sbj;
+[ grp_dta, grp_typ, grp_sbj ] = ejk_group_create( fcfg );
+grp_dta{1}( cellfun(@isempty,grp_dta{1})) = {NaN};
+
+fcfg = [];
+fcfg.sbj = grp_sbj{1};
+fcfg.dta_one = grp_dta{1};
+fcfg.lbl_one = out_dta_col(:,use_dta_col);
+fcfg.dta_two = repmat(grp_typ{1},1,sum(use_dta_col));
+fcfg.lbl_two = strcat( 'group_', out_dta_col(use_dta_col));
+fcfg.grp_nme = 'side_fisher';
+fcfg.out_dir = '/home/ekaestner/Dropbox/McDonald Lab/Erik/Projects/Imaging/cnn_lat/manuscript/tables/demographics';
+ejk_fisher_test( fcfg );
+
+%% Make Table
+grp_typ = {'L' 'R'};
+
+tst_tbl = mmil_readtext('/home/ekaestner/Dropbox/McDonald Lab/Erik/Projects/Imaging/cnn_lat/manuscript/tables/demographics/side.ttest2/output_table.csv');
+fsh_tbl = mmil_readtext('/home/ekaestner/Dropbox/McDonald Lab/Erik/Projects/Imaging/cnn_lat/manuscript/tables/demographics/side_fisher/output_table.csv');
 
 % Setup table
 clear tbl_dsg
@@ -370,20 +547,24 @@ for iR = 1:numel(col_hld(:,1))
             row_lbl{iR} = [ col_hld{iR,1} ' (' hld_cat ')'];
         end
     end
+    if strcmpi(col_hld{iR,end},'num')
+        tbl_dsg{iR,iC+1} = ['copy' ',' '2' ',' col_hld{iR,1} ',' 'report'];
+    elseif strcmpi(col_hld{iR,end},'str')
+        tbl_dsg{iR,iC+1} = ['copy' ',' '3' ',' col_hld{iR,1} ',' 'report' ];
+    end
 end
 
 fcfg = [];
 fcfg.tbl = tbl_dsg;
-fcfg.dta = {[ out_dta_col ; out_dta ]};
+fcfg.dta = {[ out_dta_col ; out_dta ] tst_tbl fsh_tbl };
 fcfg.grp = grp;
 tbl_out = ejk_create_table( fcfg );
 
-cell2csv('/home/ekaestner/Dropbox/McDonald Lab/Erik/Projects/Imaging/cnn_lat/data/missing_data/current_table.csv',[ {'N'} {numel(grp.L)} {numel(grp.R)} ; row_lbl' tbl_out ]);
+cell2csv('/home/ekaestner/Dropbox/McDonald Lab/Erik/Projects/Imaging/cnn_lat/data/missing_data/current_table.csv',[ {'N'} {numel(grp.L)} {numel(grp.R)} {'Test'} ; row_lbl' tbl_out ]);
+
+%% Save out
 
 cell2csv('/home/ekaestner/Dropbox/McDonald Lab/Erik/Projects/Imaging/cnn_lat/data/missing_data/demographic_table.csv',[ {'sbj_nme'} out_dta_col ; out_dta_sbj out_dta ]);
-
-
-
 
 
 

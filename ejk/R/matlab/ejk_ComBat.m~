@@ -33,10 +33,11 @@ btc_num = numel(btc_nme);
 col_hld = distinguishable_colors(btc_num);
 
 for iP = 1:size(cfg.dta,2)
-    if ~all(isnan(cfg.dta(:,iP))) && ~(range(cfg.dta(~isnan(cfg.dta(:,iP)),iP))==0) 
+    if ~all(isnan(cfg.dta(:,iP))) && ~all(cfg.dta(~isnan(cfg.dta(:,iP)),iP)==0) 
+        ylm(1) = min(cfg.dta(:,iP));
         figure('Visible','off'); hold on;
         if isfield(cfg,'ylm'); xlim( cfg.ylm ); bin_wdt = (cfg.ylm(2) - cfg.ylm(1)) / 50;
-        else         ylm(1) = min(cfg.dta(:,iP));
+        else
             ylm(2) = max(cfg.dta(:,iP));
             ylm(1) = ylm(1) - range(ylm)*.1;
             ylm(2) = ylm(2) + range(ylm)*.1;
@@ -84,7 +85,7 @@ if cfg.plt
     col_hld = distinguishable_colors(btc_num);
     
     for iP = 1:size(dta_out,2)
-        if ~all(isnan(dta_out(:,iP))) && ~(range(dta_out(~isnan(dta_out(:,iP)),iP))==0) 
+        if ~all(isnan(cfg.dta(:,iP))); ylm(1) = min(cfg.dta(:,iP));
             figure('Visible','off'); hold on;
             if isfield(cfg,'ylm'); xlim( cfg.ylm ); bin_wdt = (cfg.ylm(2) - cfg.ylm(1)) / 50;
             else ylm(1) = min(dta_out(:,iP));

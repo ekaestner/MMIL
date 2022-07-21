@@ -3,10 +3,10 @@ ejk_ComBat <- function( dta_var_loc,
                         cov_var_loc,
                         out_put_loc ) {
 
-  #dta_var_loc = '/home/ekaestner/Downloads/ComBat/dta_var.mat'
-  #btc_var_loc = '/home/ekaestner/Downloads/ComBat/btc_var.mat'
-  #cov_var_loc = '/home/ekaestner/Downloads/ComBat/cov_var.mat'
-  #out_put_loc = '/home/ekaestner/Downloads/ComBat/'
+  #dta_var_loc = '/home/ekaestne/PROJECTS/OUTPUT/slh_atl_mem/Data//ComBat///dta_var.mat'
+  #btc_var_loc = '/home/ekaestne/PROJECTS/OUTPUT/slh_atl_mem/Data//ComBat///btc_var.mat'
+  #cov_var_loc = '/home/ekaestne/PROJECTS/OUTPUT/slh_atl_mem/Data//ComBat///cov_var.mat'
+  #out_put_loc = '/home/ekaestne/PROJECTS/OUTPUT/slh_atl_mem/Data//ComBat//'
   
   library( R.matlab )  
   library( neuroCombat )

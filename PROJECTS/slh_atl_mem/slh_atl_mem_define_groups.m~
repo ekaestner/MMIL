@@ -23,7 +23,6 @@ has_pst_cog = find(~isnan(cell2mat(cog_dta(:,strcmpi(cog_dta_col,'lm2_pst')))) |
                
 ltl_tle = find(strcmpi(cln_dta(:,strcmpi(cln_dta_col,'SideOfSeizureFocus')),'L'));
 rgh_tle = find(strcmpi(cln_dta(:,strcmpi(cln_dta_col,'SideOfSeizureFocus')),'R'));
-btl_tle = find(strcmpi(cln_dta(:,strcmpi(cln_dta_col,'SideOfSeizureFocus')),'B'));
 con_trl     = find(strcmpi(cln_dta(:,strcmpi(cln_dta_col,'Location')),'HC'));
 
 slh_tle = find(strcmpi(cln_dta(:,strcmpi(cln_dta_col,'SurgeryType')),'SLAH'));
@@ -39,13 +38,14 @@ vp2_wms_for = find(strcmpi(cln_dta(:,strcmpi(cln_dta_col,'wms_vp2')),'IV'));
 %% Grouping 1: Site
 grp.site.control = con_trl;
 grp.site.emory   = emy_ind;
-grp.site.ucsf    = usf_ind;
+grp.site.ucsf    = rgh_tle;
 grp.site.ucsd    = usd_ind;
 
 %% Grouping 1.1: Diagnosis 
 grp.diagnosis.control = con_trl;
 grp.diagnosis.ltle   = ltl_tle;
-grp.diagnosis.rtle   = rgh_tle;
+grp.diagnosis.rtle   = ;
+grp.diagnosis.btle   = cellfun(@isempty,cov_dta);
 
 %% Grouping 2: presurgical-x-condition
 grp.pre_cog.control = intersect(has_pre_cog,con_trl);
