@@ -21,8 +21,8 @@ if ~isempty(cfg.roi_nme)
     col_plc_ind = 4;
     for iR = 1:numel(cfg.roi_nme)        
         col_use = [col_use find(ismember( roi_hld(1, :), cellfun(@(x) mmil_spec_char(x,{'-'}),strcat(cfg.mes_nme, '_', cfg.roi_hms{iR}, '_', roi_nme_hld{iR}),'uni',0)))];  
-        col_plc{iR} = col_plc_ind(iR) + (1:numel(find(ismember( roi_hld(1, :), strcat(cfg.mes_nme, '_', cfg.roi_hms{iR}, '_', roi_nme_hld{iR})))));
-        col_plc_ind(iR+1) = col_plc_ind(iR) + numel(find(ismember( roi_hld(1, :), strcat(cfg.mes_nme, '_', cfg.roi_hms{iR}, '_', roi_nme_hld{iR}))));
+        col_plc{iR} = col_plc_ind(iR) + (1:numel(find(ismember( roi_hld(1, :), cellfun(@(x) mmil_spec_char(x,{'-'}),strcat(cfg.mes_nme, '_', cfg.roi_hms{iR}, '_', roi_nme_hld{iR}),'uni',0)))));
+        col_plc_ind(iR+1) = col_plc_ind(iR) + numel(find(ismember( roi_hld(1, :), cellfun(@(x) mmil_spec_char(x,{'-'}),strcat(cfg.mes_nme, '_', cfg.roi_hms{iR}, '_', roi_nme_hld{iR}),'uni',0))));
     end
     col_plc = cat(2,col_plc{:});
 else

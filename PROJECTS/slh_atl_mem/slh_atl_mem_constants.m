@@ -5,7 +5,7 @@ dta_dir = '/home/ekaestne/PROJECTS/DATA';
 
 % File locations %%%%%%%%%%%%%%%%%%%%%%%
 % Clinical & Cognitive data location
-red_cap_fle = [ dta_dir '/' 'csv' '/' 'redcap' '/' 'Redcap_2022_01_10.csv'];
+red_cap_fle = [ dta_dir '/' 'csv' '/' 'redcap' '/' 'Redcap_2022_07_22.csv'];
 
 aln_dom_fle = '/home/ekaestne/PROJECTS/DATA/csv/redcap/Alena_Dominance.csv';
 
@@ -37,7 +37,7 @@ mri_dev_icv     = { 'IntracranialVolume' '' };
 
 dti_dev_pre     = 'DTI_dev';
 dti_dev_suf     = { 'dev'          'dev'      'dev' };
-dti_dev_mse     = { 'wmparc_FA_wm' 'fiber_FA' 'gwcsurf_FA_wm' };
-dti_dev_roi     = { [ 2 ]          [ 0 ]      [ 0 ] };
+dti_dev_mse     = { 'wmparc_FA_wm' 'fiber_FA' 'gwcsurf_FA_wm_ctx' };
+dti_dev_roi     = { [ 2 ]          [ 0 ]      [ 1 2 ] };
 dti_dev_lat     = [ 1              1          1 ];
 dti_dev_icv     = { ''             ''         '' };

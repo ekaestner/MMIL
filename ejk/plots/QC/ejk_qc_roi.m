@@ -8,7 +8,7 @@ ejk_chk_dir(cfg.out_dir)
 col_hld = distinguishable_colors(size(cfg.dta,1));
 
 %% Z-Score Data
-% By ROI
+% Z-Score By ROI
 roi_zsc = nan(size(cfg.dta));
 for iC = 1:size(cfg.dta,2)
     avg_dta = nanmean(cfg.dta(:,iC));
@@ -22,7 +22,7 @@ end
 
 prb_ind_roi_zsc = [cfg.sbj_nme num2cell(sum(roi_zsc>2 | roi_zsc<-2,2)) num2cell(sum(roi_zsc>3 | roi_zsc<-3,2)) num2cell(sum(roi_zsc>4 | roi_zsc<-4,2))];
 
-% By Subj
+% Z-Score By Subj
 sbj_zsc = nan(size(cfg.dta));
 for iR = 1:size(cfg.dta,1)
     avg_dta = nanmean(cfg.dta(iR,:));
@@ -37,8 +37,26 @@ sbj_var = nan(size(cfg.dta,1),1);
 for iR = 1:size(cfg.dta,1)
     sbj_var(iR,1) = nanstd(cfg.dta(iR,:));
 end
+
+% IQR by ROI
+roi_iqr = nan(size(cfg.dta));
+for iC = 1:size(cfg.dta,2)
+    
+    iqr_hld = iqr(cfg.dta(:,iC));
+    qan_hld = quantile(cfg.dta(:,iC),[0.25 0.75]);
+    
+    for iR = 1:size(cfg.dta,1)
+        if cfg.dta(iR,iC) > (qan_hld(2)+(iqr_hld*3)) || cfg.dta(iR,iC) < (qan_hld(1)-(iqr_hld*3))
+            roi_iqr(iR,iC) = 2;
+        elseif  cfg.dta(iR,iC) > (qan_hld(2)+(iqr_hld*1.5)) || cfg.dta(iR,iC) < (qan_hld(1)-(iqr_hld*1.5))
+            roi_iqr(iR,iC) = 1;
+        end
+    end
+end
+prb_ind_roi_iqr = [ cfg.sbj_nme num2cell(sum(roi_iqr==1,2)) num2cell(sum(roi_iqr==2,2))];
+
 [~, srt_ind] = sort(sbj_var);
-sbj_var      = [prb_ind_roi_zsc(srt_ind,:) num2cell(sbj_var(srt_ind))];
+sbj_var      = [prb_ind_roi_zsc(srt_ind,:) num2cell(sbj_var(srt_ind)) prb_ind_roi_iqr(srt_ind,:)];
 
 %% Make Plots
 % Raw %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

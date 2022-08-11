@@ -52,6 +52,9 @@ grp.pre_cog.control = intersect(has_pre_cog,con_trl);
 grp.pre_cog.ltle   = intersect(has_pre_cog,ltl_tle);
 grp.pre_cog.rtle    = intersect(has_pre_cog,rgh_tle);
 
+%% Grouping 2.1: Total Sample Diagnosis 
+grp.total_pre_cog.tle_hc = [ grp.pre_cog.control ; grp.pre_cog.ltle ; grp.pre_cog.rtle];
+
 %% Grouping 3: postsurgical-x-condition
 grp.pst_cog.ltle    = intersect(has_pst_cog,ltl_tle);
 grp.pst_cog.rtle    = intersect(has_pst_cog,rgh_tle);

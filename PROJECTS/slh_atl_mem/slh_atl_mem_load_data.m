@@ -2,6 +2,7 @@
 % Load UCSD/UCSF Redcap %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 fcfg = [];
 fcfg.red_fle = red_cap_fle;
+fcfg.sep     = '|';
 [~ , ~ , ~ , sbj_cog, ~] = mmil_load_redcap(fcfg);
 
 % Check who has post operative scores
@@ -17,6 +18,7 @@ clear sbj_cog
 fcfg = [];
 fcfg.sbj_nme = sbj_nme;
 fcfg.red_fle = red_cap_fle;
+fcfg.sep     = '|';
 [sbj_dem , sbj_sze , sbj_scn , sbj_cog, sbj_emo, sbj_srg] = mmil_load_redcap(fcfg);
 
 % Load Emory %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -368,90 +370,11 @@ for iF = 1:numel(inp_fle)
                 
                 % Save
                 cell2csv( [roi_fle_nme(1:end-4) '_' 'LateralityIndex' '.csv'], neu_bio_dta_lat)
-                
-                % QC
-                fcfg = [];
-                fcfg.sbj_nme = neu_bio_dta_lat(2:end,1);
-                fcfg.dta     = cell2mat(neu_bio_dta_lat(2:end,5:end));
-                fcfg.dta_lbl = neu_bio_dta_lat(1,5:end);
-                fcfg.out_dir     = [ qal_dir(1:end-1) '_' 'LateralityIndex' ];
-                fcfg.out_pre_fix = inp_pre{iF};
-                ejk_qc_roi(fcfg)
-                
+                               
             end
             
             % Clean up %%%%%%%%%%%%%%%%%%%%%%%%%%%%
             clear neu_bio_dta neu_bio_dta_icv neu_bio_dta_lat neu_bio_wrn
-            
-        end
-    end
-end
-
-%% Neurobio Harmonize
-for iF = 1:numel(inp_fle)
-    for iM = 1:numel(inp_mse{iF})
-        for iR = 1:numel(inp_roi{iF}{iM})
-            
-            if inp_roi{iF}{iM}(iR)==0
-                roi_fle_nme = [prj_dir '/' prj_nme '/' 'Data' '/' inp_mse{iF}{iM} '_' inp_suf{iF}{iM} '.csv'];
-                qal_dir     = [prj_dir '/' prj_nme '/' 'Data' '/' 'QC' '/' inp_pre{iF} '/' inp_mse{iF}{iM} '_' inp_suf{iF}{iM} '/' ];
-            else
-                roi_fle_nme = [prj_dir '/' prj_nme '/' 'Data' '/' inp_mse{iF}{iM} '_' mmil_spec_char(roi_nme{inp_roi{iF}{iM}(iR)},{'.'}) '_' inp_suf{iF}{iM} '.csv'];
-                qal_dir     = [prj_dir '/' prj_nme '/' 'Data' '/' 'QC' '/' inp_pre{iF} '/' inp_mse{iF}{iM}  '_' mmil_spec_char(roi_nme{inp_roi{iF}{iM}(iR)},{'.'}) '_' inp_suf{iF}{iM} '/' ];
-            end
-            
-            % Load Data
-            if ~strcmpi(inp_icv{iF}{iM},'')
-                roi_fle_nme = [roi_fle_nme(1:end-4) '_' 'norm' '_' inp_icv{iF}{iM} '.csv'];
-                fcfg = [];
-                fcfg.dta_loc = roi_fle_nme;
-                fcfg.dta_col = 5;
-                [ neu_dta, neu_dta_sbj, neu_dta_col, msc_out] = ejk_dta_frm( fcfg );
-            else
-                fcfg = [];
-                fcfg.dta_loc = roi_fle_nme;
-                fcfg.dta_col = 5;
-                [ neu_dta, neu_dta_sbj, neu_dta_col, msc_out] = ejk_dta_frm( fcfg );
-            end
-            
-            neu_dta_col = ejk_fix_column_names(neu_dta_col);
-            
-            % comBAT
-            btc_dta = cell(size(neu_dta_sbj,1),1);
-            btc_dta(grp.site.control) = {'UCSD'};
-            btc_dta(grp.site.emory) = {'Emory'};
-            btc_dta(grp.site.ucsf) = {'UCSF'};
-            btc_dta(grp.site.ucsd) = {'UCSD'};
-            
-            cov_dta          = cell(size(neu_dta_sbj,1),1);
-            cov_dta(grp.diagnosis.ltle) = {'LTLE'};
-            cov_dta(grp.diagnosis.rtle) = {'RTLE'};
-            cov_dta(grp.diagnosis.control) = {'HC'};
-            cov_dta(cellfun(@isempty,cov_dta)) = {'BTLE'};
-            
-            fcfg = [];            
-            fcfg.sbj_nme = neu_dta_sbj;            
-            fcfg.dta     = cell2mat(neu_dta);
-            fcfg.dta_nme = neu_dta_col;            
-            fcfg.btc     = btc_dta;
-            fcfg.btc_nme = {'Site'};            
-            fcfg.cov     = cov_dta;
-            fcfg.cov_nme = {'Diagnosis'};            
-            fcfg.plt = 1;           
-            fcfg.out_dir = qal_dir;            
-            com_bat_epd_dta = ejk_ComBat(fcfg);
-                       
-            % QC
-            fcfg = [];
-            fcfg.sbj_nme = neu_dta_sbj;
-            fcfg.dta     = com_bat_epd_dta;
-            fcfg.dta_lbl = neu_dta_col;
-            fcfg.out_dir     = qal_dir(1:end-1);
-            fcfg.out_pre_fix = [ inp_pre{iF} '_' 'ComBat'];
-            ejk_qc_roi(fcfg)           
-            
-            % Save
-            cell2csv( [roi_fle_nme(1:end-4) '_' 'ComBat' '.csv'], [ [ 'sbj_nme' ; neu_dta_sbj ] msc_out [ neu_dta_col ; num2cell(com_bat_epd_dta) ] ])
             
         end
     end

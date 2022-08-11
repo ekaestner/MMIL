@@ -1,8 +1,10 @@
 
 function [sbj_dem , sbj_sze , sbj_scn , sbj_cog, sbj_emo, sbj_srg] = mmil_load_redcap(cfg)
 
+if ~isfield(cfg,'sep'); cfg.sep=','; end
+
 %% Load
-sbj_hld = mmil_readtext(cfg.red_fle);
+sbj_hld = mmil_readtext(cfg.red_fle,cfg.sep);
 for iC = 1:size(sbj_hld,2)
     if isstr(sbj_hld{2,iC})
         sbj_hld(cellfun(@isempty,sbj_hld(:,iC)),iC) = repmat({''},sum(cellfun(@isempty,sbj_hld(:,iC))),1);
@@ -64,6 +66,12 @@ sbj_sze.sbj_aed_typ = cell(size(sbj_hld,1)-1,1);
 
 %% Setup Subject Scan Information
 sbj_scn.sbj_nme     = cell(size(sbj_hld,1)-1,1);
+sbj_scn.dti_pre_scn_nme = cell(size(sbj_hld,1)-1,1); 
+       dti_pre_scn_nme_col  = 'dti_visitid_presurg'; dti_pre_scn_nme_col = strcmpi(sbj_hld(1,:),dti_pre_scn_nme_col);
+sbj_scn.dti_pre_scn_qal = nan(size(sbj_hld,1)-1,1); 
+       dti_pre_scn_qal_col  = 'dti_overallqa_presurg'; dti_pre_scn_qal_col = strcmpi(sbj_hld(1,:),dti_pre_scn_qal_col);
+sbj_scn.dti_pre_scn_qal_nte = cell(size(sbj_hld,1)-1,1); 
+       dti_pre_scn_qal_nte_col  = 'dti_qcnotes_presurg'; dti_pre_scn_qal_nte_col = strcmpi(sbj_hld(1,:),dti_pre_scn_qal_nte_col);
 sbj_scn.sbj_mr1 = nan(size(sbj_hld,1)-1,1);      
    sbj_mr1_col  = 't1_acquired'; sbj_mr1_col = strcmpi(sbj_hld(1,:),sbj_mr1_col);
 sbj_scn.sbj_mr2 = nan(size(sbj_hld,1)-1,1);      
@@ -271,7 +279,10 @@ end
 
 %% Subject Scan Information
 for iS = 2:size(sbj_hld,1)
-    sbj_scn.sbj_nme{iS-1,1}     = sbj_hld{iS,sbj_nme_col};
+    sbj_scn.sbj_nme{iS-1,1}     = sbj_hld{iS,sbj_nme_col};    
+    sbj_scn.dti_pre_scn_nme{iS-1,1}     = sbj_hld{iS,dti_pre_scn_nme_col};
+    sbj_scn.dti_pre_scn_qal(iS-1,1)     = sbj_hld{iS,dti_pre_scn_qal_col};
+    sbj_scn.dti_pre_scn_qal_nte{iS-1,1} = sbj_hld{iS,dti_pre_scn_qal_nte_col};    
     sbj_scn.sbj_mr1(iS-1,1)     = sbj_hld{iS,sbj_mr1_col};
     sbj_scn.sbj_mr2(iS-1,1)     = sbj_hld{iS,sbj_mr2_col}; 
     sbj_scn.sbj_dt1(iS-1,1)     = sbj_hld{iS,sbj_dt1_col};

@@ -677,7 +677,7 @@ for iG = 1:numel(grp_nme)
     
     cell2csv([ out_dir '/' 'wms_explore' '/' 'cognitive_table_' grp_nme{iG} '.csv'],tbl_out); clear fcfg tbl_out num_sbj tbl_lbl
 end
-
+15 14
 
 % Scatterplots %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 for iG = 1:numel(grp_nme)
