@@ -31,7 +31,7 @@ sbj_ind = sort([ grp.surgery.pst_cog_dti.ltle_atl ; grp.surgery.pst_cog_dti.ltle
 
 dti_prc_dir = dir(dta_loc); dti_prc_dir = {dti_prc_dir(:).name};
 
-for iSM = 1:numel(smt_stp)
+for iSM = 1:numel(smt_stp);
     for iS = 1:numel(sbj_ind)
         
         fsr_ind = find(strcmpi( rcn_fle(:,1), cln_dta_sbj{sbj_ind(iS)}));
@@ -39,9 +39,9 @@ for iSM = 1:numel(smt_stp)
         if numel(dti_prc_ind)>1; error(''); end
         
         lhs_fle = [ dta_loc '/' dti_prc_dir{dti_prc_ind}  '/' dta_fld '/' 'FA_gwcsurf_wm-sphere-sm' smt_stp{iSM} '-lh.mgz' ];
-        lhs_fle_out = [ out_dir '/' cln_dta_sbj{sbj_ind(iS)} '_' 'left_on_left_sm' smt_stp{iSM} '.mgz' ];
+        lhs_fle_out = [ out_dir '/' cln_dta_sbj{sbj_ind(iS)} '_' 'left_on_left.mgz' ];
         rhs_fle = [ dta_loc '/' dti_prc_dir{dti_prc_ind}  '/' dta_fld '/' 'FA_gwcsurf_wm-sphere-sm' smt_stp{iSM} '-rh.mgz' ];
-        rhs_fle_out = [ out_dir '/' cln_dta_sbj{sbj_ind(iS)} '_' 'right_on_left_sm' smt_stp{iSM} '.mgz' ];
+        rhs_fle_out = [ out_dir '/' cln_dta_sbj{sbj_ind(iS)} '_' 'right_on_left.mgz' ];
         
         lhs_cmd = [ 'mris_apply_reg' ' ' ...
             '--src' ' ' lhs_fle ' ' ...
@@ -59,34 +59,31 @@ for iSM = 1:numel(smt_stp)
 end
 
 %% Load and Calculate LI
-ref_dta = mmil_rowvec(fs_load_mgh([ out_dir '/' cln_dta_sbj{sbj_ind(1)} '_' 'left_on_left_sm' smt_stp{1} '.mgz' ]));
+ref_dta = mmil_rowvec(fs_load_mgh([ out_dir '/' cln_dta_sbj{sbj_ind(1)} '_' 'left_on_left.mgz' ]));
 
-for iSM = 1:numel(smt_stp)
+lhs_gwc_srf = nan(numel(cln_dta_sbj),size(ref_dta,2));
+rhs_gwc_srf = nan(numel(cln_dta_sbj),size(ref_dta,2));
+lat_gwc_srf = nan(numel(cln_dta_sbj),size(ref_dta,2));
+
+for iS = 1:numel(sbj_ind)
+   
+    lhs_gwc_srf(sbj_ind(iS),:) = mmil_rowvec(fs_load_mgh([ out_dir '/' cln_dta_sbj{sbj_ind(iS)} '_' 'left_on_left.mgz' ]));
+    rhs_gwc_srf(sbj_ind(iS),:) = mmil_rowvec(fs_load_mgh([ out_dir '/' cln_dta_sbj{sbj_ind(iS)} '_' 'right_on_left.mgz' ]));
+
+    lat_gwc_srf(sbj_ind(iS),:) = ( lhs_gwc_srf(sbj_ind(iS),:) - rhs_gwc_srf(sbj_ind(iS),:) ) ./ ...
+                                 ( lhs_gwc_srf(sbj_ind(iS),:) + rhs_gwc_srf(sbj_ind(iS),:) ) ;
     
-    lhs_gwc_srf = nan(numel(cln_dta_sbj),size(ref_dta,2));
-    rhs_gwc_srf = nan(numel(cln_dta_sbj),size(ref_dta,2));
-    lat_gwc_srf = nan(numel(cln_dta_sbj),size(ref_dta,2));
-    
-    for iS = 1:numel(sbj_ind)
-        
-        lhs_gwc_srf(sbj_ind(iS),:) = mmil_rowvec(fs_load_mgh([ out_dir '/' cln_dta_sbj{sbj_ind(iS)} '_' 'left_on_left_sm' smt_stp{iSM} '.mgz' ]));
-        rhs_gwc_srf(sbj_ind(iS),:) = mmil_rowvec(fs_load_mgh([ out_dir '/' cln_dta_sbj{sbj_ind(iS)} '_' 'right_on_left_sm' smt_stp{iSM} '.mgz' ]));
-        
-        lat_gwc_srf(sbj_ind(iS),:) = ( lhs_gwc_srf(sbj_ind(iS),:) - rhs_gwc_srf(sbj_ind(iS),:) ) ./ ...
-            ( lhs_gwc_srf(sbj_ind(iS),:) + rhs_gwc_srf(sbj_ind(iS),:) ) ;
-        
-    end
-    
-    srf_dta_sbj = cln_dta_sbj;
-    srf_dta     = lhs_gwc_srf;
-    save([ out_dir '/' 'left_on_left_gwc_sm' smt_stp{iSM} '.mat' ] ,'srf_dta','srf_dta_sbj');
-    
-    srf_dta     = rhs_gwc_srf;
-    save([ out_dir '/' 'right_on_left_gwc_sm' smt_stp{iSM} '.mat' ],'srf_dta','srf_dta_sbj');
-    
-    srf_dta     = lat_gwc_srf;
-    save([ out_dir '/' 'laterality_gwc_sm' smt_stp{iSM} '.mat' ]   ,'srf_dta','srf_dta_sbj');
 end
+
+srf_dta_sbj = cln_dta_sbj;
+srf_dta     = lhs_gwc_srf;
+save([ out_dir '/' 'left_on_left_gwc.mat' ] ,'srf_dta','srf_dta_sbj');
+
+srf_dta     = rhs_gwc_srf;
+save([ out_dir '/' 'right_on_left_gwc.mat' ],'srf_dta','srf_dta_sbj');
+
+srf_dta     = lat_gwc_srf;
+save([ out_dir '/' 'laterality_gwc.mat' ]   ,'srf_dta','srf_dta_sbj');
 
 %% Correlate
 fcfg = [];
