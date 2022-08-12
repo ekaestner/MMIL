@@ -14,7 +14,7 @@ lhs_str_reg_two = [ fsr_avg_dir '/' 'fsaverage_sym' '/'             'surf' '/' '
 rhs_str_reg_one = [ fsr_avg_dir '/' 'fsaverage'     '/' 'xhemi' '/' 'surf' '/' 'lh.fsaverage_sym.sphere.reg' ];
 rhs_str_reg_two = [ fsr_avg_dir '/' 'fsaverage_sym' '/'             'surf' '/' 'lh.sphere.reg' ];
 
-%%
+%% Setup
 load([ prj_dir '/' prj_nme '/' 'Data' '/' 'grp.mat'])
 
 fcfg = [];
@@ -22,14 +22,12 @@ fcfg.dta_loc = [ prj_dir '/' prj_nme '/' 'Data' '/' 'Clinical.csv'];
 fcfg.dta_col = 2;
 [ ~, cln_dta_sbj, ~] = ejk_dta_frm( fcfg );
 
-rcn_fle = mmil_readtext('/home/ekaestne/gitrep/MMIL/EXTERNAL/McD/mmilmcdRSI_freesurfer_recons.csv');
+% rcn_fle = mmil_readtext('/home/ekaestne/gitrep/MMIL/EXTERNAL/McD/mmilmcdRSI_freesurfer_recons.csv');
 
-%% 
+%% Flip L/R
 sbj_ind = sort([ grp.surgery.pst_cog_dti.ltle_atl ; grp.surgery.pst_cog_dti.ltle_slh ]);
 
 dti_prc_dir = dir(dta_loc); dti_prc_dir = {dti_prc_dir(:).name};
-
-
 
 for iS = 1:numel(sbj_ind)
    
@@ -56,7 +54,7 @@ for iS = 1:numel(sbj_ind)
     
 end
 
-%% 
+%% Load and Calculate LI
 ref_dta = mmil_rowvec(fs_load_mgh([ out_dir '/' cln_dta_sbj{sbj_ind(1)} '_' 'left_on_left.mgz' ]));
 
 lhs_gwc_srf = nan(numel(cln_dta_sbj),size(ref_dta,2));
@@ -73,6 +71,52 @@ for iS = 1:numel(sbj_ind)
     
 end
 
-save([ out_dir '/' 'left_on_left_gwc.mat' ] ,'lhs_gwc_srf');
-save([ out_dir '/' 'right_on_left_gwc.mat' ],'rhs_gwc_srf');
-save([ out_dir '/' 'laterality_gwc.mat' ]   ,'lat_gwc_srf');
+srf_dta_sbj = cln_dta_sbj;
+srf_dta     = lhs_gwc_srf;
+save([ out_dir '/' 'left_on_left_gwc.mat' ] ,'srf_dta','srf_dta_sbj');
+
+srf_dta     = rhs_gwc_srf;
+save([ out_dir '/' 'right_on_left_gwc.mat' ],'srf_dta','srf_dta_sbj');
+
+srf_dta     = lat_gwc_srf;
+save([ out_dir '/' 'laterality_gwc.mat' ]   ,'srf_dta','srf_dta_sbj');
+
+%% Correlate
+fcfg = [];
+fcfg.dta_loc = [ prj_dir '/' prj_nme '/' 'Data' '/' 'Cognitive.csv'];
+fcfg.dta_col = 2;
+[ cog_dta, cog_dta_sbj,cog_dta_col] = ejk_dta_frm( fcfg );
+
+smt_stp = 256;
+pvl_chs = .05;
+pvl_cls = .05;
+
+% Surface Correlations
+fcfg = [];
+
+fcfg.smt_stp = smt_stp;
+fcfg.pvl_chs = pvl_chs;
+fcfg.pvl_cls = pvl_cls;
+
+fcfg.sbj_nme = cog_dta_sbj( grp.surgery.pst_cog_dti.ltle_atl, 1);
+
+fcfg.dta_lhs = [ out_dir '/' 'laterality_gwc.mat']; %
+fcfg.dta_rhs = [ out_dir '/' 'laterality_gwc.mat']; %
+
+fcfg.cor     = cell2mat(cog_dta( grp.surgery.pst_cog_dti.ltle_atl, strcmpi(cog_dta_col,'lm2_chg')) );
+fcfg.cor_nme = cog_dta_col( 1, strcmpi(cog_dta_col,'lm2_chg'));
+
+fcfg.grp     = repmat({'ltle_atl'},numel(fcfg.sbj_nme),1);
+fcfg.grp_nme = {'ltle_atl_grp'};
+fcfg.grp_cmp = {'ltle_atl'};
+
+fcfg.cov     = [];
+fcfg.cov_nme = [];
+
+fcfg.out_dir = out_dir;
+fcfg.out_pre = [ 'lm2_chg' '_' 'ltle_atl' ];
+
+ejk_surface_correlations_spearman( fcfg );
+
+
+%% Doublecheck ROIs

@@ -55,7 +55,7 @@ max_val = max(abs(men_val-std_val*3),abs(men_val+std_val*3));
 
 %% fsaverage load
 if isfield(cfg,'hme_wrk') && cfg.hme_wrk == 1
-    lhs_surf_brain.surf_brain =  fs_read_surf(['/home/ekaestne/PROJECTS/EXTERNAL/Misc/fsaverage/surf/' '/' cfg.lhs_nme '.pial']);
+    lhs_surf_brain.surf_brain =  fs_read_surf(['/home/ekaestne/PROJECTS/EXTERNAL/Misc/fsaverage/surf/' '/' cfg.lhs_nme '.inflated']);
     lhs_surf_brain.surf_brain.coords = lhs_surf_brain.surf_brain.vertices;
     lhs_srf_lbl = fs_read_label(['/home/ekaestne/PROJECTS/EXTERNAL/Misc/fsaverage/label/' '/' cfg.lhs_nme  '.cortex.label']);
     

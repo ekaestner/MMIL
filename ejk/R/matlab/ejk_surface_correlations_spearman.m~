@@ -139,7 +139,7 @@ for iG = 1:numel(cfg.cor_nme)
         pcfg.out_dir     = out_hld;
         pcfg.out_pre_fix = [ 'rvalues_diff' '_' fst_nme '_' 'p05' '_' num2str(low_rng_num(2)) '_' num2str(hgh_rng_num(2))];
         
-        pcfg.plt_dta = { rvl_dff_lhs_p05' rvl_dff_rhs_p05' };
+        pcfg.plt_dta = { rvl_dff_lhs_p05' rvl_dff_lhs_p05' };
         
         pcfg.fmr_col_map = {'cyan' 'blue' 'dark blue' 'grey' 'dark red' 'red' 'bright yellow'};
         
