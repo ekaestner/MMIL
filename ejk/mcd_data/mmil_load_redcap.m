@@ -37,6 +37,8 @@ sbj_dem.sbj_sex     = cell(size(sbj_hld,1)-1,1);
     sbj_sex_col =  'sex'; sbj_sex_col = strcmpi(sbj_hld(1,:),sbj_sex_col); % 0 = Woman, 1 = Man
 sbj_dem.sbj_hnd     = cell(size(sbj_hld,1)-1,1);      
     sbj_hnd_col =  'hand'; sbj_hnd_col = strcmpi(sbj_hld(1,:),sbj_hnd_col); % 7 = right, 8 = left
+sbj_dem.sbj_dob     = cell(size(sbj_hld,1)-1,1); 
+    sbj_dob_col =  'dob'; sbj_dob_col = strcmpi(sbj_hld(1,:),sbj_dob_col); % calculation needed
 sbj_dem.sbj_age     = cell(size(sbj_hld,1)-1,1); 
     sbj_age_col =  'dob'; sbj_age_col = strcmpi(sbj_hld(1,:),sbj_age_col); % calculation needed
 sbj_dem.sbj_edu     = nan(size(sbj_hld,1)-1,1);      

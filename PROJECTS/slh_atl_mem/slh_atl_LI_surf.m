@@ -15,6 +15,7 @@ rhs_str_reg_one = [ fsr_avg_dir '/' 'fsaverage'     '/' 'xhemi' '/' 'surf' '/' '
 rhs_str_reg_two = [ fsr_avg_dir '/' 'fsaverage_sym' '/'             'surf' '/' 'lh.sphere.reg' ];
 
 smt_stp = { '16' '256' };
+grp_nme = { 'ltle_slah' 'ltle_atl' };
 
 %% Setup
 load([ prj_dir '/' prj_nme '/' 'Data' '/' 'grp.mat'])
@@ -88,42 +89,88 @@ for iSM = 1:numel(smt_stp)
     save([ out_dir '/' 'laterality_gwc_sm' smt_stp{iSM} '.mat' ]   ,'srf_dta','srf_dta_sbj');
 end
 
-%% Correlate
+%% Correlate LM2
 fcfg = [];
 fcfg.dta_loc = [ prj_dir '/' prj_nme '/' 'Data' '/' 'Cognitive.csv'];
 fcfg.dta_col = 2;
 [ cog_dta, cog_dta_sbj,cog_dta_col] = ejk_dta_frm( fcfg );
 
-smt_stp = 256;
-pvl_chs = .05;
-pvl_cls = .05;
+% Surface Correlations
+for iG = 1:numel(grp_nme)
+    for iSM = 1:numel(smt_stp)
+        
+        smt_stp_use = str2double(smt_stp{iSM});
+        pvl_chs = .05;
+        pvl_cls = .05;
+        
+        fcfg = [];
+        
+        fcfg.smt_stp = smt_stp_use;
+        fcfg.pvl_chs = pvl_chs;
+        fcfg.pvl_cls = pvl_cls;
+        
+        fcfg.sbj_nme = cog_dta_sbj( grp.surgery.pst_cog_dti.(grp_nme{iG}), 1);
+        
+        fcfg.dta_lhs = [ out_dir '/' 'laterality_gwc_sm' smt_stp{iSM} '.mat']; %
+        fcfg.dta_rhs = [ out_dir '/' 'laterality_gwc_sm' smt_stp{iSM} '.mat']; %
+        
+        fcfg.cor     = cell2mat(cog_dta( grp.surgery.pst_cog_dti.(grp_nme{iG}), strcmpi(cog_dta_col,'lm2_chg')) );
+        fcfg.cor_nme = cog_dta_col( 1, strcmpi(cog_dta_col,'lm2_chg'));
+        
+        fcfg.grp     = repmat({grp_nme{iG}},numel(fcfg.sbj_nme),1);
+        fcfg.grp_nme = {[ (grp_nme{iG}) '_grp']};
+        fcfg.grp_cmp = {(grp_nme{iG})};
+        
+        fcfg.cov     = [];
+        fcfg.cov_nme = [];
+        
+        fcfg.out_dir = out_dir;
+        fcfg.out_pre = [ 'lm2_chg' '_' grp_nme{iG} '_' smt_stp{iSM}];
+        
+        ejk_surface_correlations_spearman( fcfg );
+        
+    end
+end
+
+%% Correlate LM1
+fcfg = [];
+fcfg.dta_loc = [ prj_dir '/' prj_nme '/' 'Data' '/' 'Cog_LM1.csv'];
+fcfg.dta_col = 2;
+[ cog_dta, cog_dta_sbj,cog_dta_col] = ejk_dta_frm( fcfg );
 
 % Surface Correlations
-fcfg = [];
-
-fcfg.smt_stp = smt_stp;
-fcfg.pvl_chs = pvl_chs;
-fcfg.pvl_cls = pvl_cls;
-
-fcfg.sbj_nme = cog_dta_sbj( grp.surgery.pst_cog_dti.ltle_atl, 1);
-
-fcfg.dta_lhs = [ out_dir '/' 'laterality_gwc.mat']; %
-fcfg.dta_rhs = [ out_dir '/' 'laterality_gwc.mat']; %
-
-fcfg.cor     = cell2mat(cog_dta( grp.surgery.pst_cog_dti.ltle_atl, strcmpi(cog_dta_col,'lm2_chg')) );
-fcfg.cor_nme = cog_dta_col( 1, strcmpi(cog_dta_col,'lm2_chg'));
-
-fcfg.grp     = repmat({'ltle_atl'},numel(fcfg.sbj_nme),1);
-fcfg.grp_nme = {'ltle_atl_grp'};
-fcfg.grp_cmp = {'ltle_atl'};
-
-fcfg.cov     = [];
-fcfg.cov_nme = [];
-
-fcfg.out_dir = out_dir;
-fcfg.out_pre = [ 'lm2_chg' '_' 'ltle_atl' ];
-
-ejk_surface_correlations_spearman( fcfg );
-
-
-%% Doublecheck ROIs
+for iG = 1:numel(grp_nme)
+    for iSM = 1:numel(smt_stp)
+        
+        smt_stp_use = str2double(smt_stp{iSM});
+        pvl_chs = .05;
+        pvl_cls = .05;
+        
+        fcfg = [];
+        
+        fcfg.smt_stp = smt_stp_use;
+        fcfg.pvl_chs = pvl_chs;
+        fcfg.pvl_cls = pvl_cls;
+        
+        fcfg.sbj_nme = cog_dta_sbj( grp.surgery.pst_cog_dti.(grp_nme{iG}), 1);
+        
+        fcfg.dta_lhs = [ out_dir '/' 'laterality_gwc_sm' smt_stp{iSM} '.mat']; %
+        fcfg.dta_rhs = [ out_dir '/' 'laterality_gwc_sm' smt_stp{iSM} '.mat']; %
+        
+        fcfg.cor     = cell2mat(cog_dta( grp.surgery.pst_cog_dti.(grp_nme{iG}), strcmpi(cog_dta_col,'lm1_chg')) );
+        fcfg.cor_nme = cog_dta_col( 1, strcmpi(cog_dta_col,'lm1_chg'));
+        
+        fcfg.grp     = repmat({grp_nme{iG}},numel(fcfg.sbj_nme),1);
+        fcfg.grp_nme = {[ (grp_nme{iG}) '_grp']};
+        fcfg.grp_cmp = {(grp_nme{iG})};
+        
+        fcfg.cov     = [];
+        fcfg.cov_nme = [];
+        
+        fcfg.out_dir = out_dir;
+        fcfg.out_pre = [ 'lm1_chg' '_' grp_nme{iG} '_' smt_stp{iSM}];
+        
+        ejk_surface_correlations_spearman( fcfg );
+        
+    end
+end

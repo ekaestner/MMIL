@@ -106,7 +106,7 @@ for iG = 1:numel(cfg.cor_nme)
         rvl_dff_rhs = rvl_dff_rhs.rvalues;   
         
         % rvalue %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        low_rng_num = [ -0.35 0.35 ];
+        low_rng_num = [ -0.40 0.40 ];
         hgh_rng_num = [ -0.70 0.70 ];
         
         pcfg = [];

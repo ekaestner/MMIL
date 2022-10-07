@@ -32,6 +32,7 @@ function mmil_anat_surf_plot(cfg)
 if ~isfield(cfg,'hme_wrk'); cfg.hme_wrk=0; end
 if ~isfield(cfg,'lhs_nme'); cfg.lhs_nme = 'lh'; end
 if ~isfield(cfg,'rhs_nme'); cfg.rhs_nme = 'rh'; end
+if ~isfield(cfg,'srf_typ'); cfg.srf_typ = 'pial'; end
 
 %% Load Data
 hms = {'lhs' 'rhs'};
@@ -55,35 +56,35 @@ max_val = max(abs(men_val-std_val*3),abs(men_val+std_val*3));
 
 %% fsaverage load
 if isfield(cfg,'hme_wrk') && cfg.hme_wrk == 1
-    lhs_surf_brain.surf_brain =  fs_read_surf(['/home/ekaestne/PROJECTS/EXTERNAL/Misc/fsaverage/surf/' '/' cfg.lhs_nme '.inflated']);
+    lhs_surf_brain.surf_brain =  fs_read_surf(['/home/ekaestne/PROJECTS/EXTERNAL/Misc/fsaverage/surf/' '/' cfg.lhs_nme '.' cfg.srf_typ]);
     lhs_surf_brain.surf_brain.coords = lhs_surf_brain.surf_brain.vertices;
     lhs_srf_lbl = fs_read_label(['/home/ekaestne/PROJECTS/EXTERNAL/Misc/fsaverage/label/' '/' cfg.lhs_nme  '.cortex.label']);
     
-    rhs_surf_brain.surf_brain =  fs_read_surf(['/home/ekaestne/PROJECTS/EXTERNAL/Misc/fsaverage/surf/' '/' cfg.rhs_nme '.pial']);
+    rhs_surf_brain.surf_brain =  fs_read_surf(['/home/ekaestne/PROJECTS/EXTERNAL/Misc/fsaverage/surf/' '/' cfg.rhs_nme '.' cfg.srf_typ]);
     rhs_surf_brain.surf_brain.coords = rhs_surf_brain.surf_brain.vertices;
     rhs_srf_lbl = fs_read_label(['/home/ekaestne/PROJECTS/EXTERNAL/Misc/fsaverage/label/' '/' cfg.rhs_nme '.cortex.label']);
 elseif isfield(cfg,'hme_wrk') && cfg.hme_wrk == 2
-    lhs_surf_brain.surf_brain =  fs_read_surf(['/home/ekaestne/PROJECTS/EXTERNAL/Misc/fsaverage/surf/' '/' cfg.lhs_nme '.inflated']);
+    lhs_surf_brain.surf_brain =  fs_read_surf(['/home/ekaestne/PROJECTS/EXTERNAL/Misc/fsaverage/surf/' '/' cfg.lhs_nme '.' cfg.srf_typ]);
     lhs_surf_brain.surf_brain.coords = lhs_surf_brain.surf_brain.vertices;
     lhs_srf_lbl = fs_read_label(['/home/ekaestne/PROJECTS/EXTERNAL/Misc/fsaverage/label/' '/' cfg.lhs_nme  '.cortex.label']);
     
-    rhs_surf_brain.surf_brain =  fs_read_surf(['/home/ekaestne/PROJECTS/EXTERNAL/Misc/fsaverage/surf/' '/' cfg.rhs_nme '.inflated']);
+    rhs_surf_brain.surf_brain =  fs_read_surf(['/home/ekaestne/PROJECTS/EXTERNAL/Misc/fsaverage/surf/' '/' cfg.rhs_nme '.' cfg.srf_typ]);
     rhs_surf_brain.surf_brain.coords = rhs_surf_brain.surf_brain.vertices;
     rhs_srf_lbl = fs_read_label(['/home/ekaestne/PROJECTS/EXTERNAL/Misc/fsaverage/label/' '/' cfg.rhs_nme '.cortex.label']);
 elseif isfield(cfg,'fsr_dir') && ~isempty(cfg.fsr_dir)
-    lhs_surf_brain.surf_brain =  fs_read_surf([cfg.fsr_dir '/' 'surf' '/' cfg.lhs_nme  '.pial']);
+    lhs_surf_brain.surf_brain =  fs_read_surf([cfg.fsr_dir '/' 'surf' '/' cfg.lhs_nme  '.' cfg.srf_typ]);
     lhs_surf_brain.surf_brain.coords = lhs_surf_brain.surf_brain.vertices;
     lhs_srf_lbl = fs_read_label([cfg.fsr_dir '/' 'label' '/' cfg.lhs_nme  '.cortex.label']);
     
-    rhs_surf_brain.surf_brain =  fs_read_surf([cfg.fsr_dir '/' 'surf' '/' cfg.rhs_nme '.pial']);
+    rhs_surf_brain.surf_brain =  fs_read_surf([cfg.fsr_dir '/' 'surf' '/' cfg.rhs_nme '.' cfg.srf_typ]);
     rhs_surf_brain.surf_brain.coords = rhs_surf_brain.surf_brain.vertices;
     rhs_srf_lbl = fs_read_label([ cfg.fsr_dir '/' 'label' '/' cfg.rhs_nme '.cortex.label']);
 else
-    lhs_surf_brain.surf_brain =  fs_read_surf(['/home/mmilmcd/data/FSRECONS/fsaverage/' '/' 'surf' '/' cfg.lhs_nme '.pial']);
+    lhs_surf_brain.surf_brain =  fs_read_surf(['/home/mmilmcd/data/FSRECONS/fsaverage/' '/' 'surf' '/' cfg.lhs_nme '.' cfg.srf_typ]);
     lhs_surf_brain.surf_brain.coords = lhs_surf_brain.surf_brain.vertices;
     lhs_srf_lbl = fs_read_label(['/home/mmilmcd/data/FSRECONS/fsaverage/' '/' 'label' '/' cfg.lhs_nme '.cortex.label']);
     
-    rhs_surf_brain.surf_brain =  fs_read_surf(['/home/mmilmcd/data/FSRECONS/fsaverage/' '/' 'surf' '/' cfg.rhs_nme '.pial']);
+    rhs_surf_brain.surf_brain =  fs_read_surf(['/home/mmilmcd/data/FSRECONS/fsaverage/' '/' 'surf' '/' cfg.rhs_nme '.' cfg.srf_typ]);
     rhs_surf_brain.surf_brain.coords = rhs_surf_brain.surf_brain.vertices;
     rhs_srf_lbl = fs_read_label(['/home/mmilmcd/data/FSRECONS/fsaverage/' '/' 'label' '/' cfg.rhs_nme '.cortex.label']);
 end

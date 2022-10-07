@@ -1,22 +1,23 @@
 # 2 (N=18, N=20) x 3 (No covariate, Baseline Score) x 4 (LM2, LDFR, BVMT, VPAII) = 24 brains
 
-ejk_surface_correlation <- function( lhs_srf_var_loc,
-                                     rhs_srf_var_loc,
-                                     cor_loc,
-                                     grp_loc, 
-                                     cov_loc,
-                                     iG,
-                                     fst_nme,
-                                     out_put_loc ) {
+ejk_surface_correlation_spearman <- function( lhs_srf_var_loc,
+                                              rhs_srf_var_loc,
+                                              cor_loc,
+                                              grp_loc, 
+                                              cov_loc,
+                                              iG,
+                                              fst_nme,
+                                              out_put_loc ) {
   
-  lhs_srf_var_loc = '/home/ekaestne/PROJECTS/OUTPUT/slh_atl_mem/surf//laterality_gwc.mat'
-  rhs_srf_var_loc = '/home/ekaestne/PROJECTS/OUTPUT/slh_atl_mem/surf//laterality_gwc.mat'
-  cor_loc = '/home/ekaestne/PROJECTS/OUTPUT/slh_atl_mem/surf//lm2_chg_ltle_atl/cor_var.mat'
-  grp_loc = '/home/ekaestne/PROJECTS/OUTPUT/slh_atl_mem/surf//lm2_chg_ltle_atl/grp_var.mat'
+  
+  lhs_srf_var_loc = '/home/ekaestne/PROJECTS/OUTPUT/slh_atl_mem/surf//laterality_gwc_sm256.mat'
+  rhs_srf_var_loc = '/home/ekaestne/PROJECTS/OUTPUT/slh_atl_mem/surf//laterality_gwc_sm256.mat'
+  cor_loc = '/home/ekaestne/PROJECTS/OUTPUT/slh_atl_mem/surf//lm1_chg_ltle_atl_256/cor_var.mat'
+  grp_loc = '/home/ekaestne/PROJECTS/OUTPUT/slh_atl_mem/surf//lm1_chg_ltle_atl_256/grp_var.mat'
   cov_loc = ''
   iG = 1
-  out_put_loc = '/home/ekaestne/PROJECTS/OUTPUT/slh_atl_mem/surf//lm2_chg_ltle_atl'
-  fst_nme = 'ltle_atl_cmp' # 
+  out_put_loc = '/home/ekaestne/PROJECTS/OUTPUT/slh_atl_mem/surf//lm1_chg_ltle_atl_256'
+  fst_nme = 'ltle_atl' # 
   
   library( R.matlab )
   library( rstatix )
@@ -50,7 +51,7 @@ ejk_surface_correlation <- function( lhs_srf_var_loc,
   }
   grp_var_nme = grp_var_nme[-1]
   
-  ## ANCOVA #################################################################################################################################################
+  ## Spearman #################################################################################################################################################
   srf_dta_nme = c('lhs_dep_var', 'rhs_dep_var')
   
   for( iH in 1:2){

@@ -50,14 +50,19 @@ for iR = 1:numel(cfg.xdt)
     end
 end
 
+xdt_tot = cat(1,cfg.xdt{:}); ydt_tot = cat(1,cfg.ydt{:});
+rmv_ind = isnan(xdt_tot) | isnan(ydt_tot);
+xdt_tot(rmv_ind) = []; ydt_tot(rmv_ind) = []; 
+
 if isfield(cfg,'xlm')
    xlim(cfg.xlm);   
-elseif ~all(cat(1,cfg.xdt{:})==0); xlim([ roundsd(min(cat(1,cfg.xdt{:}))-abs(min(cat(1,cfg.xdt{:}))*0.1),2) roundsd(max(cat(1,cfg.xdt{:}))+(max(cat(1,cfg.xdt{:}))*0.1),2)]);
+elseif ~all(xdt_tot==0); 
+    xlim([ roundsd(min(xdt_tot)-abs(min(xdt_tot)*0.1),2) roundsd(max(xdt_tot)+(max(xdt_tot)*0.1),2)]);
 end
 
-ylm_hld = [ roundsd(min(cat(1,cfg.ydt{:}))-abs(min(cat(1,cfg.ydt{:}))*0.1),2) roundsd(max(cat(1,cfg.ydt{:}))+(max(cat(1,cfg.ydt{:}))*0.1),2)];
+ylm_hld = [ roundsd(min(ydt_tot)-abs(min(ydt_tot)*0.1),2) roundsd(max(ydt_tot)+(max(ydt_tot)*0.1),2)];
 if ~isfield(cfg,'ylm') && ~(all(ylm_hld==0)) && ~(all(isnan(ylm_hld)))
-    if ~all(cat(1,cfg.ydt{:})==0); ylim(ylm_hld); end
+    if ~all(ydt_tot==0); ylim(ylm_hld); end
 elseif isfield(cfg,'ylm')
     ylim(cfg.ylm)
 end
