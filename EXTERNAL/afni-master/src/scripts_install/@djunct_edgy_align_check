@@ -1,0 +1,641 @@
+#!/bin/tcsh
+
+@global_parse `basename $0` "$*" ; if ($status) exit 0
+
+#set version   = "0.0";  set rev_dat   = "Aug 16, 2018"
+#   + AP/QC imager:  volreg and enorm
+#
+#set version   = "0.1";  set rev_dat   = "Oct 08, 2018"
+#   + rename
+#
+#set version   = "0.2";  set rev_dat   = "Oct 12, 2018"
+#   + add sharpening to the ulay a bit
+#
+#set version   = "0.3";  set rev_dat   = "Oct 18, 2018"
+#   + flag to have ulay extents box, to tighten the window of slicing
+#
+#set version   = "0.4";  set rev_dat   = "Oct 18, 2018"
+#   + optionify
+#
+#set version   = "0.5";  set rev_dat   = "Oct 21, 2018"
+#   + single outline form only at the moment (non-alpha-line one)
+#   + new opt: -no_clean
+#
+#set version   = "0.6";  set rev_dat   = "Nov 5, 2018"
+#   + keep up with new alpha/boxed parameters for driving afni
+#
+#set version   = "1.0";  set rev_dat   = "Jan 30, 2019"
+#   + [PT] add in the montgap and montcolor opts (useful for macaque
+#          data!)
+#
+#set version   = "1.0";  set rev_dat   = "Sep 6, 2019"
+#   + [PT] now setting def montgap to 1, in conjunction with making
+#          similar change in APQC images
+#
+#set version   = "1.1";  set rev_dat   = "Dec 30, 2019"
+#   + [PT] can set some @chauffeur_opts here-- cbar and set_dicom_xyz
+#
+#set version   = "1.2";  set rev_dat   = "Feb 22, 2020"
+#   + [PT] temp file prefix now contains a random string
+#
+#set version   = "1.21";  set rev_dat   = "March 10, 2020"
+#   + [PT] add in -ulay_range as opt
+#
+#set version   = "1.3";  set rev_dat   = "May 22, 2020"
+#   + [PT] add ${wdir} to work in -- easier to use/clean
+#
+#set version   = "1.4";  set rev_dat   = "May 26, 2020"
+# [PT] several additional features via opts
+#    + '-label_mode ..' opt
+#    + use olay grid: mainly, can have EPI as ulay with anat edges
+#      - new opt '-use_olay_grid INTERP'; need to provide NN, wsinc5, etc.
+#    + '-sharpen_ulay_off' (might use when use olay grid, or not)
+#    + '-mask_olay_edges'
+#       - now off by def, bc we often have skullstripped anat as olay edges
+# 
+#set version   = "1.41";  set rev_dat   = "May 26, 2020"
+# [PT] bug fix on conditions
+#    + also, echo version number of this prog when running
+#
+#set version   = "1.42";  set rev_dat   = "May 26, 2020"
+# [PT] bug fix on refbox, now that we have workdir
+#
+#set version   = "1.43";  set rev_dat   = "May 26, 2020"
+# [PT] bug fix on olay regrid: don't jump to wdir yet
+#    + new opt : '-ulay_range_nz ..' for passing umin/umax to @chauff*
+#
+#set version   = "1.44";  set rev_dat   = "June 22, 2020"
+# [PT] bug fix:  "-monty .." value was being ignored
+#
+#set version   = "1.45";  set rev_dat   = "Mar 16, 2021"
+# [PT] AFNI_COMPRESSOR -> NONE
+#
+#set version   = "1.46";  set rev_dat   = "Sep 21, 2021"
+# [PT] add new @chauff* opts: '-no_cor', '-no_sag', '-no_axi'
+#    + will be useful for APQC (-no_cor)
+#
+#set version   = "1.47";   set rev_dat   = "Sep 27, 2021"
+#     + [PT] chauffeur label_size 3 -> 4, bc imseq.c shifted all sizes
+#       down one level
+#
+#set version   = "1.48";   set rev_dat   = "Jan 12, 2022"
+#     + [PT] Because Daniel doesn't like crash/warnings.
+#          + add in '-save_ftype ..' opt, because somehow @animal_warper
+#            is using it
+#
+#set version   = "1.49";   set rev_dat   = "June 3, 2022"
+# + [PT] new opt: '-ulay_range_am ..', for automasking ulay for
+#         percentile calcs
+#
+set version   = "1.50";   set rev_dat   = "June 7, 2022"
+# + [PT] fix how AMASK_FOCUS_* works here
+#
+# ----------------------------------------------------------------
+setenv AFNI_COMPRESSOR NONE
+
+set this_prog = "@djunct_edgy_align_check"
+set tpname    = "${this_prog:gas/@djunct_//}"
+set here      = "$PWD"
+
+# ----------------- find AFNI and set viewer ---------------------
+
+# find AFNI binaries directory and viewer location
+set adir      = ""
+set my_viewer = ""
+which afni >& /dev/null
+if ( $status ) then
+    echo "** Cannot find 'afni' (?!)."
+    goto BAD_EXIT
+else
+    set aa   = `which afni`
+    set adir = $aa:h
+endif
+
+# ----------------------- set defaults --------------------------
+
+set ulay    = ""
+set olay    = ""
+
+set odir           = "./QC_edgy"
+set opref          = "IMG_${tpname}"
+
+set pppp           = "`3dnewid -fun11`"
+set wdir_name      = "__workdir_EAC_${pppp}"
+set tpref          = "eac"
+set olayE          = ${tpref}_olayE.nii.gz
+
+set Nx             = 7                   # num of mont wins, b/c Ny=1
+set Ny             = 1                   
+set mgap           = 1                   # gapsize (in px) bt montage slices
+set mcolor         = 'black'             # color of montage gap
+set cbar           = "Reds_and_Blues_Inv" # default colorbar; can adjust
+
+set urange_meth    = "-ulay_range"
+set umax           = "120%"
+set umin           = "0%"
+set umin_fac       = ""
+
+set refbox_add     = ( "-pass" "-pass" )
+
+set DO_CLEAN       = 1                    # default: do remove
+set allclean       = "-do_clean"          # apply cleaning to @chauff cmd
+
+set user_coors     = "-pass"
+set label_mode     = 1
+
+set DO_USE_REFBOX    = 0
+set DO_USE_OLAY_GRID = 0
+set ulay_interp      = "" 
+
+set DO_SHARPEN_ULAY  = 1
+set DO_MASK_EDGES    = 0                 # this now OFF by def
+
+set views_off        = ( )
+set all_views        = ( 1 1 1 )
+
+set ftype            = JPEG              # output file format
+
+set more_echo        = ""
+
+# ------------------- process options, a la rr ----------------------
+
+if ( $#argv == 0 ) goto SHOW_HELP
+
+set ac = 1
+while ( $ac <= $#argv )
+    # terminal options
+    if ( ("$argv[$ac]" == "-h" ) || ("$argv[$ac]" == "-help" )) then
+        goto SHOW_HELP
+    endif
+    if ( "$argv[$ac]" == "-ver" ) then
+        goto SHOW_VERSION
+    endif
+
+    #  ---------- inputs: required ---------------
+
+    if ( "$argv[$ac]" == "-ulay" ) then
+        if ( $ac >= $#argv ) goto FAIL_MISSING_ARG
+        @ ac += 1
+        set ulay = "$argv[$ac]"
+
+    else if ( "$argv[$ac]" == "-olay" ) then
+        if ( $ac >= $#argv ) goto FAIL_MISSING_ARG
+        @ ac += 1
+        set olay = "$argv[$ac]"
+
+    #  ---------- opts ---------------
+
+    else if ( "$argv[$ac]" == "-echo" ) then
+        set echo
+        set more_echo = "-echo"
+
+    else if ( "$argv[$ac]" == "-prefix" ) then
+        if ( $ac >= $#argv ) goto FAIL_MISSING_ARG
+        @ ac += 1
+        set opref = `basename "$argv[$ac]"`
+        set odir  = `dirname  "$argv[$ac]"`
+
+    # [PT: Oct 18, 2018] can get focus box, still centered on FOV
+    # center
+    else if ( "$argv[$ac]" == "-box_focus_slices" ) then
+        if ( $ac >= $#argv ) goto FAIL_MISSING_ARG
+        @ ac += 1
+        set refbox_add[1] = "-box_focus_slices"
+        set refbox_add[2] = "$argv[$ac]"
+        set DO_USE_REFBOX = 1
+
+    # [PT: Jan 30, 2019] extra montage feature: gap
+    else if ( "$argv[$ac]" == "-montgap" ) then
+        if ( $ac >= $#argv ) goto FAIL_MISSING_ARG
+        @ ac += 1
+        set mgap = "$argv[$ac]"
+
+    # [PT: Jan 30, 2019] extra montage feature: gap color
+    else if ( "$argv[$ac]" == "-montcolor" ) then
+        if ( $ac >= $#argv ) goto FAIL_MISSING_ARG
+        @ ac += 1
+        set mcolor = "$argv[$ac]"
+
+    else if ( "$argv[$ac]" == "-ulay_range" ) then
+        if ( $ac >= $#argv ) goto FAIL_MISSING_ARG
+        @ ac += 1
+        set umin = "$argv[$ac]"
+        if ( $ac >= $#argv ) goto FAIL_MISSING_ARG
+        @ ac += 1
+        set umax = "$argv[$ac]"
+
+    # [PT: May 26, 2020] can use this alternate ulay range method for
+    # @chauffeur_afni
+    else if ( "$argv[$ac]" == "-ulay_range_nz" ) then
+        if ( $ac >= $#argv ) goto FAIL_MISSING_ARG
+        @ ac += 1
+        set umin = "$argv[$ac]"
+        if ( $ac >= $#argv ) goto FAIL_MISSING_ARG
+        @ ac += 1
+        set umax = "$argv[$ac]"
+        set urange_meth = "-ulay_range_nz"
+
+    # [PT: June 3, 2020] can use this alternate ulay range method for
+    # @chauffeur_afni
+    else if ( "$argv[$ac]" == "-ulay_range_am" ) then
+        if ( $ac >= $#argv ) goto FAIL_MISSING_ARG
+        @ ac += 1
+        set umin = "$argv[$ac]"
+        if ( $ac >= $#argv ) goto FAIL_MISSING_ARG
+        @ ac += 1
+        set umax = "$argv[$ac]"
+        set urange_meth = "-ulay_range_am"
+
+    # [PT: June 5, 2020] extra opt for ulay range control, allow it to
+    # dip lower than standard percentile
+    else if ( "$argv[$ac]" == "-ulay_min_fac" ) then
+        if ( $ac >= $#argv ) goto FAIL_MISSING_ARG
+        @ ac += 1
+        set umin_fac = "-ulay_min_fac $argv[$ac]"
+
+    # [PT: May 26, 2020] use olay grid; specify interp func type,
+    # e.g., wsinc5 or NN
+    else if ( "$argv[$ac]" == "-use_olay_grid" ) then
+        if ( $ac >= $#argv ) goto FAIL_MISSING_ARG
+        @ ac += 1
+        set ulay_interp = "$argv[$ac]"
+        set DO_USE_OLAY_GRID = 1
+
+    # [PT: Dec 30, 2019] extra montage feature: cbar to use
+    else if ( "$argv[$ac]" == "-cbar" ) then
+        if ( $ac >= $#argv ) goto FAIL_MISSING_ARG
+        @ ac += 1
+        set cbar = "$argv[$ac]"
+
+    # [PT: Feb 19, 2020] extra montage feature: nslices in x 
+    else if ( "$argv[$ac]" == "-montx" ) then
+        if ( $ac >= $#argv ) goto FAIL_MISSING_ARG
+        @ ac += 1
+        set Nx = "$argv[$ac]"
+
+    # [PT: Feb 19, 2020] extra montage feature: nslices in x 
+    else if ( "$argv[$ac]" == "-monty" ) then
+        if ( $ac >= $#argv ) goto FAIL_MISSING_ARG
+        @ ac += 1
+        set Ny = "$argv[$ac]"
+
+    else if ( "$argv[$ac]" == "-label_mode" ) then
+        if ( $ac >= $#argv ) goto FAIL_MISSING_ARG
+        @ ac += 1
+        set label_mode = "$argv[$ac]"
+
+    # [PT: May 22, 2020] 
+    else if ( "$argv[$ac]" == "-sharpen_ulay_off" ) then
+        set DO_SHARPEN_ULAY = 0
+
+    # [PT: May 26, 2020] 
+    else if ( "$argv[$ac]" == "-mask_olay_edges" ) then
+        set DO_MASK_EDGES = 1
+
+    # [PT: Jan 12, 2022] 
+    else if ( "$argv[$ac]" == "-save_ftype" ) then
+        if ( $ac >= $#argv ) goto FAIL_MISSING_ARG
+        @ ac += 1
+        set ftype = "$argv[$ac]"
+
+    # [PT: Dec 30, 2019] can place coord loc
+    else if ( "$argv[$ac]" == "-set_dicom_xyz" ) then
+        if ( $ac >= $#argv ) goto FAIL_MISSING_ARG
+        @ ac += 1
+        set user_coors = "-set_dicom_xyz "
+        set user_coors = "$user_coors $argv[$ac]"
+        @ ac += 1
+        set user_coors = "$user_coors $argv[$ac]"
+        @ ac += 1
+        set user_coors = "$user_coors $argv[$ac]"
+
+    else if ( "$argv[$ac]" == "-no_axi" ) then
+        set views_off = ( ${views_off} -no_axi )
+        set all_views[1] = 0
+
+    else if ( "$argv[$ac]" == "-no_cor" ) then
+        set views_off = ( ${views_off} -no_cor )
+        set all_views[2] = 0
+
+    else if ( "$argv[$ac]" == "-no_sag" ) then
+        set views_off = ( ${views_off} -no_sag )
+        set all_views[3] = 0
+
+    else if ( "$argv[$ac]" == "-no_clean" ) then
+        set DO_CLEAN = 0
+        set allclean = "-pass"
+
+    else
+        echo "\n\n** ERROR: unexpected option #$ac = '$argv[$ac]'\n\n"
+        goto BAD_EXIT
+        
+    endif
+    @ ac += 1
+end
+
+# =======================================================================
+# ============================ ** SETUP ** ==============================
+# =======================================================================
+
+echo "++ Prepare for running ${this_prog} (ver = ${version})"
+
+if ( "${ulay}" == "" ) then
+    echo "** ERROR: missing ulay file! Use '-ulay ..'"
+    goto BAD_EXIT
+endif
+
+if ( "${olay}" == "" ) then
+    echo "** ERROR: missing olay file! Use '-olay ..'"
+    goto BAD_EXIT
+endif
+
+if ( `echo "${all_views[1]}+${all_views[2]}+${all_views[3]} == 0" | bc` ) then
+    echo "** ERROR: not allowed to turn off 3 view planes"
+    echo "   Can only use 2 of: -no_cor, -no_sag, -no_axi"
+    goto BAD_EXIT
+endif
+
+# ===================== output dir + wdir =======================
+ 
+# check output directory, use input one if nothing given
+
+\mkdir -p ${odir}
+
+# place wdir in the odir
+set wdir = "${odir}/${wdir_name}"
+
+\mkdir -p ${wdir}
+
+# =========================== Actual Plots ==============================
+
+# cp relevant dsets to ${wdir}, and do most of work there
+
+# preliminary: now that we have a workdir, need to copy any refbox
+# dset there
+
+if ( ${DO_USE_REFBOX} ) then
+    echo "++ Copy refbox (${refbox_add[2]}) to workdir"
+
+    # [PT: June 7, 2022] fix how this works with AMASK_FOCUS_*
+    if ( "${refbox_add[2]}" == "AMASK_FOCUS_ULAY" ) then
+        set aaa = "${ulay}"
+    else if ( "${refbox_add[2]}" == "AMASK_FOCUS_OLAY" ) then
+        set aaa = "${olay}"
+    else
+        set aaa = "${refbox_add[2]}"
+    endif
+
+    3dcalc                                  \
+        -a       "${aaa}"                   \
+        -expr    'a'                        \
+        -prefix  ${wdir}/REFBOX.nii
+    # ... and this will become our new refbox dset name
+    set refbox_add[2] = REFBOX.nii
+endif
+
+set idx  = 0
+
+# copy ulay; from startdir
+set uin  = "${ulay}"
+set uout = "${tpref}_${idx}_cp.nii"
+3dcalc                                      \
+    -a      "${uin}"                        \
+    -expr   'a'                             \
+    -prefix "${wdir}/${uout}"
+@ idx += 1
+
+if ( ${DO_USE_OLAY_GRID} ) then
+    if ( "${ulay_interp}" == "" ) then
+        echo "** ERROR: no interpolation value given, even though"
+        echo "          ulay must be moved to olay grid"
+        exit 1
+    endif
+
+    # presumably, upsampling; still in stardir, to be able to still
+    # find ${olay}
+    set uin  = "${wdir}/${uout}"
+    set uout = "${tpref}_${idx}_grid2olay.nii"
+    3dAllineate                        \
+        -input  "${uin}"               \
+        -master "${olay}"              \
+        -prefix "${wdir}/${uout}"      \
+        -1Dparam_apply IDENTITY        \
+        -final         ${ulay_interp}
+    @ idx += 1
+endif
+
+cd ${wdir}  # work in workdir
+
+if ( ${DO_SHARPEN_ULAY} ) then
+    # sharpen ulay; prob don't do if regridded
+    set uin  = "${uout}"
+    set uout = "${tpref}_${idx}_ulay_shrp.nii"
+    3dSharpen \
+        -prefix "${uout}"                       \
+        -phi    0.6                             \
+        -input  "${uin}"
+    @ idx += 1
+endif
+
+# at this point, from opts above, the ulay to continue with is still
+# just contained in the var ${uout}
+
+cd -   # jump back from workdir
+ 
+# process the olay
+
+if ( ${DO_USE_OLAY_GRID} ) then
+    # just copy
+    echo "++ Just copy olay, bc ulay will get regridded"
+    set fin  = "${olay}"
+    set fout = "${tpref}_${idx}_cp.nii"
+    3dcalc                                      \
+        -a      "${fin}"                        \
+        -expr   'a'                             \
+        -prefix "${wdir}/${fout}"
+    @ idx += 1
+else
+    # cubic interp, bc we don't want extra/subtle edges from wsinc5
+    # (since we are making edges of this dset)
+    set fin  = "${olay}"
+    set fout = "${tpref}_${idx}_res.nii"
+    3dAllineate \
+        -input  "${fin}"          \
+        -master "${wdir}/${uout}" \
+        -prefix "${wdir}/${fout}" \
+        -1Dparam_apply IDENTITY   \
+        -final         cubic
+    @ idx += 1
+endif 
+
+
+cd ${wdir}  # jump to workdir
+
+set mout = "${tpref}_${idx}_mask.nii"
+3dAutomask                             \
+    -prefix ${mout}                    \
+    "${fout}"
+@ idx += 1
+
+set fin  = "${fout}"
+set fout = "${tpref}_${idx}_mfilt.nii"
+3dMedianFilter                       \
+    -irad    1.01                    \
+    -iter    1                       \
+    -prefix "${fout}"                \
+    "${fin}"
+@ idx += 1
+
+set fin  = "${fout}"
+set fout = "${tpref}_${idx}_edgy.nii"
+3dedge3                     \
+    -overwrite              \
+    -prefix "${fout}"       \
+    -input  "${fin}"
+@ idx += 1
+
+if ( ${DO_MASK_EDGES} ) then
+    # this is now OFF by def, because we often have a masked anat as
+    # olay, anyways
+    set fin  = "$fout"
+    set fout = "${tpref}_${idx}_edge_mskd.nii"
+    3dcalc                                 \
+        -a      "${mout}"                  \
+        -b      "${fin}"                   \
+        -expr   'a*b'                      \
+        -prefix "${fout}" 
+    @ idx += 1
+endif
+
+# at this point, ${fout} is the final edgy dset
+
+set vvv  = `3dBrickStat                \
+                -non-zero              \
+                -percentile 1 1 1      \
+                ${fout}`
+set ethr = ${vvv[2]}
+
+# take image, from the workdir
+
+@chauffeur_afni  ${more_echo}               \
+    -ulay  "${uout}"                        \
+    "${refbox_add[1]}"  "$refbox_add[2]"    \
+    -olay  "${fout}"                        \
+    "${urange_meth}" "${umin}" "${umax}"    \
+    ${umin_fac}                             \
+    -func_range_perc_nz 33                  \
+    -cbar "${cbar}"                         \
+    -set_subbricks 0 0 0                    \
+    -olay_alpha No                          \
+    -olay_boxed No                          \
+    -thr_olay $ethr                         \
+    -opacity 9                              \
+    -prefix   "../${opref}"                 \
+    -montx $Nx -monty ${Ny}                 \
+    -montgap $mgap -montcolor $mcolor       \
+    -save_ftype ${ftype}                    \
+    -set_xhairs OFF                         \
+    -label_mode ${label_mode} -label_size 4 \
+    $allclean                               \
+    ${views_off}                            \
+    ${user_coors}
+
+# ---------------------------------------------------------------------
+
+if ( $DO_CLEAN == 1 ) then
+    echo "\n+* Removing temporary workdir '${wdir}*'\n"
+    # in working directory at present, so just go up and remove it
+    cd ..
+    \rm -rf ${wdir_name}
+else
+    echo "\n+* NOT removing temporary files '${wdir}*'\n"
+endif
+
+cd "${here}"
+
+echo ""
+echo "++ DONE! Image output:"
+echo "       ${odir}/${opref}"
+echo ""
+
+
+goto GOOD_EXIT
+
+# ========================================================================
+# ========================================================================
+
+SHOW_HELP:
+cat << EOF
+-------------------------------------------------------------------------
+
+OVERVIEW ~1~
+
+More helpful helpfile description coming (some day...)
+
+This is just a helper script for other things.
+
+written by PA Taylor, modelled heavily on RW Cox's '@snapshot_volreg'
+script
+
+# --------------------------------------------------------------------
+
+COMMAND OPTIONS ~1~
+
+-hview
+-help
+-ver
+-echo
+-ulay              ULAY
+-olay              OLAY
+-prefix            PREFIX
+-box_focus_slices  DSET_BFS
+-montgap           MG
+-montcolor         MC
+-cbar              CBAR
+-save_ftype        FTYPE
+-set_dicom_xyz     XX YY ZZ
+-ulay_range        umin umax
+-ulay_range_nz     umin umax
+-ulay_range_am     umin umax
+-umin_fac          UF
+-montx             MX
+-monty             MY
+-use_olay_grid     INTERP
+-label_mode        LM
+-sharpen_ulay_off
+-mask_olay_edges
+-no_cor
+-no_sag
+-no_axi
+-no_clean
+
+NOTES TO SELF ~1~
+
+If using -box_focus_slices, don't use the AMASK_FOCUS_OLAY keyword,
+but instead repeat the name of the olay explicitly.  This is because
+this program creates an edgified version of the olay, which gets
+passed into @chauffeur_afni, and then using the AMASK* functionality
+would try to 'automask' that dset, typically leaves no voxels and
+leads to an error.  Repeating the name of the input olay leads to
+correct behavior.  (Ask me how I discovered *this* tidbit of
+knowledge?)
+
+EOF
+
+# ----------------------------------------------------------------------
+
+    goto GOOD_EXIT
+
+SHOW_VERSION:
+   echo "version  $version (${rev_dat})"
+   goto GOOD_EXIT
+
+FAIL_MISSING_ARG:
+    echo "** ERROR! Missing an argument after option flag: '$argv[$ac]'"
+    goto BAD_EXIT
+
+BAD_EXIT:
+    exit 1
+
+GOOD_EXIT:
+    exit 0

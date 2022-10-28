@@ -1,0 +1,1 @@
+mri_convert /scratch/users/chrisgor/ICBM2009c_freesurfer/subjects_dir/ICBM2009c_fs6/mri/rawavg.mgz /scratch/users/chrisgor/ICBM2009c_freesurfer/subjects_dir/ICBM2009c_fs6/mri/orig.mgz --conform

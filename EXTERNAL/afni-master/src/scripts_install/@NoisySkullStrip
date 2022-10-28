@@ -1,0 +1,296 @@
+#!/bin/tcsh -fe
+
+set CurDir = "$PWD"
+
+@global_parse `basename $0` "$*" ; if ($status) exit 0
+
+goto PARSE_COMMAND
+Ret_PARSE_COMMAND:
+
+goto MAKE_MASK
+Ret_MAKE_MASK:
+
+goto STRIP_SKULL
+Ret_STRIP_SKULL:
+
+goto SYMMETRIZE
+Ret_SYMMETRIZE:
+
+goto CLEANUP
+goto END
+
+MAKE_MASK:
+set t = __MA
+set nbin = 1000
+
+if ( ! -f $ap".ls"+orig.HEAD) then
+   echo "Creating $ap'.ls' ..."
+   3dLocalstat -overwrite -prefix $ap".ls" \
+            -stat mean -stat stdev \
+            -nbhd 'SPHERE(4)' \
+            -datum short   \
+            $in 
+else
+   echo "Reusing $ap'.ls' ..."
+endif
+
+if ($DoEight) then
+   #Also do this one, looks promising might want it later
+   3dLocalstat -overwrite -prefix $ap".ls8" \
+               -stat mean -stat stdev \
+               -nbhd 'SPHERE(8)' \
+               -datum short   \
+               $in
+   3dcalc   -a $ap".ls"8+orig'[0]' -b $ap".ls"8+orig'[1]' \
+            -expr 'a/b' -prefix $ap".ir"
+   #top 75% is brainy 
+
+endif
+
+if ( ! -f $ap".lsp"+orig.HEAD) then
+   echo "Creating $ap'.lsp' ..."
+   set mma = `3dBrickStat -non-zero -mean $in `
+   set mm  = `3dBrickStat -non-zero -mean $ap".ls"$av'[0]'`
+   3dcalc   -a $ap".ls"$av'[0]' -b $ap".ls"$av'[1]'   \
+            -c $in   \
+            -expr "a*b/$mm"   \
+            -datum short   \
+            -overwrite -prefix $ap".lsp"
+else
+   echo "Reusing $ap'.lsp' ..."
+endif         
+
+if ($th == 0) then
+   3dhistog -nbin $nbin $ap".lsp"$av > $t"_h.1D"
+   set nm1 = `ccalc -i $nbin - 1`
+   set nm2 = `ccalc -i $nbin - 2`
+   3dTstat -prefix $t"_mx.1D" -max $t"_h.1D[1]'" 
+   set mx = `1dcat $t"_mx.1D"` && rm $t"_mx.1D"
+   1deval   -a $t"_h.1D[1]{0..$nm2}" -b $t"_h.1D[1]{1..$nm1}" \
+            -expr "(a-b)/$mx" > $t"_hd.1D"
+
+   #Find the threshold point where abs(a) is less than 0.01
+   set i = 0
+   set ith = -1
+   while ($i < 50)
+      set d = `1deval -a $t"_hd.1D{$i}" -expr "abs(a)-0.01"`
+      if (`ccalc -i "isnegative($d)"`) then
+         set ith = $i
+         echo "Got threshold for $ap".lsp" at $ith"
+         set i = 10000
+      endif
+      @ i ++
+   end
+
+   set th = `1dcat $t"_h.1D[0]{$ith}"`
+   echo "Threshold value is for $ap'.lsp': $th"
+else
+   echo "User threshold for $ap'.lsp': $th"
+endif
+
+#create masked version of input
+3dcalc -a $in  \
+       -b $ap".lsp"$av \
+       -prefix $ap.air \
+       -expr "a*(1-step(b-$th))"  \
+       -overwrite
+
+
+#This does not work well. Do not use it       
+#Create one killing top 100-pt percent or .lsp dset
+set pt = 97
+set pth = `3dBrickStat -percentile $pt 1 $pt  $ap".lsp"$av`
+set pth = $pth[2]
+3dcalc -a $in  \
+       -b $ap".lsp"$av \
+       -prefix $ap.skl \
+       -expr "a*(step(b-$pth))"  \
+       -overwrite
+
+
+#create masked version of input (took unreliable *(1-step(c)) out )
+3dcalc -a $in  \
+       -b $ap.air$av \
+       -c $ap.skl$av \
+       -prefix $ap.ma \
+       -expr "a*(1-step(b))"  \
+       -overwrite
+
+goto Ret_MAKE_MASK
+
+STRIP_SKULL:
+#Now strip brain
+#echo "Adding options to 3dSkullStrip:"
+#echo "$ssopt"
+set echo
+3dSkullStrip   -overwrite $ssopt\
+               -input $ap.ma$av \
+               -prefix $ap.nsm \
+               -mask_vol
+3dcalc   -a $in   \
+         -b $ap.nsm$av   \
+         -expr "a*step(b-1)" \
+         -prefix $ap.ns \
+         -overwrite
+unset echo
+goto Ret_STRIP_SKULL
+
+SYMMETRIZE:
+if ($symm) then
+   3dLRflip -overwrite -prefix ${t}_LRFns $ap.ns$av      
+   3dcalc   -a $ap.ns$av \
+            -b ${t}_LRFns$av \
+            -c $in \
+            -expr 'c*step((a+b)/2)' \
+            -overwrite  \
+            -prefix $ap.ns.sym
+endif
+goto Ret_SYMMETRIZE
+
+CLEANUP:
+#cleanup
+if ($cleanup) then
+   rm -f $t"_*$av*" $t"_*.1D"
+endif
+goto END
+
+PARSE_COMMAND:
+   #continue parsing for new options
+   set Narg = $#
+   set cnt = 1
+   set ssopt = ""
+   set cleanup = 1
+   set in = ""
+   set DoEight = 0
+   set symm = 0
+   set th = 0
+   while ($cnt <= $Narg)
+		set donext = 1;
+      if ($donext && "$argv[$cnt]" == '-h' || "$argv[$cnt]" == '-help') then
+	      goto USAGE
+      endif
+
+     if ($donext && "$argv[$cnt]" == "-input") then
+         set pLoc = $cnt		
+		   if ($pLoc == $Narg) then
+				echo "Need dset after -input"
+            goto END
+			else
+            @ cnt ++
+            set in = "$argv[$cnt]"
+            set donext = 0	
+         endif	
+      endif
+      if ($donext && \
+          ("$argv[$cnt]" == "-lsth" || "$argv[$cnt]" == "-lspth") ) then
+         set pLoc = $cnt		
+		   if ($pLoc == $Narg) then
+				echo "Need value after -lspth"
+            goto END
+			else
+            @ cnt ++
+            set th = `printf %f "$argv[$cnt]"`
+            set donext = 0	
+         endif	
+      endif
+      if ($donext && "$argv[$cnt]" == "-3dSkullStrip_opts") then
+         set pLoc = $cnt		
+		   if ($pLoc == $Narg) then
+				echo "Need arguments after -3dSkullStrip_opts"
+            goto END
+			else
+            @ cnt ++
+            set ssopt = ($argv[$cnt-])
+            set cnt = `ccalc -i $cnt + $#ssopt -1`
+            set donext = 0	
+         endif	
+      endif
+      
+      if ($donext && "$argv[$cnt]" == "-keep_tmp") then
+         set cleanup = 0;		
+         set donext = 0		
+      endif
+      
+      if ($donext && "$argv[$cnt]" == "-symm") then
+         set symm = 1;		
+         set donext = 0		
+      endif
+
+      
+      #ADD NO NEW OPTIONS BELOW THIS LINE
+      
+      if ($donext == 1) then
+         echo "Error: Option or parameter '$argv[$cnt]' not understood"
+         apsearch -popt `basename $0` -word $argv[$cnt]
+         goto END
+      endif
+      
+		@ cnt ++
+	end
+   
+   if ("$in" == "") then
+      echo "Error: Need input volume"
+      goto END
+   endif
+
+   set ap = `@GetAfniPrefix $in`
+   set av = `@GetAfniView $in`
+   #to deal with cases when input is something like volumne.mnc ...
+   if ("$av" == '') then 
+      set av = "+orig"
+   endif
+goto Ret_PARSE_COMMAND
+
+USAGE:
+echo ""
+echo "Usage: `basename $0` <-input ANAT> "
+echo "                     [-keep_tmp] [-3dSkullStrip_opts OPTS]"
+echo ""
+echo "Strips the skull of anatomical datasets with low SNR"
+echo "You can recognize such dataset by the presence of relatively"
+echo "elevated (grayish) signal values outside the skull."
+echo ""
+echo "This script does some pre-processing before running 3dSkullStrip"
+echo "If you're intrigued, read the code."
+echo ""
+echo "This script is experimental and has only been tested on a dozen nasty"
+echo "datasets. So use it ONLY when you need it, i.e. when 3dSkullStrip "
+echo "fails on its own and you have low SNR"
+echo ""
+echo "Examples of use:"
+echo "   For a normal anatomy with low SNR"
+echo "   `basename $0` -input anat+orig"
+echo ""
+echo "   For an anatomy with lots of CSF and low SNR"
+echo "   Note how 3dSkullStrip options are passed after -3dSkullStrip_opts"
+echo "`basename $0`  -input old_anat+orig \"
+echo "               -3dSkullStrip_opts \"
+echo "                  -use_skull -blur_fwhm 1 -shrink_fac_bot_lim 0.4"
+echo ""
+echo ""
+echo "Mandatory parameters:"
+echo "   -input ANAT : The anatomical dataset"
+echo "Optional parameters:"
+echo "   -3dSkullStrip_opts SSOPTS: Anything following this option is passed"
+echo "                              to 3dSkullStrip"
+echo "   -keep_tmp: Do not erase temporary files at the end."
+echo ""
+echo "The script outputs the following:"
+echo "   ANAT.ns  : A skull stripped version of ANAT"
+echo "   ANAT.air and ANAT.skl: A couple of special masks"
+echo "   ANAT.lsp : A volume that is used to threshold 'air'"
+echo "              out of the volume to be stripped."
+echo "              @NoisySkullStrip tries to choose a threshold"
+echo "              automatically but fails at times. You can set"
+echo "              the threshold manually with -lspth and rerun"
+echo "              the script to try and get a better result"
+echo ""
+echo "Do send me feedback on this script's performance."
+echo ""
+@global_parse -gopts_help
+echo "Ziad S. Saad, March 28 08."
+echo "saadz@mail.nih.gov"
+echo "" 
+goto END
+
+END:

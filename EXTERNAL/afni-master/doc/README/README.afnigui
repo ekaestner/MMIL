@@ -1,0 +1,228 @@
+================================================================================
+                ----===|  Usage Tips for the AFNI GUI  |===----
+================================================================================
+Tip #1:
+  When the AFNI sunrise logo is displayed in the square to right of the 'done'
+  button, this means that something is happening that might take a long time
+  (e.g., reading a big file).  The AFNI GUI will not respond to clicks or
+  keystrokes during this time.
+--------------------------------------------------------------------------------
+                    ***** AFNI For Absolute Beginners *****
+
+(1) To use AFNI, you must have some data stored in a format that the program
+    understands.
+   (a) The major formats for which AFNI is programmed are:
+       ++ AFNI formatted datasets, in .HEAD and .BRIK pairs of files;
+       ++ NIfTI-1 formatted datasets, in .nii or .nii.gz files.
+   (b) When you start AFNI, any datasets in the current directory will be ready
+       for viewing.  If there are no datasets to read, AFNI will pop up a
+       message.  At this point, you can do one of 2 things:
+       ++ Quit AFNI, change directory ('cd') to a directory with some datasets,
+          and restart the program (this is what I always do); or,
+       ++ Use the 'DataDir Read' button in the second column of the main AFNI
+          controller to navigate to a directory with some datasets.
+       When there is no data, AFNI creates a 'dummy' dataset for you to look
+       at, if you want to play with the image viewers.
+   (c) To open an image viewer, click on one of the 'Image' buttons in the left
+       column of the main AFNI controller.
+       ++ Left-click in the image to move the crosshairs around.
+       ++ Click or click-drag in the slider below the image to change slice.
+       ++ The controls to the right of the image let you adjust the image
+          contrast, brightness, zoom factor, etc.
+       ++ The controls to the bottom of the image let you carry out various
+          operations on the image, such as saving to JPEG format, and making
+          a montage (array) of slice images.
+   (d) If a dataset has more than one 3D volume in it (usually that means it
+       has a time axis, like an FMRI EPI dataset), then you can use the 'Graph'
+       buttons to view an array of graphs of the voxel data time series.
+       ++ The crosshairs in the image viewer that corresponds to the graph
+          viewer change to a small box to indicate which voxels are the source
+          of the data in the graph array.
+   (e) The viewpoint of multiple image and graph viewers (the focus voxel at
+       the crosshairs) is always locked together -- Left-click in one image 
+       to move the crosshairs, and all other open image and graph viewers 
+       will jump, too.
+       ++ Moving the time index in a graph viewer (by clicking in the central
+          sub-graph, or by using the 'Index' control in the main AFNI window)
+          will cause all the image and graph viewers to display at the new
+          time index.
+   (f) At any moment, you can have one underlay dataset (grayscale) and one
+       overlay dataset (color).  To choose which datasets are visible, use
+       the 'UnderLay' and 'OverLay' button in the second column of the AFNI
+       controller.
+       ++ To control whether the color overlay is visible, click on the 
+          'See OverLay' toggle button.
+       ++ To manage how the numbers in the overlay dataset are converted into
+          colors, click on 'Define OverLay' to open up a new control panel.
+       ++ The active underlay and overlay dataset names are shown in the title
+          bar of the AFNI controller window.
+   (g) Don't be afraid of the software!  The popup hints will help.  The button
+       'BHelp' will give you longer help about individual buttons -- click on
+       the BHelp button, then click on any AFNI button to get a small text box
+       with more help than the simple popup hints.
+   (h) Sample datasets and all the AFNI course materials are in the big file
+       CD.tgz (more than 1 Gbyte) at
+          https://afni.nimh.nih.gov/pub/dist/edu/data
+       And don't forget the AFNI message board at
+          https://afni.nimh.nih.gov/afni/community/board
+--------------------------------------------------------------------------------
+             ***** Cursor Shapes and Right-Click Popup Menus *****
+
+(2) On most systems, the X11 cursor used in AFNI is an orange arrow pointing
+    at about '10:30' on the clock face.  However, the arrow becomes yellow
+    and points more steeply, to about '11:00', when it is over a location that
+    has a hidden Right-Click popup menu.  Some of these are:
+   (a) Over the logo square just to the right of the 'done' button in an
+       AFNI controller.
+   (b) Over the labels at the top of the threshold slider and color bar in
+       the 'Define Overlay' control panel.
+   (c) On the label to the left of a drop-down 'option menu'; e.g., 'Xhairs'
+       or 'ULay' (for these menus, the cursor will not change shape).
+   (d) Over the color bar itself, when it is in continuous 'colorscale' mode
+       ('**') -- but not when it is in discrete color panel mode.
+   (e) Over the image viewer main sub-window, which holds the image itself.
+   (f) Over the image viewer intensity bar, just to the right of the image.
+   (g) Over the 'Save' button in the image viewer.
+   (h) Over the 'crop' button in the image viewer.
+   (i) Over the sub-graphs in the time series dataset graph viewer
+       (pops up some statistics about the data in the sub-graph).
+   (j) Over the coordinate display in the upper left corner of an AFNI
+       controller.
+   (k) In the 'Render Dataset' plugin, over the 'See Xhairs' and 'Accumulate'
+       toggle buttons.  The 'Accumulate' popup lets you enter a text label
+       to be drawn in the rendered image viewer -- the actual display of labels
+       (size and location) is controlled from the image viewer intensity bar
+       popup menu -- item (e) above.  Right-Click lets you change the label
+       for newly rendered images, whereas Shift+Right-Click lets you change
+       the label for all previously rendered images as well as new images.
+   (l) In the 'Clusters' report panel, right-clicking in the upper part of
+       the window (where the textual summary is), will let you choose how
+       the 'Histog' option will plot the histogram from the 'Aux.Dset'.
+       ('Histog' is selected from the menu whose initial choice is 'Mean'.)
+--------------------------------------------------------------------------------
+              ***** Hidden Clicks to Activate AFNI Features *****
+
+(3) Other 'special' clicks that aren't obvious:
+   (a) Left-clicking on the 'Image' or 'Graph' button for an already open
+       AFNI viewer will bring that viewer's window back up to the top of
+       the X11 window stacking order.
+   (b) Right-clicking on the 'Image' or 'Graph' button for an already open
+       AFNI viewer will bring that viewer's window over to the place where
+       you just clicked -- this is useful for finding lost viewers.
+   (c) Right-clicking on the 'DataDir' button in the AFNI controller will
+       un-hide (or re-hide) the obsolescent 'Define Markers' button.
+   (d) Left-clicking on the logo at the lower left of a graph viewer will
+       make the logo and menu buttons disappear -- this is intended to help
+       you make a clean-looking snapshot of the window.  Left-click again
+       in the same region at the lower left to un-hide the logo and buttons.
+   (e) Right-clicking on the graph viewer logo or on the image viewer 'Disp'
+       button (i.e., the things at the lower left of each viewer window) will
+       bring the parent AFNI controller back to the top of the X11 window
+       stacking order.
+   (f) In an image viewer window, if you press-and-hold-down the Left mouse
+       button, then drag the cursor vertically and horizontally (while still
+       holding the Left button down), the contrast and brightness of the
+       grayscale underlay changes as you move the mouse.
+   (g) To exit AFNI quickly when multiple controllers are open, hold down the
+       Shift key when you press the 'done' button (in any AFNI controller).
+       The usual requirement of pressing 'done' twice within 5 second is
+       skipped, and all AFNI controllers exit immediately.
+   (h) Left-clicking in the logo square to the right of the AFNI controller
+       'done' button will cause the AFNI splash screen to popup.  You can
+       close the splash screen window again via the usual X11 controls on
+       the window border, or by left-clicking again in the logo square.
+--------------------------------------------------------------------------------
+               ***** Keyboard Shortcuts: Image Viewer Window *****
+
+(4) The AFNI image viewer has many keyboard shortcuts.  Help for these can be
+    found by using 'BHelp' and then clicking on the image sub-window itself.
+    The shortcuts are used by putting the mouse cursor over the image 
+    sub-window and pressing the keyboard key.
+      a = fix window aspect ratio        (= Left-click in intensity bar)
+      c = enter cropping mode            (= clicking the 'crop' button)
+      D = open Disp control panel        (= clicking the 'Disp' button)
+      i = make the image sub-window smaller inside the overall viewer
+      I = make the image sub-window larger
+      l = left-right mirror image        (= '+LR Mirror' on Disp panel)
+      m = toggle 'Min-to-Max' on/off     (= 'Min-to-Max' or '2%-to-98%' on Disp)
+      M = open Montage control panel     (= clicking the 'Mont' button)
+      o = color Overlay on/off           (= 'See Overlay' in AFNI controller)
+      p = toggle panning mode            (= clicking the 'pan' button)
+      q = close window                   (= clicking the 'done' button)
+      r = like 'v', but image 'rebounds' when it reaches end of count
+      R = like 'r', but backwards order
+      s = sharpen underlay image         (= 'Sharpen' on the Disp control panel)
+      S = save image                     (= clicking the 'Save' button)
+      u = toggle background to be from Underlay or Overlay dataset
+      v = automatically change images to make a 'video' (forwards order)
+      V = same as 'v' but backwards order
+      z = zoom out                       (= zoom down-arrow button)
+      Z = zoom in                        (= zoom up-arrow button)
+      [ = time index down by 1
+      ] = time index up by 1
+      { = lower AFNI statistical threshold slider
+      } = raise AFNI statistical threshold slider
+      > = PageUp = move forward one slice in image viewer
+      < = PageDown = move backward one slice in image viewer
+      # = toggle checkerboard pattern from underlay and overlay datasets
+      3 = turn checkerboard pattern off
+    Keyboard arrow keys = move crosshairs (normal operation)
+                        = pan zoomed window (when 'pan' is on)
+    Shift+arrow keys    = pan cropped region around
+    Ctrl+arrow keys     = expand/shrink cropped region
+    Home key            = center zoomed window on current crosshair location
+    Shift+Home          = center cropped region on current crosshair location
+    Del = undo in the Drawing plugin
+     F2 = turn the Drawing pencil on
+     F3 = subtract 1 from the Drawing plugin value
+     F4 = add 1 to the Drawing plugin value
+     F5 = Meltdown!
+     F6 and higher are not (yet) defined.
+--------------------------------------------------------------------------------
+               ***** Keyboard Shortcuts: Graph Viewer Window *****
+
+(5) The AFNI graph viewer also has many keyboard shortcuts.
+      a = autoscale the graphs (this one time)
+      A = autoscale the graphs (every time they are redrawn)
+      b = switch graph baseline mode (between Separate, Common, and Global)
+      B = switch on/off Boxes graphs instead of line graphs
+      g = decrease vertical grid spacing in graphs
+      G = increase vertical grid spacing in graphs
+      h = draw dotted horizontal line at zero level in graphs
+      i = decrease graph 'ignore' level by 1
+      I = increase graph 'ignore' level by 1
+      l = move to last time point
+      L = turn AFNI logo on or off (but why would you want it OFF?!)
+      m = reduce matrix size of sub-graphs by 1
+      M = increase matrix size of sub-graphs by 1
+      q = quit = Opt->Done
+    r/R = 'rebound' up or down in time
+      S = save an image of the graph window to a file
+      t = show text (numbers) instead of graphs
+    v/V = 'video' up or down in time
+      w = write data from central sub-graph to a 1D file
+      z = change slice number by 1 downwards (= keyboard Page Down key)
+      Z = change slice number by 1 upwards   (= keyboard Page Up key)
+      - = scale the graphs down (vertically)
+      + = scale the graphs up
+      1 = move to first time point
+ < or [ = move back in time by 1 point  (= keyboard Left arrow)
+ > or ] = move up in time by 1 point    (= keyboard Right arrow)
+      N = after typing the 'N', type a number, then press Enter;
+          the matrix of sub-graphs will change to the number given immediately
+     F5 = Meltdown!
+--------------------------------------------------------------------------------
+            ***** Keyboard Shortcuts in the Threshold Slider *****
+
+(6) Fine control over the threshold slider is hard with the mouse.  You can
+    move the slider with the following keystrokes, after clicking in the
+    slider's 'thumb' to move the keyboard input focus to this control.
+      Down arrow = reduce slider by 1 in the 4th significant place
+      Up arrow   = increase slider by 1 in the 4th significant place
+      Page Down  = reduce slider by 1 in the 3rd significant place
+      Page Up    = increase slider by 1 in the 3rd significant place
+      Home       = drop slider to 0
+      End        = move slider to top
+    The Left and Right arrow keys can similarly be used in the image viewer
+    slice index slider to move 1 slice backward or forward at a time.
+--------------------------------------------------------------------------------

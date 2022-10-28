@@ -1,0 +1,207 @@
+#!/bin/tcsh -f
+
+set stat = 0
+set sdir = "$PWD"
+set ok_1surf = 0
+set ok_Gsurf = 0
+set ok_Gvol = 0
+
+#Is the mini version present?
+set cdir = `\pwd | sed 's/AFNI_InstaCorrDemo.build/BUILDIR/' | \grep AFNI_InstaCorrDemo.mini`
+if ($status == 0 && ${cdir} != '') then
+   echo "You should not run this command from a directory under AFNI_InstaCorrDemo.mini"
+   set sugdir = `echo $cdir | sed 's/AFNI_InstaCorrDemo.mini/ /g' | \
+                              cut -f 1 -d ' '`
+   echo "Consider running this script again with: "
+   echo "   cd $sugdir"
+   echo "   `basename $0` $argv[*]"
+   echo ""
+   goto END
+endif
+
+
+set cdir = `\pwd | sed 's/AFNI_InstaCorrDemo.build/BUILDIR/' | \grep AFNI_InstaCorrDemo`
+if ($status == 0 && ${cdir} != '') then
+   echo "You should not run this command from a directory under AFNI_InstaCorrDemo"
+   set sugdir = `echo $cdir | sed 's/AFNI_InstaCorrDemo/ /g' | cut -f 1 -d ' '`
+   echo "Consider running this script again with: "
+   echo "   cd $sugdir"
+   echo "   `basename $0` $argv[*]"
+   echo ""
+   goto END
+endif
+
+goto PARSE
+RET_PARSE:
+
+if ("$trgdir" == "") then
+   if ( -d ./AFNI_InstaCorrDemo.mini ) then
+      set trgdir = AFNI_InstaCorrDemo.mini
+   else if ( -d ./AFNI_InstaCorrDemo ) then
+      set trgdir = AFNI_InstaCorrDemo
+   endif
+endif
+
+#Still undecided ?
+if ("$trgdir" == "") then
+    set trgdir = AFNI_InstaCorrDemo
+endif
+
+if ( -f ${trgdir}/srf/rest_sub99965.STL_rh_SM.niml.dset.1D.smrec ) then
+   echo "Subject single surf processed"
+   set ok_1surf = 1
+endif
+if ( -f ${trgdir}/srf/G1.LR.grpincorr.niml ) then
+   echo "Subject group surf processed"
+   set ok_Gsurf = 1
+endif
+if ( -f ${trgdir}/vol/G1.grpincorr.niml ) then
+   echo "Subject group vol processed"
+   set ok_Gvol = 1
+endif
+
+if ( $ok_Gvol == 1 || $ok_Gsurf == 1 || $ok_1surf == 1 )  then
+echo ""
+echo "Notice:"
+echo "   Output files already exist."
+echo "   If you need to reinstall, remove both AFNI_InstaCorrDemo,"
+echo "   AFNI_InstaCorrDemo.mini and AFNI_InstaCorrDemo.tgz with:"
+echo "\\rm -rf AFNI_InstaCorrDemo.tgz AFNI_InstaCorrDemo AFNI_InstaCorrDemo.mini"
+echo "   then run `basename $0` $argv[*] again."
+echo ""
+echo "Otherwise to just run the demos do:"
+echo ""
+set ret_coms = END
+goto SHOW_COM
+   endif
+
+if ( ! -f ${trgdir}.tgz) then
+   if ($use_curl == -1) then
+      which curl
+      if ($status) then
+         set use_curl = 0;
+      else
+         set use_curl = 1;
+      endif
+   endif
+
+   if ($use_curl == 0) then
+      wget https://afni.nimh.nih.gov/pub/dist/data/${trgdir}.tgz
+   else
+      curl -O https://afni.nimh.nih.gov/pub/dist/data/${trgdir}.tgz
+   endif
+   tar xvzf ${trgdir}.tgz
+else
+   echo "Reusing existing ${trgdir}.tgz"
+   tar xvzf ${trgdir}.tgz
+endif
+
+cd ${trgdir}/vol
+   tcsh ./@SetupVolGroupInCorr
+cd -
+cd ${trgdir}/srf
+   tcsh ./@SetupSurfGroupInCorr
+   tcsh ./@RunSingleSurfInstaCorr -setup_only
+cd -
+
+if ( ! -d ${trgdir}/srf ) then
+   echo "Installation Failed"
+   goto BEND
+endif
+set ret_coms = END
+goto SHOW_COM
+
+SHOW_COM:
+   echo "*****************"
+   echo ""
+   echo "For Volume-based 3dGroupInCorr run:"
+   echo "cd $PWD/${trgdir}/vol"
+   echo "tcsh ./@RunVolGroupInCorr "
+   echo ""
+   echo "For Surface-based 3dGroupInCorr run:"
+   echo "cd $PWD/${trgdir}/srf"
+   echo "tcsh ./@RunSurfGroupInCorr "
+   echo ""
+   echo "For Surface-based Single-Subject InstaCorr run:"
+   echo "cd $PWD/${trgdir}/srf"
+   echo "tcsh ./@RunSingleSurfInstaCorr "
+   echo ""
+   echo "*****************"
+goto $ret_coms
+
+goto END
+
+PARSE:
+   set Narg = $#
+   set use_curl = -1
+   set cnt = 1
+   set trgdir = ''
+   while ($cnt <= $Narg)
+		set donext = 1;
+      if ($donext && "$argv[$cnt]" == "-echo") then
+         set echo
+         set donext = 0; goto NEXT		
+      endif
+      if ($donext && "$argv[$cnt]" == "-curl") then
+         set use_curl = 1
+         set donext = 0; goto NEXT		
+      endif
+      if ($donext && "$argv[$cnt]" == "-wget") then
+         set use_curl = 0
+         set donext = 0; goto NEXT		
+      endif
+      if ($donext && "$argv[$cnt]" == "-mini") then
+         set trgdir = AFNI_InstaCorrDemo.mini
+         set donext = 0; goto NEXT		
+      endif
+      if ($donext && "$argv[$cnt]" == "-full") then
+         set trgdir = AFNI_InstaCorrDemo
+         set donext = 0; goto NEXT		
+      endif
+      if ($donext && ("$argv[$cnt]" == "-h" || "$argv[$cnt]" == "-help")) then
+         goto HELP
+         set donext = 0;	 goto NEXT	
+      endif
+      if ($donext == 1) then
+         echo "Error: Option or parameter '$argv[$cnt]' not understood"
+         goto END
+      endif
+      
+      NEXT:
+		@ cnt ++
+	end
+   
+goto RET_PARSE
+
+HELP:
+   echo "Installs and sets up AFNI's InstaCorr demo archive"
+   echo "After setup, all you need to do is run the demo scripts"
+   echo "this way:"
+   set ret_coms = HELP_COM
+   goto SHOW_COM
+   HELP_COM:
+   echo "Options:"
+   echo "[-wget]: Use wget to download archive. Script chooses by default"
+   echo "         with preference for curl"
+   echo "[-curl]: Use curl to download archive. Script chooses by default"
+   echo "         with preference for curl"
+   echo "[-full]: Install the full version of the demo. This downloads"
+   echo "         all subject surfaces, resting state volume time series"
+   echo "         etc. The script then processes the data and produces"
+   echo "         the files needed for running the various interactive"
+   echo "         InstaCorr demos."   
+   echo "[-mini]: Install the mini version of the demo. This downloads"
+   echo "         only the files needed for running the various interactive"
+   echo "         InstaCorr demos."
+   echo ""
+   echo "It takes a while to download, unpack, and run the setup scripts"
+   echo ""
+   goto END
+
+BEND:
+   echo "Failed"
+   set stat = 1
+   goto END
+   
+END:
+   exit $stat

@@ -1,0 +1,313 @@
+#!/bin/tcsh -f
+#last edited June 13 2008
+
+DEFAULT_PARAMETERS:
+   set kclustlist = ( 4 )
+   set LSlist = (ALL_med ALL_MAD ALL_skew chew_medaniso chew_MADaniso AvMed)
+   #Set these two by hand
+      #example:
+      # set component_list = (D_ijk_stat.Int D_D_ijk_stat.*.fitcoef)
+      # set clustsuff = ALLcomp
+      set component_list = ('D_D_ijk_stat.ALL_med.fitcoef')
+      set clustsuff = med
+
+PARSE:
+   set Narg = $#
+   set cnt = 1
+   set subj = ''
+   set mask = ''
+   set ClustOnly = 0
+   set distmetric = 7
+   
+   if ("$1" == '') goto HELP
+   if ($Narg == 2  && ("$1" !~ -*) && ("$2" !~ -*)) then
+      set subj = $1
+      set mask = $2
+   else
+      while ($cnt <= $Narg)
+         set donext = 1;
+         if ($donext && "$argv[$cnt]" == "-help" || "$argv[$cnt]" == "-h") then
+            goto HELP
+         endif
+         if ($donext && "$argv[$cnt]" == "-anat") then
+            if ($cnt == $Narg) then
+               echo "Need a volume after -anat"
+               goto END
+            else
+               @ cnt ++
+               set subj = "$argv[$cnt]"
+               set donext = 0   
+            endif   
+         endif
+         
+         if ($donext && "$argv[$cnt]" == "-distmetric") then
+            if ($cnt == $Narg) then
+               echo "Need a value between 1 and 8 after -distmetric"
+               goto END
+            else
+               @ cnt ++
+               set distmetric = $argv[$cnt]
+               if ($distmetric < 1 || $distmetric > 8) then
+                  echo "Need a value between 1 and 8 after -distmetric"
+                  echo "Have $distmetric"
+                  goto END
+               endif
+               set donext = 0   
+            endif
+         endif
+         
+         if ($donext && "$argv[$cnt]" == "-mask") then
+            if ($cnt == $Narg) then
+               echo "Need a mask volume after -mask"
+               goto END
+            else
+               @ cnt ++
+               set mask = $argv[$cnt]
+               set donext = 0   
+            endif
+         endif
+         
+         if ($donext && "$argv[$cnt]" == "-nclusts") then
+            if ($cnt == $Narg) then
+               echo "Need number of clusts after -nclusts"
+               goto END
+            else
+               @ cnt ++
+               set kclustlist = ($argv[$cnt])
+               set donext = 0   
+            endif
+         endif
+         
+         if ($donext && "$argv[$cnt]" == "-complist") then
+            if ($cnt == $Narg) then
+               echo "Need components list after -complist"
+               goto END
+            else
+               @ cnt ++
+               set component_list = "$argv[$cnt]"
+               set donext = 0   
+            endif
+         endif
+         
+         if ($donext && "$argv[$cnt]" == "-clustsuff") then
+            if ($cnt == $Narg) then
+               echo "Need cluster suffix after -clustsuff"
+               goto END
+            else
+               @ cnt ++
+               set clustsuff = "$argv[$cnt]"
+               set donext = 0   
+            endif
+         endif
+         
+         if ($donext && "$argv[$cnt]" == "-clust_only") then
+            set ClustOnly = 1;
+            set donext = 0   
+         endif
+
+         if ($donext) then
+            echo "Parameter $argv[$cnt] not understood"
+            goto END
+         else 
+            @ cnt ++
+         endif
+      end
+   endif
+   
+setenv AFNI_DECONFLICT OVERWRITE
+
+PREP:
+   if ("$subj" == "") then
+      echo "Error: No subject volume given"
+      goto END
+   endif
+   if (`@CheckForAfniDset $subj` < 2) then
+      echo "Failed to find $subj"
+      goto END
+   endif
+   set hdir = $PWD
+   set pref = `@GetAfniPrefix $subj`
+   set dir = out_$pref
+   set clustpref = ${pref}.${clustsuff}
+   if ( "$hdir:t" == "$dir" ) then
+      echo "This script should be run from outside the"
+      echo " the output directory $dir. Run this:"
+      echo ""
+      echo "cd .."
+      echo "`basename $0` $argv"
+      echo ""
+      goto END
+   endif
+   if ( ! -d $dir ) mkdir $dir
+   if ("$mask" == "") set mask = $subj
+
+if ($ClustOnly == 1) then
+   #good jumping point
+   goto PREPFORCLUSTERING
+endif
+
+COPY:
+   3dcopy $subj $dir/$subj
+   if ("$mask" != "$subj") then
+      3dcopy $mask $dir/$mask
+   endif
+
+LOCAL_STATS:
+   echo "#############################"
+   echo "LOCALSTATS:"
+   echo "#############################"
+   cd $dir
+   @seg_Wrsmpl6 ${subj}
+   cd $hdir
+   
+RESAMPLE:
+   cd $dir
+   echo "#############################"
+   echo "RESAMPLE MASK:"
+   echo "#############################"
+
+   3dresample  -rmode NN -dxyz 1.0 1.0 1.0 \
+               -master ${pref}_1mm+orig   \
+               -inset  ../$mask  \
+               -prefix ./${pref}_mask_1mm
+   if (! -f ${pref}_mask_1mm+orig.HEAD) then
+      echo "Error: No resample mask written!"
+      goto END
+   endif
+   cd $hdir
+
+FITTING:
+   cd $dir
+   echo "#############################"
+   echo "FITTING:"
+   echo "#############################"
+
+   set cnt = 1
+   foreach kk ($LSlist)
+      set sgn_volume = ${pref}_${kk}+orig
+      set D_ijk = D_ijk_stat.${kk}
+      3dmaskdump  -mask ${pref}_mask_1mm+orig \
+                  $sgn_volume  > $D_ijk
+      fitanje_1sign $D_ijk > D_${D_ijk}.fitcoef
+      @ cnt ++
+   end
+   #not quite like others, but might be useful to use voxel intensity too
+   3dmaskdump -mask ${pref}_mask_1mm+orig \
+               ${pref}_mask_1mm+orig > D_ijk_stat.Int
+   cd $hdir
+
+PREPFORCLUSTERING:
+   cd $dir
+   echo "#############################"
+   echo "Pre Clustering:"
+   echo "#############################"
+   #expand the component list
+   set component_list = ($component_list)
+   @prepare4clust -out D_${clustpref}_prepared4clust.sign \
+                  -components $component_list
+   if ( ! -f D_${clustpref}_prepared4clust.sign) then
+      echo "Error: Failed to produce signature file"
+      goto END
+   endif
+   cd $hdir
+
+CLUSTERING:
+   #It makes no sense to separate @prepareAFTERclust and 3dUndump from this
+   cd $dir
+   foreach kclust ($kclustlist)
+      echo "#############################"
+      echo "Clustering $kclust :"
+      echo "#############################"
+      Aclustering  \
+            -f D_${clustpref}_prepared4clust.sign \
+            -g $distmetric  -k $kclust  -r 3  \
+            -u D_${clustpref}
+      if (! -f D_${clustpref}_K_G${kclust}.kgg) then
+         echo "Error: Failed to cluster"
+         goto END
+      endif
+      rm D_${clustpref}_K_G${kclust}.cdt
+   end
+   cd $hdir
+
+POSTCLUSTERING:
+   cd $dir
+   echo "#############################"
+   echo "Post Clustering:"
+   echo "#############################"
+   foreach kclust ($kclustlist)
+      @prepareAFTERclust   D_${clustpref}_K_G${kclust}.kgg   \
+                           D_ijk_stat.Int
+      3dUndump   -prefix ${clustpref}.${kclust}clust   \
+                 -master ${pref}_mask_1mm+orig \
+                 D_D_${clustpref}_K_G${kclust}.kgg.FINAL4undump
+      if (`@CheckForAfniDset \
+              ${clustpref}.${kclust}clust+orig.HEAD` < 2) then
+         echo "Failed to undump to ${clustpref}.${kclust}clust+orig"
+         goto END
+      endif
+      rm D_D_${clustpref}_K_G${kclust}.kgg.FINAL4undump
+   end
+   cd $hdir
+
+goto END
+
+HELP:
+   echo "Usage mode 1: ############################"
+   echo "   Script needs 2 arguments!"
+   echo "   1st must be original image to segment"
+   echo "   2nd must be mask image for selecting..."
+   echo "   If no mask is given, then the whole volume is used"
+   echo "##########################################"
+   echo "Usage mode 2: ############################"
+   echo "   `basename $0` -anat ANAT_VOL -mask MASK_VOL"
+   echo "      If no mask is given, then the whole volume is used"
+   echo "Options:"
+   echo "   -clustsuff CLUSTER_DSET_SUFFIX"
+   echo "        Default now is: '$clustsuff'"
+   echo "   -complist COMP_LIST: List of components to use"
+   echo "                     for bulding signatures."
+   echo "         Default now is: '$component_list'"
+   echo "         You can choose combinations of:"
+   echo "         'D_D_ijk_stat.*.fitcoef', where * gets replaced"
+   echo "         by each of the parameter in LSlist: "
+   echo "         $LSlist"
+   echo "         Note that the signle quotes are necessary."
+   echo "         You could also use: "
+   echo "         'D_D_ijk_stat.ALL_mad.fitcoef D_D_ijk_stat.skew.fitcoef'"
+   echo "   -nclusts N_CLUSTS: To make clustering repeat with different"
+   echo "                   number os clusters, you can set N_CLUSTS to:"
+   echo "                   '3 4 6' for example (single quotes necessary)."
+   echo "         Default now is '$kclustlist'"
+   echo "   -clust_only: use precomputed localstats and fitting and "
+   echo "             and go to straight to clustering"
+   echo "         Default is to do the whole thing."
+   echo "   -distmetric DIST: set distance metric."
+   echo "         Default is $distmetric"
+   echo "         Choose between 1 and 8, see cluster"
+   echo "         for meaning."
+   echo "         1 Uncentered correlation"
+   echo "         2 Pearson correlation"
+   echo "         3 Uncentered correlation, abs value"
+   echo "         4 Pearson correlation, abs value"
+   echo "         5 Spearman's rank correlation"
+   echo "         6 Kendall's tau"
+   echo "         7 Euclidian distance"
+   echo "         8 City block distance"
+   echo ""
+   echo "Examples:"
+   echo "1- To process a new data set, with a brain mask"
+   echo "   @sigseg  -anat DemoSubj_spgrsa+orig.   \"
+   echo "            -mask DemoSubj_spgrsa_ns+orig "
+   echo "2- To change clustering parameters and use all components "
+   echo "   and 6 clusters but without repeating localstats and fitting:"
+   echo "   @sigseg  -nclusts 6 -clust_only \"
+   echo "            -complist 'D_D_ijk_stat.*.fitcoef' \"
+   echo "            -clustsuff all \"
+   echo "            -anat DemoSubj_spgrsa+orig.   \"
+   echo "            -mask DemoSubj_spgrsa_ns+orig "
+   echo "##########################################"
+   goto END
+
+
+END:

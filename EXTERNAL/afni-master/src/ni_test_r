@@ -1,0 +1,9 @@
+#!/bin/csh
+
+# Run ni_test_r in one window and ni_test_w in another
+
+echo "First test of reading: tcp"
+nicat -r tcp:junk:53211
+
+echo "Second test of reading: shm"
+nicat -r shm:junk:53211

@@ -1,0 +1,293 @@
+#Makefile for ptaylor's code
+
+CCOMP_PT   = $(CCFAST) $(OMPFLAG)
+
+PTAYLORLIB = libtracktools.a
+
+PTAYLOR_SRCS = DoTrackit.c TrackIO.c rsfc.c diffusiony.c FuncTrac.c \
+               roiing.c Fat_Labels.c colorbasic.c LS_funcs.c   \
+               checks_and_balances.c readglob.c basic_boring.c
+       
+PTAYLOR_OBJS = ${PTAYLOR_SRCS:.c=.o}
+
+PTAYLOR_INCLUDE_PATH = ${IFLAGS} -I/usr/local/include \
+                  -I../nifti/nifti2 -I../nifti/niftilib -I../nifti/nifticdf \
+                 -I../nifti/znzlib -I../3DEdge/src -I../rickr \
+                 -I../ -I../niml/  -I../SUMA/ -I../f2c
+
+PTAYLOR_LINK_PATH = -L.. ${LFLAGS} -L/usr/lib -L/usr/local/lib 
+PTAYLOR_LINK_LIB = ${LLIBS} -lmri
+
+PTAYLOR_HDRS = DoTrackit.h TrackIO.h rsfc.h diffusiony.h FuncTrac.h \
+               roiing.h Fat_Labels.h colorbasic.h LS_funcs.h   \
+               checks_and_balances.h readglob.h basic_boring.h
+
+WARNTOPT = ${WARNOPT}
+
+#library only
+${PTAYLORLIB} : ${PTAYLOR_OBJS} 
+	rm -f ${PTAYLORLIB}
+	ar q ${PTAYLORLIB} ${PTAYLOR_OBJS} 
+	echo "library Rebuilt ..."
+	$(RANLIB) ${PTAYLORLIB} 
+
+
+
+clean:
+	$(RM) *.o *.a ${FC_PROGRAMS}
+
+#cluster.o:cluster.c
+#	$(RM) $@
+#	${CC} ${CCOPT} ${WARNTOPT} ${PTAYLOR_INCLUDE_PATH} -c cluster.c 
+
+cluster_floatNOMASK.o:cluster_floatNOMASK.c
+	$(RM) $@
+	${CC} ${CCOPT} ${WARNTOPT} ${PTAYLOR_INCLUDE_PATH} -c cluster_floatNOMASK.c 
+
+.c.o:
+	${CC} ${CCOPT} ${WARNTOPT} ${PTAYLOR_INCLUDE_PATH} -c $*.c 
+
+### From Paul Taylor
+
+# not distributed 25 Aug 2020
+3dProbTrackID:3dProbTrackID.o  ${PTAYLORLIB}
+	$(RM) $@
+	$(CC) -o 3dProbTrackID 3dProbTrackID.o  \
+		${PTAYLOR_INCLUDE_PATH} ${PTAYLOR_LINK_PATH} $(LFLAGS) \
+		$(LLIBS) ${PTAYLORLIB} \
+      -lgsl -lgslcblas -lm
+
+3dTrackID:3dTrackID.o  ${PTAYLORLIB}
+	$(RM) $@
+	$(CC) -o 3dTrackID 3dTrackID.o   \
+		${PTAYLOR_INCLUDE_PATH} ${PTAYLOR_LINK_PATH}  \
+		$(LFLAGS) ${PTAYLORLIB} $(LLIBS) \
+      -lgsl -lgslcblas -lm
+
+#3dDWUncert:3dDWUncert.o  ${PTAYLORLIB}
+#	$(RM) $@
+#	$(CC) -o 3dDWUncert 3dDWUncert.o   \
+#		${PTAYLOR_INCLUDE_PATH} ${PTAYLOR_LINK_PATH}  \
+#		$(LFLAGS) ${PTAYLORLIB} $(LLIBS) \
+#     -lgsl -lgslcblas -lm
+
+3dEigsToDT:3dEigsToDT.o  ${PTAYLORLIB}
+	$(RM) $@
+	$(CC) -o 3dEigsToDT 3dEigsToDT.o   \
+		${PTAYLOR_INCLUDE_PATH} ${PTAYLOR_LINK_PATH}  \
+		$(LFLAGS) ${PTAYLORLIB} $(LLIBS) \
+      -lgsl -lgslcblas -lm
+
+3dDTtoNoisyDWI:3dDTtoNoisyDWI.o  ${PTAYLORLIB}
+	$(RM) $@
+	$(CC) -o 3dDTtoNoisyDWI 3dDTtoNoisyDWI.o   \
+		${PTAYLOR_INCLUDE_PATH} ${PTAYLOR_LINK_PATH}  \
+		$(LFLAGS) ${PTAYLORLIB} $(LLIBS) \
+      -lgsl -lgslcblas -lm
+
+3dTORTOISEtoHere:3dTORTOISEtoHere.o  ${PTAYLORLIB}
+	$(RM) $@
+	$(CC) -o 3dTORTOISEtoHere 3dTORTOISEtoHere.o   \
+		${PTAYLOR_INCLUDE_PATH} ${PTAYLOR_LINK_PATH}  \
+		$(LFLAGS) ${PTAYLORLIB} $(LLIBS) \
+      -lgsl -lgslcblas -lm
+
+3dReHo: 3dReHo.o  ${PTAYLORLIB}
+	$(RM) $@
+	$(CC) -o 3dReHo 3dReHo.o   \
+		${PTAYLOR_INCLUDE_PATH} ${PTAYLOR_LINK_PATH}  \
+		$(LFLAGS) ${PTAYLORLIB} $(LLIBS) \
+      -lgsl -lgslcblas -lm
+
+3dRSFC: 3dRSFC.o  ${PTAYLORLIB}
+	$(RM) $@
+	$(CC) -o 3dRSFC 3dRSFC.o   \
+		${PTAYLOR_INCLUDE_PATH} ${PTAYLOR_LINK_PATH}  \
+		$(LFLAGS) ${PTAYLORLIB} $(LLIBS) \
+      -lgsl -lgslcblas -lm
+
+3dROIMaker: 3dROIMaker.o  ${PTAYLORLIB}
+	$(RM) $@
+	$(CC) -o 3dROIMaker 3dROIMaker.o   \
+		${PTAYLOR_INCLUDE_PATH} ${PTAYLOR_LINK_PATH}  \
+		$(LFLAGS) ${PTAYLORLIB} $(LLIBS) \
+      -lgsl -lgslcblas -lm
+      
+#@pt_sept_2012
+map_TrackID:map_TrackID.o  ${PTAYLORLIB}
+	$(RM) $@
+	$(CC) -o map_TrackID map_TrackID.o  \
+		${PTAYLOR_INCLUDE_PATH} ${PTAYLOR_LINK_PATH}  \
+		$(LFLAGS) ${PTAYLORLIB} $(LLIBS) \
+      -lgsl -lgslcblas -lm 
+      
+
+3dMatch: 3dMatch.o  ${PTAYLORLIB}
+	$(RM) $@
+	$(CC) -o 3dMatch 3dMatch.o   \
+		${PTAYLOR_INCLUDE_PATH} ${PTAYLOR_LINK_PATH}  \
+		$(LFLAGS) ${PTAYLORLIB} $(LLIBS) \
+      -lgsl -lgslcblas -lm
+
+3dNetCorr: 3dNetCorr.o  ${PTAYLORLIB}
+	$(RM) $@
+	$(CC) -o 3dNetCorr 3dNetCorr.o   \
+		${PTAYLOR_INCLUDE_PATH} ${PTAYLOR_LINK_PATH}  \
+		$(LFLAGS) ${PTAYLORLIB} $(LLIBS) \
+      -lgsl -lgslcblas -lm
+
+# not distributed 25 Aug 2020
+1dDW_Grad_o_Mat: 1dDW_Grad_o_Mat.o  ${PTAYLORLIB}
+	$(RM) $@
+	$(CC) -o 1dDW_Grad_o_Mat 1dDW_Grad_o_Mat.o   \
+		${PTAYLOR_INCLUDE_PATH} ${PTAYLOR_LINK_PATH}  \
+		$(LFLAGS) ${PTAYLORLIB} $(LLIBS) \
+      -lgsl -lgslcblas -lm
+
+1dDW_Grad_o_Mat++: 1dDW_Grad_o_Mat++.o  ${PTAYLORLIB}
+	$(RM) $@
+	$(CC) -o 1dDW_Grad_o_Mat++ 1dDW_Grad_o_Mat++.o   \
+		${PTAYLOR_INCLUDE_PATH} ${PTAYLOR_LINK_PATH}  \
+		$(LFLAGS) ${PTAYLORLIB} $(LLIBS) \
+      -lgsl -lgslcblas -lm
+
+3dVecRGB_to_HSL:3dVecRGB_to_HSL.o  ${PTAYLORLIB}
+	$(RM) $@
+	$(CC) -o 3dVecRGB_to_HSL 3dVecRGB_to_HSL.o   \
+		${PTAYLOR_INCLUDE_PATH} ${PTAYLOR_LINK_PATH}  \
+		$(LFLAGS) ${PTAYLORLIB} $(LLIBS) \
+      -lgsl -lgslcblas -lm
+
+3ddot_beta: 3ddot_beta.o  ${PTAYLORLIB}
+	$(RM) $@
+	$(CC) -o 3ddot_beta 3ddot_beta.o   \
+		${PTAYLOR_INCLUDE_PATH} ${PTAYLOR_LINK_PATH}  \
+		$(LFLAGS) ${PTAYLORLIB} $(LLIBS) \
+      -lgsl -lgslcblas -lm
+
+3dLombScargle: 3dLombScargle.o  ${PTAYLORLIB}
+	$(RM) $@
+	$(CC) -o 3dLombScargle 3dLombScargle.o   \
+		${PTAYLOR_INCLUDE_PATH} ${PTAYLOR_LINK_PATH}  \
+		$(LFLAGS) ${PTAYLORLIB} $(LLIBS) \
+      -lgsl -lgslcblas -lm
+
+3dAmpToRSFC: 3dAmpToRSFC.o  ${PTAYLORLIB}
+	$(RM) $@
+	$(CC) -o 3dAmpToRSFC 3dAmpToRSFC.o   \
+		${PTAYLOR_INCLUDE_PATH} ${PTAYLOR_LINK_PATH}  \
+		$(LFLAGS) ${PTAYLORLIB} $(LLIBS) \
+      -lgsl -lgslcblas -lm
+
+3dSpaceTimeCorr: 3dSpaceTimeCorr.o  ${PTAYLORLIB}
+	$(RM) $@
+	$(CC) -o 3dSpaceTimeCorr 3dSpaceTimeCorr.o   \
+		${PTAYLOR_INCLUDE_PATH} ${PTAYLOR_LINK_PATH}  \
+		$(LFLAGS) ${PTAYLORLIB} $(LLIBS) \
+      -lgsl -lgslcblas -lm
+
+3dZipperZapper: 3dZipperZapper.o  ${PTAYLORLIB}
+	$(RM) $@
+	$(CC) -o 3dZipperZapper 3dZipperZapper.o   \
+		${PTAYLOR_INCLUDE_PATH} ${PTAYLOR_LINK_PATH}  \
+		$(LFLAGS) ${PTAYLORLIB} $(LLIBS) \
+      -lgsl -lgslcblas -lm
+
+3dSliceNDice: 3dSliceNDice.o  ${PTAYLORLIB}
+	$(RM) $@
+	$(CC) -o 3dSliceNDice 3dSliceNDice.o   \
+		${PTAYLOR_INCLUDE_PATH} ${PTAYLOR_LINK_PATH}  \
+		$(LFLAGS) ${PTAYLORLIB} $(LLIBS) \
+      -lgsl -lgslcblas -lm
+
+3dClusterize: 3dClusterize.o  ${PTAYLORLIB}
+	$(RM) $@
+	$(CC) -o 3dClusterize 3dClusterize.o   \
+		${PTAYLOR_INCLUDE_PATH} ${PTAYLOR_LINK_PATH}  \
+		$(LFLAGS) ${PTAYLORLIB} $(LLIBS) \
+      -lgsl -lgslcblas -lm
+
+#### -------------------- OMP building -----------------------
+
+3dDWUncert.o: 3dDWUncert.c
+	$(RM) $@
+	$(CCOMP_PT) -c  3dDWUncert.c $(PTAYLOR_INCLUDE_PATH)
+
+3dDWUncert:3dDWUncert.o  ${PTAYLORLIB}
+	$(RM) $@
+	$(CCOMP_PT) -o 3dDWUncert 3dDWUncert.o   \
+		${PTAYLOR_INCLUDE_PATH} ${PTAYLOR_LINK_PATH}  \
+		$(LFLAGS) ${PTAYLORLIB} $(LLIBS) \
+     -lgsl -lgslcblas -lm
+
+#### -------------------- OMP building -----------------------
+
+
+
+
+
+FC_PROGRAMS = 3dTrackID 3dDWUncert 3dReHo 3dRSFC map_TrackID \
+       3dROIMaker 3dMatch 3dNetCorr 1dDW_Grad_o_Mat++ \
+       3dEigsToDT \
+       3dDTtoNoisyDWI 3dTORTOISEtoHere 3dVecRGB_to_HSL 3ddot_beta \
+       3dLombScargle 3dAmpToRSFC 3dSpaceTimeCorr 3dZipperZapper \
+       3dSliceNDice 3dClusterize
+
+progs: $(FC_PROGRAMS)
+
+echo_progs:
+	echo "$(FC_PROGRAMS)" | tr ' ' '\n' | sort | uniq 
+
+all: ${PTAYLORLIB} progs install 
+
+afni_all: ${PTAYLORLIB} progs
+	@if [ -f  libtracktools.a ]; then cp -p libtracktools.a ../; fi;	
+ 
+
+install:
+	@echo Installing Binaries...
+	@if [ ! -d $(INSTALLDIR) ]; then $(MKDIR) -p $(INSTALLDIR); echo WARNING: directory $(INSTALLDIR) has been created from ptaylor directory. ; fi;
+	@if [ -f  3dTrackID ]; then mv 3dTrackID ${INSTALLDIR}; fi;
+	@if [ -f  3dDWUncert ]; then mv 3dDWUncert ${INSTALLDIR}; fi;
+	@if [ -f  3dReHo ]; then mv 3dReHo ${INSTALLDIR}; fi;
+	@if [ -f  3dRSFC ]; then mv 3dRSFC ${INSTALLDIR}; fi;
+	@if [ -f  map_TrackID ]; then mv map_TrackID ${INSTALLDIR}; fi; 
+	@if [ -f  3dROIMaker ]; then mv 3dROIMaker ${INSTALLDIR}; fi; 
+	@if [ -f  3dMatch ]; then mv 3dMatch ${INSTALLDIR}; fi; 
+	@if [ -f  3dNetCorr ]; then mv 3dNetCorr ${INSTALLDIR}; fi;
+	@if [ -f  1dDW_Grad_o_Mat++ ]; then mv 1dDW_Grad_o_Mat++ ${INSTALLDIR}; fi;
+	@if [ -f  3dEigsToDT ]; then mv 3dEigsToDT ${INSTALLDIR}; fi;
+	@if [ -f  3dDTtoNoisyDWI ]; then mv 3dDTtoNoisyDWI ${INSTALLDIR}; fi;
+	@if [ -f  3dTORTOISEtoHere ]; then mv 3dTORTOISEtoHere ${INSTALLDIR}; fi;
+	@if [ -f  3dVecRGB_to_HSL ]; then mv 3dVecRGB_to_HSL ${INSTALLDIR}; fi;
+	@if [ -f  3ddot_beta ]; then mv 3ddot_beta ${INSTALLDIR}; fi; 
+	@if [ -f  3dLombScargle ]; then mv 3dLombScargle ${INSTALLDIR}; fi; 
+	@if [ -f  3dAmpToRSFC ]; then mv 3dAmpToRSFC ${INSTALLDIR}; fi; 
+	@if [ -f  3dSpaceTimeCorr ]; then mv 3dSpaceTimeCorr ${INSTALLDIR}; fi; 
+	@if [ -f  3dZipperZapper ]; then mv 3dZipperZapper ${INSTALLDIR}; fi;
+	@if [ -f  3dSliceNDice ]; then mv 3dSliceNDice ${INSTALLDIR}; fi;
+	@if [ -f  3dClusterize ]; then mv 3dClusterize ${INSTALLDIR}; fi;
+
+afni_install:
+	@echo Installing Binaries...
+	@if [ ! -d $(INSTALLDIR) ]; then $(MKDIR) -p $(INSTALLDIR); echo WARNING: directory $(INSTALLDIR) has been created from ptaylor directory. ; fi;
+	@if [ -f  3dTrackID ]; then mv 3dTrackID ${INSTALLDIR}; fi;
+	@if [ -f  3dDWUncert ]; then mv 3dDWUncert ${INSTALLDIR}; fi;
+	@if [ -f  3dReHo ]; then mv 3dReHo ${INSTALLDIR}; fi;
+	@if [ -f  3dRSFC ]; then mv 3dRSFC ${INSTALLDIR}; fi;
+	@if [ -f  map_TrackID ]; then mv map_TrackID ${INSTALLDIR}; fi; 
+	@if [ -f  3dROIMaker ]; then mv 3dROIMaker ${INSTALLDIR}; fi; 
+	@if [ -f  3dMatch ]; then mv 3dMatch ${INSTALLDIR}; fi; 
+	@if [ -f  3dNetCorr ]; then mv 3dNetCorr ${INSTALLDIR}; fi;
+	@if [ -f  1dDW_Grad_o_Mat++ ]; then mv 1dDW_Grad_o_Mat++ ${INSTALLDIR}; fi;
+	@if [ -f  3dEigsToDT ]; then mv 3dEigsToDT ${INSTALLDIR}; fi;
+	@if [ -f  3dDTtoNoisyDWI ]; then mv 3dDTtoNoisyDWI ${INSTALLDIR}; fi;
+	@if [ -f  3dTORTOISEtoHere ]; then mv 3dTORTOISEtoHere ${INSTALLDIR}; fi;
+	@if [ -f  3dVecRGB_to_HSL ]; then mv 3dVecRGB_to_HSL ${INSTALLDIR}; fi;
+	@if [ -f  3ddot_beta ]; then mv 3ddot_beta ${INSTALLDIR}; fi; 
+	@if [ -f  3dLombScargle ]; then mv 3dLombScargle ${INSTALLDIR}; fi; 
+	@if [ -f  3dAmpToRSFC ]; then mv 3dAmpToRSFC ${INSTALLDIR}; fi; 
+	@if [ -f  3dSpaceTimeCorr ]; then mv 3dSpaceTimeCorr ${INSTALLDIR}; fi; 
+	@if [ -f  3dZipperZapper ]; then mv 3dZipperZapper ${INSTALLDIR}; fi;
+	@if [ -f  3dSliceNDice ]; then mv 3dSliceNDice ${INSTALLDIR}; fi;
+	@if [ -f  3dClusterize ]; then mv 3dClusterize ${INSTALLDIR}; fi;

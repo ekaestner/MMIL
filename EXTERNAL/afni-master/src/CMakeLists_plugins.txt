@@ -1,0 +1,106 @@
+set(CORE_PLUGINS plug_afnihistory plug_crender
+plug_drawdset plug_histog plug_histog_multi plug_notes plug_nth_dataset
+plug_nudge plug_null plug_realtime plug_second_dataset plug_tag
+plug_ttget plug_vol2sur)
+
+set_os_flags(plug_threshold.c)
+set_os_flags(plug_maskcalc.c)
+foreach(
+  target
+  plug_3Ddump_V2
+  plug_3ddot
+  plug_3ddup
+  plug_4Ddump
+  plug_L1fit
+  plug_afnihistory
+  plug_aslA3D3
+  plug_betafit
+  plug_clust
+  plug_compress
+  plug_coorder
+  plug_copy
+  plug_crender
+  plug_deconvolve
+  plug_delay_V2
+  plug_drawdset
+  plug_edit
+  plug_extract
+  plug_fourier
+  plug_hemisub
+  plug_histog
+  plug_histog_multi
+  plug_imreg
+  plug_lsqfit
+  plug_maskave
+  plug_maskcalc
+  plug_notes
+  plug_nth_dataset
+  plug_nudge
+  plug_null
+  plug_permtest
+  plug_power
+  plug_realtime
+  plug_rename
+  plug_reorder
+  plug_roiedit
+  plug_roiplot
+  plug_second_dataset
+  plug_stats
+  plug_stavg
+  plug_tag
+  plug_threshold
+  plug_ttget
+  plug_vol2surf
+  plug_volreg
+  plug_wavelets
+  plug_zeropad
+)
+  # Filter plugins if requested
+  if(NOT (COMP_ALL_PLUGINS))
+    if(NOT ${target} IN_LIST CORE_PLUGINS)
+      continue()
+    endif()
+  endif()
+
+  # Add plugin to build
+  add_afni_plugin(${target} ${target}.c)
+  target_link_libraries(
+    ${target}
+    PRIVATE
+    AFNI::mrix
+  )
+  endforeach(target)
+
+
+add_afni_plugin(plug_maxima maxima.c plug_maxima.c)
+target_link_libraries(plug_maxima PRIVATE AFNI::mrix)
+add_afni_plugin(plug_retroicor plug_retroicor.c retroicor.c)
+target_link_libraries(plug_retroicor PRIVATE AFNI::mrix)
+
+
+add_afni_plugin(
+  plug_3dsvm
+  svm/3dsvm_common.c svm/svm_learn.c svm/svm_hideo.c svm/plug_3dsvm.c svm/svm_common.c
+ )
+target_link_libraries(plug_3dsvm 
+  PRIVATE
+  AFNI::mrix
+  )
+
+foreach(target plug_scatplot plug_nlfit)
+  add_afni_plugin(${target} ${target}.c)
+  target_link_libraries(${target} 
+    PRIVATE
+    AFNI::mrix
+    )
+endforeach(target)
+
+if(COMP_COREBINARIES)
+  foreach(target afni_open aiv Xphace)
+    add_afni_executable(${target} ${target}.c)
+    target_link_libraries(${target} 
+      PRIVATE
+        AFNI::mrix
+    )
+  endforeach(target)
+endif()

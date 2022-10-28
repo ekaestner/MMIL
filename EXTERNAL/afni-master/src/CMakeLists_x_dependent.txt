@@ -1,0 +1,105 @@
+# ##### Build X dependent programs...
+
+add_subdirectory(svm)
+add_subdirectory(leej3)
+add_afni_library(
+  mrix
+  bbox.c
+  coxplot/plot_motif.c
+  coxplot/plot_strip.c
+  coxplot/plot_ts.c
+  coxplot/plot_x11.c
+  mri_coxplot.c
+  display.c
+  imseq.c
+  LiteClue.c
+  pbar_color_defs.c
+  suma_help.c
+  xdraw.c
+  xim.c
+  xutil.c
+  xutil_webber.c
+)
+set_target_properties(
+  mrix PROPERTIES PUBLIC_HEADER "imseq.h;display.h;xim.h;bbox.h;xutil.h"
+)
+target_link_libraries(
+  mrix
+  PUBLIC
+           AFNI::mri
+           AFNI::coxplot
+           Motif::Motif
+           X11::Xt
+           X11::X11
+  PRIVATE
+          $<IF:$<BOOL:${USE_SYSTEM_XMHTML}>,XmTHML::XmHTML,AFNI::XmHTML>
+)
+
+set_source_files_properties(
+  afni.c afni_version.c PROPERTIES COMPILE_DEFINITIONS "SHOWOFF"
+)
+
+add_library(
+  afni_all_objects OBJECT
+  $<TARGET_OBJECTS:afsliceobjs>
+  $<TARGET_OBJECTS:parser>
+  afni.c
+  afni_cluster.c
+  afni_driver.c
+  afni_environ.c
+  afni_filer.c
+  afni_fimfunc.c
+  afni_fimmer.c
+  afni_friends.c
+  afni_func.c
+  afni_graph.c
+  afni_lock.c
+  afni_logger.c
+  afni_niml.c
+  afni_pcor.c
+  afni_plugin.c
+  afni_plugout.c
+  afni_ports.c
+  afni_pplug_1dfunc.c
+  afni_pplug_2dfunc.c
+  afni_pplug_env.c
+  afni_pplug_instacalc.c
+  afni_pplug_instacorr.c
+  afni_pplug_tstat.c
+  afni_receive.c
+  afni_setup.c
+  afni_splash.c
+  afni_suma.c
+  afni_sumafunc.c
+  afni_transforms.c
+  afni_ttren.c
+  afni_vedit.c
+  afni_version.c
+  afni_vol2surf.c
+  afni_warp.c
+  afni_whelp.c
+  afni_widg.c
+  mcw_graf.c
+  pbar.c
+)
+target_link_libraries(afni_all_objects
+  PUBLIC
+    libheaders
+  PRIVATE
+    whats_my_exepath
+    AFNI::mrix
+    ${CMAKE_DL_LIBS}
+    )
+
+
+add_afni_executable(afni $<TARGET_OBJECTS:afni_all_objects>)
+target_link_options(afni PRIVATE "-rdynamic")
+target_link_libraries(
+  afni
+  PRIVATE
+    afni_all_objects
+    whats_my_exepath
+    NIFTI::nifti2
+    NIFTI::nifticdf
+)
+

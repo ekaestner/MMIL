@@ -1,0 +1,9 @@
+Logfile for pctsurfcon
+Wed Oct 26 09:05:30 PDT 2016
+setenv SUBJECTS_DIR /scratch/users/chrisgor/ICBM2009c_freesurfer/subjects_dir
+cd /scratch/users/chrisgor/ICBM2009c_freesurfer/subjects_dir/ICBM2009c_fs6/scripts
+/opt/freesurfer/bin/pctsurfcon
+$Id: pctsurfcon,v 1.15 2016/02/12 21:43:15 zkaufman Exp $
+Linux sh-0-28.local 2.6.32-573.12.1.el6.x86_64 #1 SMP Tue Dec 15 21:19:08 UTC 2015 x86_64 x86_64 x86_64 GNU/Linux
+FREESURFER_HOME /opt/freesurfer
+Cleaning up

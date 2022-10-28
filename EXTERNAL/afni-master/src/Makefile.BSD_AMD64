@@ -1,0 +1,108 @@
+##################################################################
+#
+# This Makefile is tested with FreeBSD 5.3 AMD64.  Performance of
+# the AMD64 (1 megabyte cache) for large 3dDeconvolve analyses is 
+# very similar to PowerMac G5 systems.
+#
+# Contributed by: 
+#   Jason W. Bacon
+#   Medical College of Wisconsin
+#
+# Before compiling afni, install the following packages:
+#
+#   open-motif
+# 
+# To compile SUMA you will also need the following packages installed.
+#
+#   libiconv
+#   gettext
+#   gmake
+#
+#   Note:   SUMA has display problems on FreeBSD 4.8 and below that I 
+#           have not found time to resolve.  I believe they are related
+#           to the version of the GL libraries that ship with 4.x.
+#
+#           SUMA works fine under FreeBSD 4.9 with GeForce drivers installed
+#           and under FreeBSD 5.1.
+#
+#   Note:   The SUMA build process (as of Aug, 2003) requires GNU make,
+#           which is /usr/local/bin/gmake on BSD systems.  
+#           Be sure the MAKE macro below is set to gmake.
+
+MAKE   = gmake
+CCDEBS = -DAFNI_DEBUG -DIMSEQ_DEBUG -DDISPLAY_DEBUG -DTHD_DEBUG
+CEXTRA = -Wcomment -Wformat -DUSE_TRACING -fomit-frame-pointer -DHAVE_XDBE
+CC     = gcc -O2 -DREAD_WRITE_64 -fPIC  -DFreeBSD -DNO_GAMMA $(CEXTRA)
+CCVOL  = gcc -O2 -DREAD_WRITE_64 -fPIC  -DFreeBSD -DNO_GAMMA $(CEXTRA)
+CCFAST = gcc -O2 -DREAD_WRITE_64 -fPIC  -DFreeBSD -DNO_GAMMA $(CEXTRA)
+CCMIN  = gcc
+CCD    = $(CC) $(CCDEBS)
+CCOLD  = $(CC)
+
+# OpenBSD: /usr/local/include/Xm
+IFLAGS = -I. -I/usr/X11R6/include -I/usr/local/include
+LFLAGS = -s -L. -L/usr/X11R6/lib
+
+CCSVD  = gcc -O0 -fPIC
+
+
+PLUGIN_SUFFIX = so
+PLUGIN_LFLAGS = -shared
+PLUGIN_CC     = $(CC)
+PLFLAGS       = -s -rdynamic -L. -L/usr/X11R6/lib
+
+AR     = /usr/bin/ar
+RANLIB = /usr/bin/ranlib
+TAR    = /usr/bin/tar
+MKDIR  = /bin/mkdir
+TAPE   = /dev/sa0
+GZIP   = /bin/gzip
+LD     = gcc
+
+RM = /bin/rm -f
+MV = /bin/mv -f
+CP = /bin/cp -f
+
+LINT = /usr/bin/lint -a -b -u -v -x $(IFLAGS) $(CCDEFS)
+
+# INSTALLDIR should match the extension on the Makefile name
+INSTALLDIR = ./BSD_AMD64
+LIBDIR = $(INSTALLDIR)
+
+# for dynamic linking
+
+# LLIBS  = -lmri -lf2c -lXm -lXp -lXpm -lXext -lXmu -lXt -lX11 -lm
+
+# for static linking to Motif, dynamic to all else
+
+LLIBS  = -lmri -lf2c -lXm -lXp -lXpm -lXext -lXmu -lXt -lX11 -lm
+
+# for static linking, as far as possible
+
+# LLIBS = -lmri -lf2c                \
+#         /usr/X11R6/lib/libXm.a   \
+#        /usr/X11R6/lib/libXpm.a  \
+#        /usr/X11R6/lib/libXext.a \
+#        /usr/X11R6/lib/libXmu.a  \
+#        /usr/X11R6/lib/libXt.a   \
+#        /usr/X11R6/lib/libSM.a   \
+#        /usr/X11R6/lib/libICE.a  \
+#        /usr/X11R6/lib/libX11.a  \
+#        /usr/lib/libm.a          \
+#        /usr/lib/libc.a
+
+# vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+# For suma (NO STATIC LINKING OF GL libs)
+SUMA_INCLUDE_PATH = -I/usr/X11R6/include -I/usr/local/include -I./ -I../ -I../niml/ -Igts/src 
+SUMA_LINK_PATH = -L/usr/lib -L/usr/X11R6/lib -L../
+#use -lGLw if you have libGLw.a or libGLw.so* or 
+#  -lMesaGLw if you have Mesa's version (libMesaGLw*) of libGLw
+SUMA_LINK_LIB = -lXm -lGLw -lGLU -lGL -lXmu -lXp -lXt -lXext -lX11 -lm 
+SUMA_MAKEFILE_NAME = SUMA_Makefile
+SUMA_BIN_ARCHIVE = SUMA_Linux.tar
+SUMA_MDEFS = -DSUMA_GL_NO_CHECK_FRAME_BUFFER
+# ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+###############################################################
+
+include Makefile.INCLUDE

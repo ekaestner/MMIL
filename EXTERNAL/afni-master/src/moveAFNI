@@ -1,0 +1,52 @@
+#!/bin/tcsh
+
+# script to put changed files from afni_src/ into the current directory
+
+set doit = 0
+if( $#argv == 1 ) then
+  if( $argv[1] == "doit" ) set doit = 1
+endif
+
+set localdir = afni_src
+set ftpdir   = $cwd
+
+echo "================================================"
+echo "Starting to install $localdir into $ftpdir"
+
+cd $localdir
+
+echo "Starting to scan for changed files"
+
+@ ttt = 0
+foreach fname ( `find . -print | grep -v CVS | grep -v moveAFNI` )
+
+   if( -f $fname ) then
+      if( -f $ftpdir/$fname ) then
+         cmp -s $ftpdir/$fname $fname
+         set mmm = $status
+      else
+         set mmm = 1
+      endif
+      if( $mmm && $doit ) then
+         echo "/bin/cp -f $fname $ftpdir/$fname"
+               /bin/cp -f $fname $ftpdir/$fname
+         @ ttt = $ttt + 1
+      else if( $mmm ) then
+         echo "WOULD /bin/cp -f $fname $ftpdir/$fname"
+      endif
+   else if( -d $fname ) then
+      if( ! -d $ftpdir/$fname ) then
+         if( $doit ) then
+            echo "/bin/mkdir -p $ftpdir/$fname"
+                  /bin/mkdir -p $ftpdir/$fname
+         else
+            echo "WOULD /bin/mkdir -p $ftpdir/$fname"
+         endif
+      endif
+   endif
+
+end
+
+cd -
+
+if( $doit ) echo "`date`: Put ${ttt} files from ${localdir} to ${ftpdir}"

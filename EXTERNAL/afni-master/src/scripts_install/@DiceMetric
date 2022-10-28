@@ -1,0 +1,483 @@
+#!/bin/tcsh -fe
+
+set stat = 0
+set RNS = `3dnewid -fun`
+set log = /tmp/${RNS}.MLT.log
+
+
+goto PARSE_COMMAND
+Ret_PARSE_COMMAND:
+
+set bparse = `@parse_afni_name $base`
+set vol1 = $bparse[1]/$bparse[2]
+set view = `@GetAfniView $base`
+set outlist = ()
+set idset = 1
+foreach dset ($dsets) 
+   set dparse = `@parse_afni_name $dset`
+   set vol2o = $dparse[1]/$dparse[2]
+   set dparse = ($dparse[1] $dparse[2] )
+   set viewo = "`@GetAfniView $dset`"
+   #mask by base
+   switch  ($maskby)
+      case 2:
+         set vol2m = {$RNS}.bma
+         if ($usedsetvals == 1) then
+            3dhistog -omit 0 -overwrite \
+                     -unq /tmp/${RNS}.unq.1D $dset >& /dev/null
+            if ($status) goto BEND
+            set klist = `1dcat -form '%d,' /tmp/${RNS}.unq.1D\' | sed 's/,$//'`
+            rm -f /tmp/${RNS}.unq.1D
+         endif
+         echo $klist
+         3dcalc -a $vol1${view} -b $vol2o$viewo -overwrite \
+                  -expr "amongst(a,$klist)*b"   \
+                  -prefix $vol2m >& $log  
+         set viewm = $view
+         breaksw
+      case 1:
+         set vol2m = {$RNS}.bma
+         3dcalc -a $vol1${view} -b $vol2o$viewo -overwrite -expr 'step(a)*b'   \
+                  -prefix $vol2m >& $log  
+         set viewm = $view
+         breaksw
+      case 0:
+         set vol2m = $vol2o
+         set viewm = $viewo
+         breaksw
+      default:
+         echo "Bad maskby of $maskby"
+         goto BEND
+         breaksw
+   endsw
+   if (`@CheckForAfniDset $vol2m$viewm` < 2) then
+      echo "Failed to create masked set $vol2m"
+      goto BEND
+   endif
+   
+   set iidset = `printf %02d $idset`
+   if ($SaveEq) then
+      set aib = $dparse[1]/$bparse[2].EQ.$dparse[2]
+   endif
+   if ($SaveDiff) then
+      set anib = $dparse[1]/$bparse[2].DF.$dparse[2]
+   endif
+   
+   #You don't need vol2m instead of vol2o these two commands because
+   # you are multiplying by a, effectively masking.
+   # Just keeps the history cleaner...
+   3dcalc   -datum short -overwrite \
+            -a $vol1${view} -b $vol2o${viewo} -expr 'a*equals(a,b)' \
+            -prefix  ${aib}  >& $log 
+   3dcalc   -datum short -overwrite \
+            -a $vol1${view} -b $vol2o${viewo} -expr 'a*(1-equals(a,b))' \
+            -prefix  ${anib} >& $log                      
+   
+   
+      3dROIstats -1Dformat -mask_f2short -numROI ${numROI} -zerofill 0\
+                  -nzvoxels -mask ${aib}$view ${aib}$view > {$RNS}.aib.1D
+      3dROIstats -1Dformat -mask_f2short -numROI ${numROI} -zerofill 0\
+                  -nzvoxels -mask $vol1$view $vol1$view >> {$RNS}.aib.1D
+      3dROIstats -1Dformat -mask_f2short -numROI ${numROI} -zerofill 0\
+                  -nzvoxels -mask $vol2m$viewm $vol2m$viewm >> {$RNS}.aib.1D
+
+   set nvals = `3dnvals -all {$RNS}.aib.1D`
+   set N_cl = `ccalc -i $nvals[4] / 2`
+
+   set cl = 1
+   set icl = 0
+   set dcar = ()
+   set clar = ()
+   while ($cl <= $N_cl)
+      set in = `ccalc -i "2*$icl"`
+      set cl_num = `1dcat {$RNS}.aib.1D"[$in]" | uniq`
+      if ("$#cl_num" != 1 && "$#cl_num" != 0) then
+         if ($ignore_bad) then
+            if ($#forced_list > 0) then
+               #Check if $cl is mandated
+               set mm = (`1dcat "1D:$forced_list $cl" | sort -n | uniq`)
+               if ($#mm == $#forced_list) then
+                  set clar = ($clar $cl)
+                  set dcar = ($dcar 0)
+               endif
+            else
+               echo "#Bad table $cl_num, ignoring it"
+            endif
+         else
+            echo "#Bad table $cl_num, filling with 0s"
+            set clar = ($clar $cl)
+            set dcar = ($dcar 0)
+         endif
+      else      
+         if ("$cl_num" != 0) then
+            set in = `ccalc -i "2*$icl+1"`
+            set nums = `1dcat {$RNS}.aib.1D"[$in]"`
+            set dice = `ccalc "2*$nums[1]/($nums[2]+$nums[3])"`
+            set clar = ($clar $cl_num)
+            set dcar = ($dcar $dice)
+         else if ($#forced_list > 0) then
+            #Check if $cl is mandated
+            set mm = (`1dcat "1D:$forced_list $cl" | sort -n | uniq`)
+            if ($#mm == $#forced_list) then
+               set clar = ($clar $cl)
+               set dcar = ($dcar 0)
+            endif
+         endif 
+      endif
+      @ cl ++
+      @ icl ++
+   end
+
+   set labar = ()
+   foreach cl ($clar)
+      if ($ltfile != '') then
+         set labar = ($labar `@MakeLabelTable -word_label_match \
+                                       -labeltable $ltfile -klabel $cl` ',')
+      else
+         set labar = ($labar DOH.$cl,)
+      endif
+      set labar = `echo $labar | sed 's/,$//'`
+   end
+   
+   if ($idset == 1) then
+      set outlist = ($outlist {$RNS}.dice_${iidset}.1D)
+   else 
+      set outlist = ("$outlist" {$RNS}.dice_${iidset}.1D'[1]')
+   endif
+   echo "#cl   #dice($vol2o VS $vol1)" > {$RNS}.dice_${iidset}.1D
+   echo "#Labels: $labar" >> {$RNS}.dice_${iidset}.1D
+   set cnt = 1
+   foreach cl ($clar)
+      echo "$cl   $dcar[$cnt]  #$labar[$cnt]" >> {$RNS}.dice_${iidset}.1D
+      @ cnt ++
+   end
+   cat {$RNS}.dice_${iidset}.1D
+   @ idset ++
+end
+
+COMBINE:
+if ("$prefix" !~ "") then
+   set lll = ''
+   if ($ltfile != '') then
+      set lll = (`@MakeLabelTable -all_labels -labeltable $ltfile`)
+   endif
+   echo '#<DICE' > $prefix.1D
+   echo "#ni_type = 'int,$#dsets*float'" >> $prefix.1D
+   echo "#ni_dimen= '$#clar'" >> $prefix.1D
+   echo "#Command='`basename $0` $argv[*]'" >> $prefix.1D
+   echo "#Col.0 = 'ROI label in $base ($lll)'" >> $prefix.1D
+   set cnt = 1
+   foreach dset ($dsets)
+      set bp = $base:h
+   echo "#Col.$cnt.Command = 'Dice(`@GetAfniPrefix $dset` VS $base (in $bp))' " \
+           >> $prefix.1D
+   echo "#Col.$cnt.Dset = '$dset'" >> $prefix.1D   
+      @ cnt ++
+   end
+   set cnt=1
+   foreach cl ($clar)
+      echo "#Label.$cl = '$labar[$cnt]'">> $prefix.1D
+      @ cnt ++
+   end
+   echo "#>" >> $prefix.1D
+   set noglob
+   1dcat $outlist >> $prefix.1D
+   echo "#</DICE>" >> $prefix.1D
+   unset noglob
+endif 
+
+goto END
+
+PARSE_COMMAND:
+	
+   #continue parsing for new options
+   set numROI = 0
+   set dsets = ()
+   set base = ''
+   set prefix = ''
+   set cleanup = 1
+   set cnt = 1
+   set aib = {$RNS}.aib
+   set anib = {$RNS}.anib
+   set SaveEq=0
+   set SaveDiff=0
+   set forced_list = ()
+   set Narg = $#argv
+   set maskby = 0
+   set ltfile = ''
+   set llist = ()
+   set usedsetvals = 0
+   set ignore_bad = 0
+   
+   if ("$1" == '' || "$1" == '-h' || "$1" == '-help' || "$2" == '') then
+	   goto USAGE
+   endif
+
+   while ($cnt <= $Narg)
+		set donext = 1;
+      if ($donext && "$argv[$cnt]" == "-max_N_roi") then
+         set pLoc = $cnt		
+		   if ($pLoc == $Narg) then
+				echo "Need integer after -max_N_roi"
+            goto END
+			else
+            @ cnt ++
+            set numROI = "$argv[$cnt]"
+            set donext = 0	
+         endif	
+      endif
+      
+      if ($donext && "$argv[$cnt]" == "-prefix") then
+         set pLoc = $cnt		
+		   if ($pLoc == $Narg) then
+				echo "Need a string after -prefix"
+            goto END
+			else
+            @ cnt ++
+            #set prefix = `@GetAfniPrefix "$argv[$cnt]"`
+            set prefix = `@NoExt $argv[$cnt] 1D`
+            set donext = 0	
+         endif	
+      endif
+      
+      if ($donext && "$argv[$cnt]" == "-base") then
+         set pLoc = $cnt		
+		   if ($pLoc == $Narg) then
+				echo "Need a volume after -base"
+            goto END
+			else
+            @ cnt ++
+            set base = "$argv[$cnt]"
+            if (`@CheckForAfniDset $base`<2) then
+               echo "Cannot find dset $argv[$cnt]"
+               goto BEND
+            endif
+            set donext = 0	
+         endif	
+      endif
+      
+      if ($donext && "$argv[$cnt]" == "-do_not_mask_by_base") then
+         set maskby = 0
+         set donext = 0	
+      endif
+
+      if ($donext && "$argv[$cnt]" == "-ignore_bad") then
+         set ignore_bad = 1
+         set donext = 0	
+      endif
+      
+      if ($donext && "$argv[$cnt]" == "-mask_by_base") then
+         set maskby = 1
+         set donext = 0	
+      endif
+      
+      if ($donext && "$argv[$cnt]" == "-mask_by_dset_vals") then
+         set maskby = 2
+         set usedsetvals = 1
+         set donext = 0	
+      endif
+      
+      if ($donext && "$argv[$cnt]" == "-mask_by_labels") then
+         set maskby = 2
+         set nneed = `ccalc -i $cnt + 1`
+         if ($nneed > $Narg) then
+				echo "Need at least 1 label after -mask_by_labels"
+            goto BEND
+			else
+				@ cnt ++
+            set llist = ()
+            while (("$argv[$cnt]" !~ -*) && ($cnt <= $Narg))
+               set llist = ($llist $argv[$cnt])
+               @ cnt ++
+            end
+            if ("$argv[$cnt]" =~ -*) @ cnt --
+            set NxtInd = $cnt
+			endif
+         set donext = 0	
+      endif
+      
+      if ($donext && "$argv[$cnt]" == "-labeltable") then
+         set pLoc = $cnt		
+		   if ($pLoc == $Narg) then
+				echo "Need a file after -labeltable"
+            goto END
+			else
+            @ cnt ++
+            set ltfile = "$argv[$cnt]"
+            set donext = 0	
+         endif	
+      endif   
+         
+      if ($donext && "$argv[$cnt]" == "-forceoutput") then
+         set pLoc = $cnt		
+		   if ($pLoc == $Narg) then
+				echo "Need a file after -forceoutput"
+            goto END
+			else
+            @ cnt ++
+            set forced_list = \
+               (`@MakeLabelTable -all_keys -labeltable $argv[$cnt]`)
+            set donext = 0	
+         endif	
+      endif   
+         
+      if ($donext && "$argv[$cnt]" == "-dsets") then
+         set pLoc = $cnt		
+		   if ($pLoc == $Narg) then
+				echo "Need at least a volume after -dsets"
+            goto END
+			else
+            @ cnt ++
+            set dsets = ($argv[$cnt-])
+            foreach fol ($dsets)
+               set exx = `@CheckForAfniDset $fol`
+               if ( $status) then
+                  echo "Error follower dset $fol cannot be found"
+                  echo "Note that option -dsets must be "
+                  echo "the last one on the command line"
+                  goto END
+               endif
+               if ( $exx < 2) then
+                  echo "Error follower dset $fol appears not to be a dset"
+                  echo "Note that option -dsets must be "
+                  echo "the last one on the command line"
+                  goto END
+               endif
+            end
+            set cnt = `expr $cnt + $#dsets - 1`
+            set donext = 0	
+         endif	
+      endif
+      
+      
+      if ($donext && "$argv[$cnt]" == "-keep_tmp") then
+         set cleanup = 0;		
+         set donext = 0		
+      endif
+      if ($donext && "$argv[$cnt]" == "-save_match") then
+         set SaveEq = 1;		
+         set donext = 0		
+      endif
+      if ($donext && "$argv[$cnt]" == "-save_diff") then
+         set SaveDiff = 1;		
+         set donext = 0		
+      endif
+       if ($donext && "$argv[$cnt]" == "-echo") then
+         set echo		
+         set donext = 0		
+      endif
+     
+      #ADD NO NEW OPTIONS BELOW THIS LINE
+      
+      if ($donext == 1 && $cnt == 1) then
+	      set base = "$argv[$cnt]"
+         set donext = 0
+      endif      
+      
+      if ($donext == 1 && $cnt == 2) then
+         set dsets = ("$argv[$cnt]")
+         set donext = 0
+      endif         
+
+      if ($donext == 1) then
+         echo "Error: Option or parameter '$argv[$cnt]' not understood"
+         goto END
+      endif
+      
+		@ cnt ++
+	end
+   
+   if ($ltfile != '') then
+      if ($#forced_list == 0) then
+         set forced_list = (`@MakeLabelTable -all_keys -labeltable $ltfile`)
+      endif
+      if ($numROI == 0) then
+         set numROI = `@MakeLabelTable -max_key -labeltable $ltfile`
+      endif
+   endif
+   
+   if ($ltfile == '' && $maskby == 2) then
+      echo "Must use -labeltable with -mask_by_labels"
+      goto BEND
+   else
+      set klist = ()
+      foreach l ($llist) 
+         set klist = ($klist `@MakeLabelTable -word_label_match \
+                                       -labeltable $ltfile -lkeys $l` ',')
+      end
+      set klist = `echo $klist | sed 's/,$//'`       
+   endif
+   if ($numROI == 0) then
+      set numROI=12
+   endif   
+   
+	goto Ret_PARSE_COMMAND
+
+
+USAGE:
+echo ""
+echo "Usage: "
+echo "`basename $0` <-base BASE> <-dsets DSET1 [DSET2 ...]> "
+echo "              [max_N_roi MAX_ROI]  "
+echo "              [-keep_tmp]"
+echo ""
+echo "Computes Dice Metric between BASE, and each of DSET volumes"
+echo ""
+echo "Mandatory parameters:"
+echo "<-base BASE>: Name of base (reference) segmentation "
+echo "<-dsets DSET1 [DSET2 ...]>: Data sets for which the Dice Metric with "
+echo "                            BASE is computed."
+echo "                            This option is to be the last on the command "
+echo "                            line."
+echo ""
+echo "  NOTE: A lazy usage would be:"
+echo "  `basename $0` BASE DSET"
+echo ""
+echo "Optional parameters:"
+echo "   [-save_match] : Save volume showing BASE*equals(BASE,DSET)"
+echo "   [-save_diff ] : Save volume showing BASE*(1-equals(BASE,DSET))"
+echo "          These two options are off by default. The output filenames"
+echo "          are formed this way:"
+echo "             PATH_DSET/PREFIX_BASE.EQ.PREFIX_DSET"
+echo "             PATH_DSET/PREFIX_BASE.DF.PREFIX_DSET"
+echo "   [-max_N_roi MAX_ROI]: The maximum possible roi index. Default is 12"
+echo "                         or based on LTFILE if specified" 
+echo "   [-labeltable LTFILE]: If given, the labeltable is used to set the "
+echo "                         default MAX_ROI parameter"
+echo "                         Also, this option forces an output for each"
+echo "                         key in the LTFILE"
+echo "   [-forceoutput LTFILE]: If given force output for each class in LTFILE"
+echo "   [-do_not_mask_by_base]: Do not mask dset by step(base) before computing"
+echo "                           Dice coefficient. This is the default behaviour"
+echo "                           for backward compatibility. "
+echo "   [-mask_by_base]: Mask dset by the step(base) before computing"
+echo "                           Dice coefficient. With this option,"
+echo "                           Voxels that are 0 in the base dataset are not"
+echo "                           considered in the computations."
+echo ""
+echo "   [-prefix PREFIX]: Use PREFIX for the output table. "
+echo "                     Default is separate results for each dset to stdout"
+echo "   [-ignore_bad]: Warn if encountering bad scenarios, but do not create"
+echo "                  a zero entry. You should check for the cause of the"
+echo "                  warnings to be sure they are OK to ignore"
+echo "   [-keep_tmp]: Keep temporary files for debugging. Note that you should"
+echo "                delete temporary files before rerunning the script."
+echo "   [-echo]    : set echo "         
+echo ""
+echo "Ziad Saad (saadz@mail.nih.gov)"
+echo "SSCC/NIMH/ National Institutes of Health, Bethesda Maryland"
+echo ""
+   set cleanup = 0
+	goto END
+
+BEND:
+   set stat = 1
+   goto END
+   
+END:
+if ($cleanup) then
+   rm -f {$RNS}.dice_*.1D {$RNS}.aib.1D {$RNS}.aib+????.* \
+            {$RNS}.anib+????.* {$RNS}.bma+????.* 
+endif
+if ($stat == 0 && -f $log) \rm /tmp/${RNS}.MLT.log
+exit $stat

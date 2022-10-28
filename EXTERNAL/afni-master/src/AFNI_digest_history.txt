@@ -1,0 +1,2269 @@
+AFNI Digest, week of 2022/05/09.
+
+SUMA on ARM-architecture Mac OS.  For those compiling their own AFNI
+package on an ARM Mac OS (we will not mention Prantik by name), suma
+started crashing after an OS update due to apparent inconsistencies in
+the X11/motif/GL libraries.  Now, Makefile.macos_11_ARM_clang and
+other_builds/OS_notes.macos_11_ARM.txt have been updated to install
+mesa libraries (from homebrew) and to link more preferentially to
+homebrew.  This happily resolves the issue (and applies to Mac OS 12,
+as well).
+
+AFNI on Fedora 35.  For those who build AFNI on their own Fedora
+systems (rather than downloading binaries), install instructions and a
+Makefile have been added for compiling AFNI under Fedora 35.  See
+OS_notes.linux_fedora_35.txt and Makefile.linux_fedora_35_shared under
+other_builds for more information.
+
+AFNI on any OS.  For those compiling AFNI on their own computers, new
+sub-packages have been created that do not contain any precompiled
+binaries, and therefore can be run on any OS.  The anyos_text package
+contains all shell scripts, python files and other text files, while
+anyos_text_atlas also contains the atlases.  This allows one to easily
+initialize an AFNI directory that can be later populated with compiled
+software.  For example, consider the command:
+   @update.afni.binaries                 \
+       -no_recur                         \
+       -package anyos_text_atlas         \
+       -bindir anyos_text_atlas
+
+AFNI Docker container.  Instructions for downloading and using an AFNI
+Container from Docker Hub have been updated here:
+https://afni.nimh.nih.gov/pub/dist/doc/htmldoc/background_install/container.html
+Many thanks to Vinai Roopchansingh for help with this.
+
+========================================================================
+
+AFNI Digest, week of 2022/04/05.
+
+nifti_tool
+nifti_tool can now be used to convert between any two integer or float
+data types (except float128).  If a conversion failure occurs (such as
+float 27.3 to integer 27), one can choose to ignore it, warn or fail.
+This is a result of nibabel (via numpy) previously outputting 64-bit
+int datasets, and was requested by J Teves.
+
+afni_proc.py
+When an external anat->EPI registration base is provided via
+-align_epi_ext_dset, an additional affine transformation will be
+applied to include its registration with the EPI registration base.
+Thanks to D Handwerker for helping to finally drag it off "the list".
+
+afni_proc.py QC HTML
+There have been a couple recent updates to the APQC HTML:
++ There is a new "mecho" block when processing multi-echo FMRI data;
+when using MEICA-tedana to combine echos, that software's own QC HTML
+will be directly linked there (and included in the QC_*/ folder, so it
+travels along if the directory is copied/moved).
++ To help troubleshoot potential EPI-anatomical alignment woes, the
+"vorig" QC block now contains images of the initial EPI-anatomical
+overlap (with obliquity applied, if present).
+
+========================================================================
+
+AFNI Digest, week of 2022/02/18.
+
+afni_proc.py - multi-echo FMRI flexibility
+afni_proc.py can implement over 10 "combine" methods for multi-echo
+FMRI data processing.  As of Nov 2021, this includes the current
+tedana from the MEICA group (see
+https://tedana.readthedocs.io/en/stable/installation.html).  This
+MEICA group version of tedana is not distributed within AFNI and must
+be installed separately.  New or updated combine methods have the
+naming prefix "m_tedana", including m_tedana, m_tedana_OC and
+m_tedana_m_tedort.  Note: the older tedana* methods still apply to the
+version from Prantik.
+
+APMULTI Demo1 - rest
+We have put together a demonstration of running multi-echo FMRI data
+through afni_proc.py in various ways (combining echoes with OC,
+Prantik's tedana.py, MEICA group tedana), as well as with distortion
+correction, optionally with physiological regression (ricor), and
+optionally with surface-based analysis.  This can serve as a basis for
+main subject-level processing scripts, or for investigating results
+across option sets.  
+To install, run @Install_APMULTI_Demo1_rest, which includes scripts
+for running on a desktop or on Biowulf.
+
+APMULTI Demo2 - realtime
+This demonstrates use of AFNI's real-time system, showing how
+processing could work at a scanner, while testing is done safely on
+one's desktop.  The demo processes single- and multi-echo DICOM input
+(and even NIFTI input, just for kicks).  It shows how afni can be used
+to send data (motion params, ROI averages, voxel data) to an external
+program (realtime_receiver.py in this case).  
+To intall, run: @Install_APMULTI_Demo2_realtime.
+
+APQC HTML update
+The QC HTML output by afni_proc.py has also expanded a bit. 
+1) The 'vorig' QC block now contains images of the anatomical dset, as
+well as the initial overlap of the EPI on the anatomical.  The latter
+is particularly useful for QCing troubles with EPI-anatomical
+alignment.
+2) If you use the MEICA group's tedana, then that program's HTML QC is
+now linked within AFNI's by the click of a button (see the 'mecho' QC
+block).  So one can browse both QCs together.
+
+========================================================================
+
+AFNI Digest, week of 2022/02/11.
+
+
+SurfLocalstat.  One of the last programs written by Ziad, this is
+newly released with the addition of the 'mode' statistic for doing
+modal smoothing on the surface.
+
+Monkey business
+We have been really involved in the world of monkeys (something like
+the Planet of the Apes). Lots of upcoming atlases, templates and
+scripts and contributions to the PRIME-DRE site.
++ Messinger et al. (2021) A collaborative resource platform for
+non-human primate neuroimaging
+https://doi.org/10.1016/j.neuroimage.2020.117519
++ Hartig et al. (2022) The Subcortical Atlas of the Rhesus Macaque
+(SARM) for neuroimaging.
+https://doi.org/10.1016/j.neuroimage.2021.117996
++ Saleem et al. (2021). High-resolution mapping and digital atlas of
+subcortical regions in the macaque monkey based on matched MAP-MRI and
+histology.  https://doi.org/10.1016/j.neuroimage.2021.118759
++ Milham et al (2022) PRIMatE Data and Resource Exchange (PRIME-DRE)
+Global Collaboration Workshop and Consortium. Toward next-generation
+primate neuroscience: A collaboration-based strategic plan for
+integrative neuroimaging.  https://pubmed.ncbi.nlm.nih.gov/34731649/
++ Tian et al. (2021) Integrated resource for functional and structural
+connectivity of the marmoset brain
+https://www.biorxiv.org/content/10.1101/2021.11.12.468389v1
+
+Defacing/Refacing datasets
+If you want to note the good performance of AFNI’s defacing/refacing
+tool @afni_refacer_run, you can check out this independent study that
+found it to be the overall best among currently available tools (also
+presented at OHBM 2020):
++ Theyers et al. (2021). Multisite Comparison of MRI Defacing Software
+Across Multiple Cohorts.
+https://www.frontiersin.org/articles/10.3389/fpsyt.2021.617997/full
+
+Clipping Planes in SUMA
+Clipping planes enable the user to interactively visualize surfaces of
+interest by interactively, or drivably, clipping away surfaces between
+those surfaces and the viewer.  Up to six such surfaces can be used
+and they are identified by prime color (RGBCMY) squares which can be
+toggled on/off.  The square associated with the active plane is
+brightest.  Each plane may be scrolled along its normal and/or tilted.
+A demonstration is available in:
+Creating Layered Surfaces to Visualize with AFNI + SUMA, with
+applications to laminar fMRI:
+https://afni.nimh.nih.gov/pub/dist/HBM2021/OHBM2021_SurfLayers_v2.pdf
+and the related Surf Layers demo:  @Install_SURFLAYERS_DEMO1.
+
+
+========================================================================
+
+AFNI Digest, week of 2022/01/25.
+
+Planning a study with trials? Take note!
+We illustrate that the trial sample size in experimental design is
+almost as important as subject sample size, in terms of statistical
+efficiency.  Here we investigate the crucial role of trial number in
+neuroimaging from the perspectives of both statistical efficiency and
+condition-level generalizability:
+   Chen G, Pine DS, Brotman MA, Smith AR, Cox RW, Taylor PA, Haller
+SP (2022). Hyperbolic trade-off: the importance of balancing trial
+and subject sample sizes in neuroimaging. NeuroImage 247:118786.
+https://doi.org/10.1016/j.neuroimage.2021.118786
+
+3dTshift: update and explain more.
+Update "3dTshift -help" to describe possibly desirable stimulus timing
+adjustment for the combination case of preprocessing with fmriprep
+while using 3dDeconvolve/3dREMLfit for regression.  See "How might
+this affect stimulus timing in 3dDeconvolve?".  Note that toffset
+should be *subtracted* from stimulus times, not added (as some have
+reported).
+
+3dmaskdump: fix. 
+Fix 'ball' options when handling sub-millimeter voxel datasets.
+Previously there was a bug that made spheres in such datasets too
+small.
+
+dcm2niix_afni: version update. 
+The distributed version is now v1.0.20210317, via Chris Rorden.
+
+Templates+atlases update:  macaques.
+Now available, the SC21 (subcortical template) and updated D99: high
+resolution macaque atlasing. Anatomical delineation using histology
+and high-resolution MAP-MRI (and data are available in NIFTI and GIFTI
+formats).  See:
+  Saleem KS, Avram AV, Glen D, Yen CC-C, Ye FQ, Komlosh M, Basser PJ
+(2021).  High-resolution mapping and digital atlas of subcortical
+regions in the macaque monkey based on matched MAP-MRI and histology.
+Neuroimage 245:118759.
+https://doi.org/10.1016/j.neuroimage.2021.118759
+
+Pull request (PR) documentation for AFNI source code
+The AFNI codebase has had many contributors from many places over
+time.  If you are interested in contributing to the AFNI source code,
+please check out how to make a pull request:
+https://afni.nimh.nih.gov/pub/dist/doc/htmldoc/devdocs/pull_requests/pr_ex.html
+Note that with great code ideas, comes great responsibility of code
+maintenance....
+
+3dDiff: new program
+Particularly relevant to the last item, there is a new program 3dDiff
+(contributed by J. Teves) for calculating whether two datasets contain
+elementwise differences at a given tolerance.  The program works for
+volume, surface and 1D datasets inputs, and calculates 'per timepoint'
+as well (e.g., for each volume in a time series).
+
+
+========================================================================
+
+AFNI Digest, week of 2021/06/11.
+
+0) Disabling AFNI_COMPRESSOR for NIFTI files
+1) Commentary: Dichotomous thinking and informational waste in neuroimaging
+2) 3dClusterize table report update
+3) 3dAllineate updates (to mainly deal with some marginal cases)
+4) NaN data values
+
+++ Code comments in this Digest relate to version release:  AFNI_21.1.10
+
+0) Disabling AFNI_COMPRESSOR for NIFTI files
+Automatic compression of NIFTI datasets via environment variables has
+been disabled, reverting to a "get what you ask for" approach (i.e.,
+specify .nii.gz for output when compression is desired).  Using
+AFNI_COMPRESSOR for this caused trouble for scripting.
+AFNI_COMPRESSOR will still apply in creating BRIK.gz files.
+
+1) Commentary: Dichotomous thinking and informational waste in neuroimaging 
+   preprint: https://www.biorxiv.org/content/10.1101/2021.05.09.443246v1
+Neuroimaging relies on separate statistical inferences at tens of
+thousands of spatial locations. Such massively univariate analysis
+typically requires adjustment for multiple testing in an attempt to
+maintain the family-wise error rate at a nominal level of 5%. We
+discuss how this approach is associated with substantial information
+loss because of an implicit but questionable assumption about the
+effect distribution across spatial units. To improve inference
+efficiency, predictive accuracy, and generalizability, we propose a
+Bayesian multilevel modeling framework. In addition, we make four
+actionable suggestions to alleviate information waste and to improve
+reproducibility: (1) abandon strict dichotomization, (2) report full
+results, (3) quantify effects, and (4) model data hierarchy.
+
+2) 3dClusterize table report update
+3dClusterize outputs a data table about clusters by default.
+Traditionally, the program internally used absolute-valued voxel
+values before calculating Mean and SEM column values, unless the
+'-noabs' option was used.  The new default is that Mean and SEM is
+each calculated from the raw values; to mirror the old behavior of
+having abs vals, one would use the new '-abs_table_data' value.  This
+only affects table values (in 1- or bi-sided clustering, this would
+only affect sign, not magnitude).  The GUI's Clusterize menu follows
+this new behavior.
+
+3) 3dAllineate updates (to mainly deal with some marginal cases)
+Some internal changes to 3dAllineate were made to make the
+optimization of alignment parameters more robust in some
+situations. In particular, when aligning a pair of T1-weighted
+volumes, one of the best cost function choices has been
+lpa+ZZ. However, in a small subset of cases, lpa+ZZ did not always
+give good results. For example, if the source image is a whole-head
+volume and the coordinates are weird (the xyz origin not anywhere near
+the center of the brain), while the base image is the MNI template,
+covering only the upper part of the head, the huge extraneous volume
+below the brain could sometimes confuse the optimizer. Changes to
+3dAllineate to help with this situation were: (1) reformulate lpa+ZZ
+to be more robust, and (2) use more trial parameter sets in the coarse
+alignment phase. These changes will make the program somewhat slower,
+but (Insha'Allah) more reliable across these marginal cases.
+
+4) NaN data values
+AFNI programs have no special code to deal with NaN values in datasets
+- NaN is the acronym for Not a Number, which is a special bit pattern
+marking an illegal floating point value (e.g., the result of
+sqrtf(-1.0f)). On input to AFNI programs, NIfTI and some more obscure
+data formats are, if in float format, scanned to turn NaN and infinite
+values to 0s before being stored internally. However, AFNI-format
+.BRIK files are not automatically scanned/fixed on input, unless the
+environment variable AFNI_FLOATSCAN is set to YES. If you read in a
+floating point dataset with NaN values, AFNI programs will probably
+not behave well, as the computations with NaNs will propagate and
+contaminate the results. The AFNI program float_scan can be used to
+patch float point files, or you can set AFNI_FLOATSCAN = YES in your
+~/.afnirc file's ***ENVIRONMENT section to avoid this potential
+issue. But please don't worry about NaNs in AFNI until/unless they
+start to bother you!
+
+
+========================================================================
+
+AFNI Digest, week of 2021/04/12.
+
+0) afni_proc.py updates.
+1) 3dROIstats updates.
+2) Bug fix for (rare) NIFTI occurrences.
+3) Mac OS binaries update, re. XQuartz/libXp.
+4) New old notes on various AFNI stats programs.
+5) Scripts, notes and description for integrating FreeSurfer and AFNI.
+
+0) afni_proc.py updates.
+++ Computed TSNR volumes are no longer masked by default, so one can
+   better evaluate things like dropout.  And images of TSNR volumes
+   (after volreg and at end) are now part of the APQC HTML.
+++ afni_proc.py: one can now pass single files with many regressors of
+   no interest via -regress_extra_ortvec and
+   -regress_extra_ortvec_labels.
+
+1) 3dROIstats updates.
+Slowness has been fixed in the processing of NIFTI float time series
+datasets.  Thanks to C Craddock for reporting the issue.
+
+2) Bug fix for (rare) NIFTI occurrences.
+A bug has been fixed in the handling of NIFTI float datasets with
+scalars attached (this is uncommon).  From 2021.01.26 to 2021.03.08,
+some programs would not apply the scalars.
+
+3) Mac OS binaries update, re. XQuartz/libXp.
+AFNI now includes libXp with the macos_10.12_local binaries, as
+XQuartz no longer distributes it.  That is required for the AFNI
+binaries to work on newer systems.  Thanks to C Gaillard for reporting
+and testing.
+
+4) New old notes on various AFNI stats programs.
+There are some new documentations for AFNI stats programs, some dating
+back to The Beginning when they were written.  These typically include
+both general theory and program-specific notes.  The current list of
+descriptions is:
++ When and how to center a variable?
++ Deconvolution Analysis of FMRI Time Series Data
++ Nonlinear Regression Analysis of FMRI Time Series Data (NLfim)
++ Notes on 3dREMLfit
++ Analysis of Variance (ANOVA)
++ Multivariate modeling (MVM) approach for group analysis
++ Linear Mixed-Effects (LME) Modeling
++ Mixed-Effects Meta Analysis (MEMA)
++ False Discovery Rate (FDR)
++ Nonparametric Statistical Analysis of FMRI Data
+... which are available here:
+https://afni.nimh.nih.gov/pub/dist/doc/htmldoc/statistics/main_toc.html
+
+5) Scripts, notes and description for integrating FreeSurfer and AFNI.
+FreeSurfer's (FS's) recon-all performs useful parcellation and surface
+creation for T1w anatomicals.  This tutorial describes combining this
+with AFNI (via @SUMA_Make_Spec_FS), including notes on
+parallelization, speed, avoiding crashes, running on NIH's Biowulf,
+and the full set of extra dsets and QC info that @SUMA_Make_Spec_FS
+creates.  If that is of interest, check out:
+https://afni.nimh.nih.gov/pub/dist/doc/htmldoc/tutorials/fs/main_toc.html
+
+========================================================================
+
+AFNI Digest, week of 2021/04/06.
+
+0)   Sign up for Zoom consultations occuring April 19-23, 2021.
+1-2) Useful programs (3dMSS, PTA) for capturing nonlinearity in stats modeling
+3-4) Useful programs (3dLMEr, TRR) for estimating test-retest reliability 
+5)   The India Brain Templates and Atlases (IBTAs)
+6)   More AFNI Academy online video lecture/tutorials
+
+0) Sign-up open for Zoom consults, in the week of April 19-23, 2021.  
+The form for doing so is here:
+    https://forms.gle/ZeUSau2hpQVovwHbA
+It is a good opportunity to discuss MRI/FMRI/DTI processing questions,
+esp. being able to share screens looking at data.  Discussions can
+even involve *planning* a study, going over considerations beforehand
+to make later processing easier.
+
+1) 3dMSS:  multilevel smoothing splines (MSS).
+When a quantitative predictor's effect is non-monotonic, the typical
+approach of handling it as a covariate through linear modeling can be
+inappropriate or even misleading.  As a more flexible and adaptive
+approach, multilevel smoothing splines (MSS) offer a more powerful
+analytical tool for capturing nonlinearity. More details can be found
+in:
+Chen et al., 2021. Beyond linearity in neuroimaging: Capturing
+nonlinear relationships with application to longitudinal
+studies. NeuroImage 233, 117891.
+https://doi.org/10.1016/j.neuroimage.2021.117891
+
+2) PTA:  Same nonlinear modeling approach as 3dMSS, but for 1D data.
+
+3) 3dLMEr with option "-TRR" for test-retest reliability estimates.
+The new option -TRR in 3dLMEr estimates the test-retest reliability at
+the whole-brain voxel level based on trial-level effect estimates
+instead of the conventional condition-level approach. The conventional
+intraclass correlation coefficient (ICC) tends to underestimate the
+test-retest reliability, as demonstrated in the following manuscript:
+Chen et al., 2021. Beyond the intraclass correlation: A hierarchical
+modeling approach to test-retest assessment. bioRxiv
+2021.01.04.425305. https://doi.org/10.1101/2021.01.04.425305
+
+4) TRR:  Same test-retest reliability modeling as 3dLMEr -TRR, but for ROIs.
+
+5) Indian Brain Templates and Atlases (IBTAs) available.
+Working with Drs. Bharath Holla, Rose Dawn Bharath (NIMHANS, the other
+NIMH) and colleagues, we have generated a new set of brain templates
+and atlases for studies focusing on a billion-plus people. There are
+several templates with corresponding atlases, covering various age
+ranges from 5-60 years, combining data from subjects across India.
+For more information, please see:
+https://onlinelibrary.wiley.com/doi/10.1002/hbm.25182
+https://afni.nimh.nih.gov/pub/dist/doc/htmldoc/template_atlas/ibt.html
+
+6) More AFNI Academy online video lecture/tutorials
+"MBA: Analyzing matrix data through Bayesian multilevel modeling", by G Chen:
+https://www.youtube.com/watch?v=K2nW8M3sYNY&list=PL_CD549H9kgr42Cc0Uoo6o64sPlu6c3Qz
+"Advanced Visualization - atlases as surfaces in SUMA", by D Glen:
+https://www.youtube.com/watch?v=y-6hJ8iDy5o
+
+========================================================================
+
+AFNI Digest, week of 2020/12/17. 
+ 
+0)  Sign up for Zoom consultations in January, 2021 (!).
+1)  New tutorial on making plus/minus plots in the GUI Graphs.
+2)  New AFNI Academy videos on stats from Gang "Santa" Chen.
+ 
+0) The first go-round of Zoom consultations seemed useful (looking at
+data simultaneously and asking questions in realtime can be useful--
+who knew?).  So we are opening sign-up for another, in the week of Jan
+11-15, 2021.  The form for doing so is here:
+    https://forms.gle/noNfdoPH8pKRBzy37
+Basically, tell us some of your woes or questions, and we will try to
+find a way to resolve them.  (Esp. if you are trying to finish your
+abstracts for OHBM, due a couple weeks later...)
+ 
+1) One or two Digests ago, we advertised some new fun plotting
+capability to show plus/minus lines or background color in the GUI's
+Graph windows.  Now that you have had ample time to guess at the
+mechanics of it, we are ready to reveal the secrets of carrying this
+out in greater detail -- see this tutorial from The Bob:
+    https://afni.nimh.nih.gov/pub/dist/doc/htmldoc/tutorials/gui/pm_plot.html
+ 
+2) If all you ever wanted for the holidays was some introduction to
+group analysis methods, then Gang Chen is the new Santa.  Here are
+some of his thoughts on "population-level" modeling (the hip term, for
+those in the know) in the AFNI Academy video series:
+    https://www.youtube.com/watch?v=2hP4hamIqLM&list=PL_CD549H9kgrA_GGQkVAulFJLiv05z2tv
+
+========================================================================
+
+AFNI Digest, week of 2020/11/20.
+ 
+And now for something completely different...
+ 
+In normal times, we often discuss MRI processing issues with people in
+person either at NIH, at a Bootcamp, or during a collaboration visit.
+If you haven't noticed, these aren't normal times.
+ 
+So, we brainstormed a mechanism to still try to have this
+functionality, since looking at data makes a big difference in
+understanding it.  The result: we will try to schedule some
+Zoom-consultations in the week of Nov. 30 - Dec 4, 2020, seeing how a
+30 min window works.
+ 
+If you or your lab has some question(s) or processing that you would
+like to discuss screen-to-screen, then please fill in the form here:
+    https://forms.gle/jLxgtq8xYHxoexXh9
+... and we will see if we can find overlapping times.
+ 
+**Disclaimer: we haven't done this previously, we don't know how well
+  it will work, and we really hope not to hurt anyone's feelings if a
+  particular Guru's schedule fills up quickly (=Gang!).  We will check
+  incoming requests and try to see if there is a mutually available
+  time slot, until a Guru's consulting timecard is maxed out.  It
+  might then be possible to chat with a different Guru who might have
+  available time and also be able to help, or that consultation might
+  just have to wait for a later date.  Again, please bear with us in
+  this.
+
+========================================================================
+
+AFNI Digest, week of 2020/11/12.
+ 
+00) AFNI YouTube channel:  new easy-to-remember address
+01) AFNI realtime-to-PsychoPy package moving homes
+02) New group analysis program: 3dMSS
+ 
+ 
+00) The AFNI YouTube channel for Bootcamp talks has a new homepage
+address:
+           www.youtube.com/c/afnibootcamp 
+(The old link still works as well, but this one is easier to
+remember/share.)
+ 
+01) PsychoPy-NeuroFeedback-Demo with AFNI:  on the move.
+Vinai's PsychoPy-NeuroFeedback-Demo package, which demonstrates
+communication between AFNI's real-time data interface and the PsychoPy
+module, will no longer be distributed within AFNI.  It is being
+removed to avoid any differences with the version from its main
+repository:
+https://github.com/roopchansinghv/afni-real-time-interface-in-python
+... but the same great content remains (thanks, Vinai!).
+ 
+02) Going beyond the linearity assumption of quantitative variables.
+Linearity assumptions for quantitative variables may be reasonable in
+some situations, but not so much in others.  What to do in the latter
+case?  Gang's new group-level program 3dMSS adopts a principle of
+learning from the data in the presence of uncertainty to dissolve the
+problematic aspects of conventional polynomial fitting, using
+multilevel smoothing splines (MSSs).  Please see the help of this
+program for examples, and read more about it in the bioRxiv draft:
+  https://www.biorxiv.org/content/10.1101/2020.11.01.363838v1
+... which contains both background theory and an interesting
+application to longitudinal MRI analysis.
+
+========================================================================
+
+AFNI Digest, week of 2020/09/23.
+
+0)  All AFNI Python programs are Python 3.* compatible
+1)  New GUI feature: set threshold directly by typing
+2)  More macaque-related datasets and features
+3)  Return of graph fading in the GUI
+4)  More complete AFNI features for zsh users (mainly Mac-related)
+
+
+0) Python 2 has been deprecated for a little while now, and we thought
+that we should make all AFNI Python programs Python 3 compatible
+before *that* gets deprecated, too.  That momentous day has arrived--
+while most AFNI Python should still work in Python 2.7, they are all
+Python 3 compatible.
++ Well, there is one (very specialized) exception: the meica.py and
+tedana.py programs written by P Kundu have not been transliterated to
+Python 3, because there is a big Python 2 library packaged with them.
+So you still need Python 2 access if using them.  C'est la vie.  But
+for most people, that need not be a concern, so just having Python 3
+is fine.  (Though, on a multiecho EPI note: there are still many ways
+to include your multiecho processing in afni_proc.py-- just ask if you
+aren't sure!)
+++ Final Python setup note: if you want to use Conda to manage your
+Python needs, there is a basic tutorial/intro here:
+https://afni.nimh.nih.gov/pub/dist/doc/htmldoc/background_install/miniconda.html
+
+1) There are several ways to set a threshold value in the AFNI GUI, including:
++ Use the threshold slider
++ Use AFNI's "autothreshold" feature to try to select a reasonable one
++ Drive AFNI to set a threshold value explicitly
++ If the threshold dset is a statistic, then specify a q- or p-value 
+  and have AFNI apply the equivalent for that statistic
+... And now there is a new way to set it directly: You can right click
+on the "Thr" button above the slider/colorbar, select "Set Threshold",
+and type the value in.  Thanks, Justin!
+
+2) These papers (currently available on bioRxiv) describe the
+following publicly available Macaque dataset resources and related
+AFNI programs:
+NIMH Macaque Template (NMT)
+Cortical Hierarchical Atlas of the Rhesus Macaque (CHARM)
+Subcortical Atlas of the Rhesus Macaque (SARM)
+AFNI's @animal_warper (both skullstripping and template alignment)
+afni_proc.py demos for macaque processing
+https://www.biorxiv.org/content/10.1101/2020.08.05.237818v1
+https://www.biorxiv.org/content/10.1101/2020.09.16.300053v1
+AFNI documentation pages about these is included here:
+https://afni.nimh.nih.gov/pub/dist/doc/htmldoc/nonhuman/main_toc.html
+
+3)  The "graph fading" feature in the GUI has returned after a bit of holiday.  
+When this feature is ON (which is default) and a Graph viewer is open
+(showing underlay values) and an overlay dataset is applied, then
+graph window panel of voxels where the Threshold dset is
+suprathreshold have a white background and the rest have a gray
+background.  Poorly described by me?  Perhaps!  But see the attached
+image showing this fun+useful functionality more clearly.  To control
+this feature in your ~/.afnirc file, set AFNI_GRAPH_FADE to either YES
+or NO.
+
+4)  This one probably applies mostly to Mac users:  
+Are you using zsh as your terminal shell, rather than bash, csh or
+tcsh (you can check by typing this in a terminal: echo $0)?  Well,
+your life just became a bit easier, as TAB completion for AFNI program
+options has been added for zsh via updates to apsearch,
+@update.afni.binaries and afni_system_check.py.  Now, if ooonly you
+could easily change that OS to Linux, for some *real* convenience...
+
+
+========================================================================
+
+AFNI Digest, week of 2020/08/19:  Special "Chopped" edition.
+
+AFNI has over 600 programs for your neuroimaging analysis amusement.
+To simplify things a bit, we are in the process of “cleaning house” on
+some functionality.  On Monday, Aug. 24, the programs listed below
+will be chopped (= no longer supplied in the AFNI distribution).
+
+If you are still using one of these old programs, you should follow
+the update recommendations provided.  Those without a specific update
+are probably “underlying” functionality that you do not use directly.
+If you have any questions or would like advice on how best to update
+your pipelines, please just ask your friendly AFNI guru on the Message
+Board.  (And if it turns out one of these programs really should not
+be removed, then its execution--in the Revolutionary France sense--can
+be stayed.  But you must raise such an issue before dawn on Monday,
+Aug. 24.)
+
+Once the following programs are removed, we will just assume you have
+the list of all remaining programs memorized, as well as their full
+help files and examples.  If that is not somehow the case, please be
+aware of the Classified list of AFNI programs:
+https://afni.nimh.nih.gov/pub/dist/doc/htmldoc/educational/classified_progs.html
+... the Tutorial pages:
+https://afni.nimh.nih.gov/pub/dist/doc/htmldoc/tutorials/main_toc.html
+... and the online AFNI Bootcamp and Academy recordings:
+https://afni.nimh.nih.gov/pub/dist/doc/htmldoc/educational/bootcamp_recordings.html
+... and more help and examples on the main documentation pages.
+
+PROGRAMS SNEAKILY ALREADY CHOPPED
+---------------------------------
+3dMINCtoAFNI
+3dAFNItoMINC
+
+PROGRAMS ON THE CHOPPING BLOCK
+------------------------------
+AlphaSim                (obsolete -> used 3dClustSim)
+3dFWHM                  (obsolete -> use 3dFWHMx)
+3dMax                   (obsolete -> use 3dBrickStat)
+@auto_align             (obsolete -> use align_epi_anat.py or 3dAllineate)
+@UpdateAfni             (obsolete -> use @update.afni.binaries)
+3dANALYZEtoAFNI         (obsolete -> use 3dcopy or to3d)
+Dimon1                  (obsolete -> use Dimon)
+3dCountSpikes           (obsolete -> use 3dToutcount)
+3dfim                   (obsolete -> use 3dDeconvolve)
+3dUniformize            (obsolete -> use 3dUnifize)
+@DTI_studio_reposition  (probably obsolete)
+@make_stim_file         (obsolete -> use timing_tool.py)
+3dICC_REML.R            (obsolete -> use 3dICC)
+3dAOV.R                 (obsolete -> use 3dMVM)
+lpc_align.py            (obsolete -> use align_epi_anat.py or 3dAllineate)
+afni_restproc.py        (obsolete -> use afni_proc.py)
+@snapshot_volreg3       (obsolete -> use @snapshot_volreg)
+1dDW_Grad_o_Mat         (obsolete -> use 1dDW_Grad_o_Mat++)
+3dProbTrackID           (obsolete -> use 3dTrackID)
+3dAnatNudge             (obsolete -> use align_epi_anat.py or Nudge plugin)
+3dFourier               (obsolete -> use 3dBandpass)
+3dttest                 (obsolete -> use 3dttest++; for "3dttest -base .."
+                         functionality, use "3dttest++ -singletonA ..")
+3dAnatNudge             (obsolete -> use align_epi_anat.py, 3dAllineate or
+                         Nudge plugin)
+DoPerRoi.py
+3dbuc2fim
+3dDeconvolve_f 
+3ddup
+3dnoise
+3dproject
+3dWavelets
+abut
+ent16
+ftosh
+ge_header
+Ifile
+check_dset_for_fs.py 
+mayo_analyze          
+mritopgm
+siemens_vision
+sqwave
+Xphace
+FD2
+
+========================================================================
+
+AFNI Digest, week of 2020/08/05.
+
+Contents:
+0) New AFNI Academy video playlist: Intro to SUMA
+1) Faster AFNI installation/downloads for some OSs.
+2) New citation page for documentation/program usage.
+3) PRIME-RE paper out---describes macaque processing tools.
+4) New webpages describing macaque processing demos, templates and atlases.
+5) New program for patching/smoothing ROIs: @ROI_modal_grow.
+
+
+0) Adding to the list of fun AFNI Academy videos online, we have a new
+   playlist about getting started with SUMA:
+     https://www.youtube.com/watch?v=QCh6HApyM0U&list=PL_CD549H9kgqSs51SCNZQ4q57IguXvFI8
+   It includes background, using the GUI, setting environment
+   variables, calculating distances along surfaces, drawing surface
+   ROIs (and translating them to the volume) and displaying multiple
+   surface ROIs that overlap.
+
+1) These OSs now have AFNI binary files that are about 85% smaller
+   than they used to be:
+     linux_ubuntu_16_64.tgz
+     linux_centos_7_64.tgz
+     linux_fedora_28_shared.tgz
+   The same great functionality is there, but someone (= Rick)
+   rearranged the shared libraries for greater efficiency.  This might
+   spread to further OSs, too...
+
+2) To make it easier to cite AFNI in your publications (and please
+   don't forget to do so when you use it...), we have this new page in
+   the documentation:
+     https://afni.nimh.nih.gov/pub/dist/doc/htmldoc/published/main_toc.html
+   This also provides a convenient guide to AFNI functionality and
+   applications.
+
+3) A new open/sharing resource for primate/macaque MRI processing has
+   been created, called PRIME-RE (= PRIMate Resource Exchange), and it
+   is described here:
+     https://www.biorxiv.org/content/10.1101/2020.07.31.230185v1 It
+   contains tools, demos and programs from AFNI-land, among others.
+   Moreover, it is likely to grow over time, so watch that space.
+
+4) Speaking of macaques, there is new documentation about macaque
+   resources in AFNI, includes templates, atlases and demos, here:
+     https://afni.nimh.nih.gov/pub/dist/doc/htmldoc/nonhuman/macaque_demos/main_toc.html
+     https://afni.nimh.nih.gov/pub/dist/doc/htmldoc/nonhuman/macaque_tempatl/main_toc.html
+   See relatedly the @Install_MACAQUE_DEMO* scripts and the
+   @animal_warper program (make sure you have the latest AFNI for
+   these, "@update.afni.binaries -d").  These projects were in
+   enjoyable collaboration with: Adam Messinger, Ben Jung, Jakob
+   Seidlitz, Caleb Sponheim, and Leslie Ungerleider-- so many thanks
+   to them.
+
+5) Grow your regions with @ROI_modal_grow. This new program uses
+   iterative, non-zero modal smoothing to grow regions to fill a
+   mask. It works by looking by filling unassigned voxels with its
+   most common (the mode) non-zero neighbors, and then keeps filling
+   until all the voxels in a mask are filled. Seems useful for
+   creating atlases and refilling dilated masks.
+
+========================================================================
+
+
+ AFNI Digest, week of 2020/06/23: general edition
+
+Contents
+0) New outlier removal option in some stats programs
+1) R-dependency note:  stay with 3.6 for now (esp. on Macs)
+2) Ubuntu 20.04 installation instructions are up
+3) New features in the AFNI graph viewer
+4) AFNI Academy update: better sound now in Regression Hands-on
+5) AFNI refacer/defacer tool with demo page
+
+0) These programs have a new outlier removal option:
+     3dLME, 3dLMEr, 3dICC, 3dISC
+   The option "-bounds" in these programs allows the user to set a
+   range beyond which any values would be considered as outliers and
+   excluded in data analysis
+
+1) On the Mac, specifically for package macos_10.12_local, the R
+   programs (3dMVM, 3dLME, etc.) now depend on R version 3.6 (not 3.5,
+   not 4.0).  We hope to ease this restriction in the future.
+
+2) Ubuntu 20.04 installation instructions (regular and quick versions)
+   are up and running:
+   https://afni.nimh.nih.gov/pub/dist/doc/htmldoc/background_install/install_instructs/steps_linux_ubuntu20.html
+   Note: we are discovering Windows Subsystem Linux version 2 presents
+   new challenges... we are working on notes for that.
+
+3) AFNI graph viewer update: new features
+   A) You can smooth the plotted curves by pressing the 's' key when
+   the graph viewer window has "focus" (e.g., when the mouse cursor is
+   over the window); you can also control this feature from the
+   Opt->Colors_Etc menu. The smoothing is interpolatory; that is, the
+   plotted curve still passes through the data points, but the
+   interpolated part of the graph will be smooth rather than
+   angular. Smooth plotting will be most evident when there is only
+   one sub-graph displayed. You can see an example in the attached image
+   (afni_graph_viewer.png), which is plotted with Points+Lines 
+   (selectable from Opt->Colors_Etc).
+
+   B) You can plot every N-th point for N=1,2,...,9 by using the
+   Opt->Index_Pin/Stride menu button (at the top of the Opt menu) -
+   this is called "striding" through the data. Not all features of the
+   graph viewer are available when the stride is greater than 1; in
+   particular, the current time point, which is usually marked with a
+   little ball, will not be so marked, and you cannot select a new
+   time point by clicking in the central sub-graph.
+
+   C) You can plot uncertainty in a few different ways;  the "pmfill" 
+   (= "plus/minus" fill) might be the prettiest-- see the attached
+   pmfill.png image.
+
+4) The "AFNI Academy: Regression Hands-on" video on youtube was
+   re-created, due to low sound in the initial version.  (Even though
+   it is in Dolby Surround Sound, you still need to bring your own
+   popcorn, though.)
+
+5) The @afni_refacer_run program for defacing/refacing data has a
+   handy tutorial page, showing how to use it and the helpful
+   automatic QC images generated:
+   https://afni.nimh.nih.gov/pub/dist/doc/htmldoc/tutorials/refacer/refacer_run.html
+   ... and it was also judged to be the "best" program for defacing
+   out there by another group's OHBM poster-- check it out!
+
+========================================================================
+
+
+AFNI Digest, week of 2020/06/23: New papers+posters edition!
+
+Contents
+0) Glen et al. (Frontiers): check for left-right consistency in YOUR data
+1) Chen et al. (bioRxiv): how to analyze task FMRI for generalizability
+2) OHBM-2020 posters from the AFNI group
+
+0) Daniel's LR flip paper:
+Beware (Surprisingly Common) Left-Right Flips in Your MRI Data:
+An Efficient and Robust Method to Check MRI Dataset Consistency Using AFNI
+https://www.frontiersin.org/articles/10.3389/fninf.2020.00018/full
+
+1) Gang's bioRxiv paper:
+To pool or not to pool: Can we ignore cross-trial variability in FMRI?
+https://www.biorxiv.org/content/10.1101/2020.05.19.102111v1?rss=1
+Trailer quotes:
+In this work, we investigate the importance of explicitly accounting
+for cross-trial variability in neuroimaging data analysis...
+To allow generalizing beyond the particular stimulus set employed, the
+cross-trial variability is modeled at the population level through
+partial pooling in a multilevel model, which permits accurate effect
+estimation and characterization...
+Furthermore, our approach allows appropriate accounting for serial
+correlation, handling outliers, adapting to data skew, and capturing
+nonlinear brain-behavior relationships.
+
+2) AFNI OHBM 2020 posters have uploaded:
+Have a sneak peek at the AFNI group's posters on:
++ AFNI's defacing/refacing tool (judged "best" out there, by another
+  group's OHBM poster):
+  https://afni.nimh.nih.gov/pub/dist/HBM2020/AFNI_reface_OHBM2020.pdf
++ Animal-FMRI pipeline from AFNI (with demos):
+  https://afni.nimh.nih.gov/pub/dist/HBM2020/GlenEtal_aw_ap_OHBM_2020.pdf
++ More fun in afni_proc.py's automatic QC:
+  https://afni.nimh.nih.gov/pub/dist/HBM2020/AFNI_FMRI_QC_OHBM2020.pdf
++ Stats! How to handle relatedness among subjects through LME modeling:
+  https://afni.nimh.nih.gov/pub/dist/HBM2020/AFNI_Mixed_effects_OHBM2020.pdf
++ Determining representative center of mass for ROIs:
+  https://afni.nimh.nih.gov/pub/dist/HBM2020/GlenEtal_FindingYourCenter_OHBM2020.pdf
+
+
+========================================================================
+
+
+ AFNI Digest, week of 2020/03/09.
+
+Contents:
+00) Cancellation of in-person Bootcamp at NIH (March, 2020)
+
+00)  As you are aware, the outbreak and spread of coronavirus/COVID-19 has become a major concern in the US and globally. The NIH has recently issued guidance to telecast/postpone/cancel large conferences and meetings on campus where possible:
+https://www.nih.gov/health-information/nih-guidance-travel-meetings
+Unfortunately, this means that we will not be able to host the upcoming AFNI Bootcamp from March 30-April 3, 2020.
+
+We understand that many people have made plans to travel here for the Bootcamp, and we are deeply sorry that we cannot host the standard Bootcamp.  We really appreciate that you would take the time and effort travel here for the course, but the larger public health concerns require its cancellation.
+
+However, we are working to create and provide a new set of recordings of the Bootcamp lectures online.  While we do have previous Bootcamp recordings available already:
+https://afni.nimh.nih.gov/pub/dist/doc/htmldoc/educational/bootcamp_recordings.html
+we also have new talks, programs and functionality to present.  Additionally, we are looking into ways to schedule separate consultation sessions for users during that time.  We will write back more details on both considerations.
+
+---------------------------------------------------------------------
++ This Digest is not a comprehensive list of code updates.
++ Please direct comments or questions to the AFNI Message Board:
+  https://afni.nimh.nih.gov/afni/community/board/list.php?1
++ To unsubscribe or otherwise manage your Digest settings, click here:
+  https://list.nih.gov/cgi-bin/wa.exe?SUBED1=afni_digest&A=1
+---------------------------------------------------------------------
+
+========================================================================
+
+AFNI Digest, week of 2020/02/20.
+
+Contents:
+00) AFNI Bootcamp++ in San Sebastian, Espana (May, 2020) 
+
+00) The Basque Center on Cognition, Brain and Language (BCBL) is
+organizing the 1st Basque AFNI meeting. The event will be held in San
+Sebastián-Donostia, 10-16 May 2020.  Please see the following link for
+more details:
+https://afni.nimh.nih.gov/afni/community/board/read.php?1,163224,163224#msg-163224
+
+---------------------------------------------------------------------
++ This Digest is not a comprehensive list of code updates.
++ Please direct comments or questions to the AFNI Message Board:
+  https://afni.nimh.nih.gov/afni/community/board/list.php?1
++ To unsubscribe or otherwise manage your Digest settings, click here:
+  https://list.nih.gov/cgi-bin/wa.exe?SUBED1=afni_digest&A=1
+---------------------------------------------------------------------
+
+========================================================================
+
+
+AFNI Digest, week of 2020/01/27.
+
+Contents:
+00) 2 AFNI-TORTOISE DTI workshops in India (Feb, 2020).
+
+00) We are pleased to announce the upcoming AFNI-TORTOISE DTI workshop,
+"India Brain Connectivity Bootcamp: Diffusion Tensor Imaging 2020."
+Each 3-day workshop will be a combination of lecture and hands-on data
+investigation, with speakers including Drs. Carlo Pierpaoli, Amritha
+Nayak, Paul Taylor, Rose Dawn Bharath and Bharath Holla.
+
+These will take place at NIMHANS in Bengaluru from Feb 8-10 and at
+PGIMER in Chandigarh from Feb 13-15. For more details and
+registration, please see the PDF advert here:
+https://afni.nimh.nih.gov/pub/sscc/staff/ptaylor/Flyer_India_Brain_Connectivity_Bootcamp_2020.pdf
+Circulate to any interested colleagues. See you there!
+
+---------------------------------------------------------------------
++ This Digest is not a comprehensive list of code updates.
++ Please direct comments or questions to the AFNI Message Board:
+  https://afni.nimh.nih.gov/afni/community/board/list.php?1
++ To unsubscribe or otherwise manage your Digest settings, click here:
+  https://list.nih.gov/cgi-bin/wa.exe?SUBED1=afni_digest&A=1
+---------------------------------------------------------------------
+
+========================================================================
+
+AFNI Digest, week of 2020/01/14.
+
+Contents:
+00) AFNI Bootcamp advert: at NIH campus, March 30 - April 3, 2020.
+
+00) AFNI Bootcamp advert: at NIH campus, March 30 - April 3, 2020.
+The next AFNI Bootcamp at NIH (Bethesda, MD, USA) is open for
+registration!  The main session runs Mar 30-Apr 3, and there is
+an optional/alternative DTI session, also on Friday, Apr 3. There
+is no registration fee for the Bootcamp, but attendees must pay
+all their own expenses (e.g., lodging, travel, food, fancy
+coffees). The main Bootcamp info page is here, with a link to the
+registration form:
+https://afni.nimh.nih.gov/bootcamp/
+along with preliminary schedules and logistic information.
+
+
+---------------------------------------------------------------------
++ This Digest is not a comprehensive list of code updates.
++ Please direct comments or questions to the AFNI Message Board:
+  https://afni.nimh.nih.gov/afni/community/board/list.php?1
++ To unsubscribe or otherwise manage your Digest settings, click here:
+  https://list.nih.gov/cgi-bin/wa.exe?SUBED1=afni_digest&A=1
+---------------------------------------------------------------------
+
+========================================================================
+
+AFNI Digest, week of 2019/08/28.
+
+Contents:
+00) AFNI Bootcamp advert: at NIH campus, November 4-8, 2019.
+01) AFNI GUI: 'A' and 'B' buttons now work with discrete color panes.
+02) New program: 3dICC, for whole brain intraclass correlation.
+03) New program: 3dISC, for whole brain intersubj. corr. analysis.
+04) New program: RBA, for region-based analysis.
+05) Matrix-based analysis (MBA) paper accepted at Human Brain Mapping.
+06) Bye-bye Bootcamp-list: migrated to this Digest-list.
+
+
+00) AFNI Bootcamp advert: at NIH campus, November 4-8, 2019.
+Please note the dates of the next AFNI Bootcamp here in Bethesda.  The
+main session runs Nov. 4-8, and there is an optional/alternative DTI
+session on Nov. 8 (*note that it is Friday this time*). There is no
+registration fee for the Bootcamp, but attendees must pay all their
+own expenses (e.g., lodging, travel, food, fancy coffees). The
+registration page is here: 
+https://afni.nimh.nih.gov/bootcamp/ 
+along with preliminary schedules and logistic information.
+
+01) 'A' and 'B' buttons now work with discrete panes in color bar.
+The Alpha 'A' and Boxed 'B' modes previously added (week of
+2018/11/30) did not work when the color bar in Define Overlay was
+switched to the discrete panes display (done by choosing the number of
+panes with the '#' control just below the color bar). That oversight
+has now been fixed, due to the diligent perspicacity and persistence
+of some unnamed person from Wisconsin.
+   However. The patch works by converting (internally) the discrete
+panes to a 'continuous' colorscale. At the boundaries between the
+panes, color interpolation might occur, and so you might end up seeing
+some intermediate color that you did not order. This should be rare,
+but when many voxels are involved, it can happen.
+   Relatedly, when you zoom in on an image, the color overlay needs to
+be resampled to the higher resolution zoomed display. The standard way
+to do this is with a form of linear interpolation -- which will also
+introduce colors not in the discrete color panes. You can turn this
+artifact off by setting the AFNI_IMAGE_ZOOM_NN environment variable to
+YES. That change can be done in your ~/.afnirc file, or interactively
+in the AFNI GUI using the 'EditEnv' button (next to 'Underlay'). If
+you do change it interactively, you'll have to force a redraw of the
+image to see the effect -- for example, by left-clicking on the
+threshold slider thumb in the 'Define Overlay' control panel.
+
+02) New program: 3dICC, for voxelwise whole brain intraclass correlation.
+See:
+   https://afni.nimh.nih.gov/afni/community/board/read.php?1,161629
+
+03) New program: 3dISC, for whole brain intersubj. corr. analysis.
+See:
+   https://afni.nimh.nih.gov/afni/community/board/read.php?1,161898
+
+04) New program: RBA, for region-based analysis.
+The program is similar to the Python program BayesianGroupAna.py, but
+it is more actively maintained and updated. The modeling approach is
+elaborated in the following paper:
+Chen G, Xiao Y, Taylor PA, Riggins T, Geng F, Redcay E, 2019. Handling
+Multiplicity in Neuroimaging through Bayesian Lenses with Multilevel
+Modeling. Neuroinformatics. https://rdcu.be/bhhJp
+
+05) Matrix-based analysis (MBA) paper accepted at Human Brain Mapping.
+The paper provides the underlying mechanism for the program MBA:
+  https://onlinelibrary.wiley.com/doi/abs/10.1002/hbm.24686
+ 
+06) Bye-bye Bootcamp-list: migrated to this Digest-list
+Some of you might have received an email about this recently, but the
+old listserv for hearing about Bootcamps has been retired.  Members of
+it have been migrated to this Digest (welcome!).  Why?  Because there
+was a large overlap of functionality, and this Digest is much more
+informative.  
+   We strongly recommend that any AFNI user subscribe to the Digest in
+order to hear about updates, fixes, new programs, announcements, etc.
+
+---------------------------------------------------------------------
++ This Digest is not a comprehensive list of code updates.
++ Please direct comments or questions to the AFNI Message Board:
+  https://afni.nimh.nih.gov/afni/community/board/list.php?1
++ To unsubscribe or otherwise manage your Digest settings, click here:
+  https://list.nih.gov/cgi-bin/wa.exe?SUBED1=afni_digest&A=1
+---------------------------------------------------------------------
+
+========================================================================
+
+
+AFNI Digest, week of 2019/06/27.
+
+AFNI GUI edition
+
+00) Fixes to GUI threshold slider
+
+Some bug in the OpenMotif graphics library (used to build the
+AFNI graphical user interface) has caused the Define Overlay
+threshold slider to resize itself unpleasantly when other
+interface elements nearby are altered. In the past, there were
+several attempts to detect these alterations and force the slider
+back to its correct size. Recently, on some computer systems,
+these attempts starting doing strange things, causing multiple
+rapid tiny resizes, making the threshold slider look like it was
+vibrating.
+   To patch this problem, the AFNI GUI now simply checks every
+second to see if the slider has the right size, and if not,
+pushes it back to the pre-ordained startup size. The result is
+that the visibility of the slider resizing operations is more
+apparent now than in the past, but less likely to be extremely
+annoying. (If I knew how to avoid this resizing problem in the
+first place, I would have done so 20+ years ago - RWC.)
+
+01) Threshold slider range: new default, and new way to control
+
+The range of the threshold slider is determined by specifying a
+power of 10.  The selector for the power is below threshold bar,
+in the current GUI written as "10^[value]" (used to
+be "**[value]", because of standard programming notation for
+exponentiation).
+   Recently, the default power-of-10 for the threshold slider was
+changed from 0 (so, the thr range was [0, 1]) to 1 (so, the thr
+range is now [0, 10]). This change was made to make the slider's
+initial range be more appropriate for t- and F-statistics, which
+are commonly used datasets for thresholding.
+   You can alter this startup setting in your ~/.afnirc file by
+setting the environment variable AFNI_THRESH_INIT_EXPON.  The
+normal allowable range for the power-of-10 chooser (below the
+threshold slider) is 0..5, but you can set environment variable
+AFNI_THRESH_TOP_EXPON to 6 if you need to use thresholds as large
+as 999999.
+
+02) "Jumpto Olay ..." buttons fix
+
+By right clicking on the OLay label atop the colorscale, a popup
+menu appears.  Two buttons there are Jumpto OLay Max @Thr and
+Jumpto OLay Min @Thr, and a bug was fixed so that each should
+work more reliably now.
+   These buttons will jump the crosshairs to the maximum/minimum
+value in the OLay volume after the volume is thresholded with the
+Thr volume. You can see these at-threshold maximum/minimum values
+in the popup hint that shows if you hover the mouse cursor over
+the dataset range values display just above the autoRange toggle
+button.
+
+03) Perc-y new environment variable to control colorbar range
+
+The environment variable AFNI_AUTORANGE_PERC lets you set a
+percentile value for the OLay autoRange value, which determines
+the default colorizing scale for the OLay volume (i.e., what
+number gets mapped to the top of the colorbar).
+   Until recently, this range value was set to the maximum
+absolute value in the OLay volume.  This meant that some outlier
+value could easily set the colorbar range, effectively washing
+out visualization of interesting contrasts/details.  The new
+default environment variable value is 95 (so that 95% of the
+values in the OLay volume are smaller than the top of the
+colorbar range).
+   If you set variable AFNI_AUTORANGE_PERC to a number between 2
+and 99, then this percentile point on the cumulative histogram of
+the absolute values of the OLay volume will be used as the
+autoRange value.  To make an "optimal" image for a particular
+dataset, you will usually have to deselect autoRange in the GUI
+and manually set the color range until it looks good to you.
+   AFNI_AUTORANGE_PERC will not have any effect if the OLay
+dataset is marked has having a discrete colormap (e.g., atlases
+supplied by AFNI, or datasets so marked with using 3drefit
+-cmap).
+
+04) New default colorbar
+
+The default colorscale is now Reds_and_Blues_Inv, which provides
+a more distinct transition between negative (bluish) and
+positive (reddish) colors than the previous default
+Spectrum:red_to_blue.  
+   You can change the colorscale interactively by right-clicking
+on the colorscale bar, or you can change the startup colorscale
+semi-permanently by setting the environment variable
+AFNI_COLORSCALE_DEFAULT.  
+   (Of course, you can also define your own colorscales --
+https://afni.nimh.nih.gov/pub/dist/doc/OLD/afni_colorscale.html)
+
+05) Opacity locking
+
+The opacity controls on the right side of the AFNI image
+viewers (the 1..9 arrows) are now locked across the different
+viewers. That is, if you click the arrow to alter the overlay
+opacity in one viewer, it will change in all viewers. To turn
+this feature off, set the environment variable AFNI_OPACITY_LOCK
+to NO.
+
+06) Summer reading list
+
+AFNI reads all 'datasets' in a directory when it starts up. By
+default, 'dataset' includes 2D images files (*.jpg and *.png). If
+you do not want such image files included in your list of
+datasets, set environment variable AFNI_IMAGE_DATASETS to NO.
+Such 2D files are viewable only as Axial images. The principal
+reason they are now made visible in the AFNI GUI is that they are
+present in some BIDS dataset collections.
+
+07) Anisotropic linear smoothing in 3dmerge
+
+Per the request of a loyal user in Alicante (España), the
+functionality of program 3dmerge to carry out Gaussian smoothing
+with different FWHM parameters along different spatial axes has
+been restored (it was removed from the user interface 20+ years
+ago as being too confusing for new users; now, we are all much
+more sophisticated). This capability is accessed with the
+-1blur3D_fwhm option.
+
+---------------------------------------------------------------------
++ This Digest is not a comprehensive list of code updates.
++ Please direct comments or questions to the AFNI Message Board:
+  https://afni.nimh.nih.gov/afni/community/board/list.php?1
++ To unsubscribe or otherwise manage your Digest settings, click here:
+  https://list.nih.gov/cgi-bin/wa.exe?SUBED1=afni_digest&A=1
+---------------------------------------------------------------------
+
+========================================================================
+
+
+AFNI Digest, week of 2019/05/31.
+
+00) AFNI Bootcamp announcement: at NIH campus, November 4-8, 2019.
+Please note the dates of the next AFNI Bootcamp here in Bethesda.  The
+main session runs Nov. 4-8, and there is an optional/alternative DTI
+session on Nov. 8 (*note that it is Friday this time*). There is no
+registration fee for the Bootcamp, but attendees must pay all their
+own expenses (e.g., lodging, travel, food, fancy coffees). The
+registration page is here:
+https://afni.nimh.nih.gov/bootcamp/
+along with preliminary schedules and logistic information.
+
+01) Paper on matrix-based analysis (MBA) has been accepted in HBM.
+This work, describing a new approach for matrix-based analysis by Gang
+Chen, has been accepted for publication; its freely available bioRxiv
+version is located here:
+https://www.biorxiv.org/content/10.1101/459545v1
+
+02) *More* statistical methods from Gang.
+... he has been busy!  Here is a new draft of an article describing a
+useful approach to intersubject correlation: "Untangling the
+Relatedness among Correlations, Part III: Inter-Subject Correlation
+Analysis through Bayesian Multilevel Modeling for Naturalistic
+Scanning", by G Chen et al.:
+https://www.biorxiv.org/content/10.1101/655738v1
+
+03) whereami changes.
+whereami is a little different. Defaults have changed and new atlases
+have been integrated. The HCP Glasser, the Brainnetome and the 2.2
+version of the Eickhoff-Zilles MPM atlases are now in the default list
+of atlases searched in the whereami GUI. The Talairach daemon has been
+moved down the search list for now. The Haskins Pediatric atlas and
+the Eickhoff-Zilles probabilistic atlases are no longer searched by
+default. You can make whereami search the list of atlases you want by
+setting AFNI_ATLAS_LIST to have the atlases you want (comma
+separated). If you want all the atlases searched, set that variable to
+ALL, but it will use up memory and make whereami a little slower.
+
+04) New program for ROI work:  3dExchange.
+This can be used to give voxels new values-- for example, to renumber
+ROIs in atlases.
+
+---------------------------------------------------------------------
++ This Digest is not a comprehensive list of code updates.
++ Please direct comments or questions to the AFNI Message Board:
+  https://afni.nimh.nih.gov/afni/community/board/list.php?1
++ To unsubscribe or otherwise manage your Digest settings, click here:
+  https://list.nih.gov/cgi-bin/wa.exe?SUBED1=afni_digest&A=1
+---------------------------------------------------------------------
+
+========================================================================
+
+
+AFNI Digest, week of 2019/05/24.
+
+00) New article on clustering in AFNI: 
+Equitable Thresholding and Clustering (ETAC): A novel method for FMRI
+clustering in AFNI, by RW Cox.
+https://www.biorxiv.org/content/10.1101/295931v2
+Users can read it and take a quiz afterward (possibly with extra
+credit if you can relate the method to the Riemann Zeta
+function). This article has just been accepted to Brain Connectivity.
+
+01) Updates in afni_proc.py's automatic QC document.
+There are new items in the afni_proc.py QC HMTL file.  One is for the
+output of the left-right flip check (which has plagued many data sets
+in public repositories).  Another is for @radial_correlate output,
+which helps detect some scanner coil issues, as well as large motion
+in subjects.
+   If you still haven't checked out the automatically-generated HTML QC
+from afni_proc.py (huh?!?!?), please update your AFNI and check here:
+https://afni.nimh.nih.gov/pub/dist/doc/htmldoc/tutorials/apqc_html/main_toc.html
+
+02) Opening dsets in directories+subdirectories from the GUI.
+The AFNI interface "-bysub" option now accepts a directory name as an
+argument. For example:
+    afni -bysub ~/data/BIDS_directory
+This command will find all sub-directories of ~/data/BIDS_directory
+with names of the form "sub-*", and then recursively search
+~/data/BIDS_directory for all corresponding files. All datasets
+belonging to each distinct subject (e.g., sub-007) will be collected
+into distinct sessions in the AFNI GUI. All datasets found in this
+search will also be collected into the "All_Datasets" mega-session.
+    The purpose of this enhancement is to make it easy to read in an
+entire BIDS collection. However, since there can be 1000+ datasets in
+such a collection, you should be aware of the amount of data that
+could be loaded. It might take some time to scan through a lot of
+directories and set up the sessions. For this reason, the older form
+    afni -bysub sub-007 sub-008 - ~/data/BIDS_directory
+can still be used, indicating to read only the two named subjects from
+the input directory.
+
+03) Colorbar/pbar updates in the GUI.
+The color "pbar" scale in Define Overlay now shows the actual min and
+max values alongside-- i.e., the values that get mapped to top/bottom
+of the colorbar. These values can be set interactively by clicking
+"autoRange" off and entering a value in the numeric field directly
+below.
+    On the subject of the pbar, the Unix environment variable
+AFNI_PBAR_THREE, when set to YES, provides a way to control
+colorization for overlay values larger than the max and smaller than
+the min. This option is mostly useful if you want to turn off
+colorization for these extreme values; that is, have voxels with
+values above the max or below the min not be colored in. You must set
+this environment variable before starting AFNI (usually in your
+~/.afnirc file).
+
+04) The AFNI GUI has 3 new buttons.
+These help you get help: "AFNI News", "AFNI Forum", and "Prog
+Helps". These buttons open up web pages on the AFNI website, and are
+provided for your convenience. They are located near the older "AFNI
+Tips" button, at the bottom of the main AFNI controller window.
+
+05) 3dAllineate was modified (slightly).
+3dAllineate is now more strict in its convergence criterion, when
+searching for the "optimal" alignment parameters between the base and
+source datasets. The results from running this program will now be
+slightly different than before (a few tenths of mm at most). These
+changes were made to make the registration results more similar when
+running the program on different computers, where the difference in
+compilers can produce varying floating point roundoff issues that in
+turn produce different pathways through the optimization software– the
+goal is to get them to the same final point, and that is aided by
+making the optimizer work harder.
+
+06) A small change to afni_proc.py -regress_anaticor_fast.  
+This is now applied via a truncated Gaussian curve (unless otherwise
+requested), to make the result very similar to the original ANATICOR
+method in -regress_anaticor.  The original method uses a flat average
+of neighboring white matter voxels, while the new version uses a close
+approximation (arbitrarily so) via the truncated central part of a
+Gaussian curve.  This change will have a small effect on the results.
+Please see "afni_proc.py -help" for details:
+https://afni.nimh.nih.gov/pub/dist/doc/htmldoc/programs/afni_proc.py_sphx.html
+
+
+---------------------------------------------------------------------
++ This Digest is not a comprehensive list of code updates.
++ Please direct comments or questions to the AFNI Message Board:
+  https://afni.nimh.nih.gov/afni/community/board/list.php?1
++ To unsubscribe or otherwise manage your Digest settings, click here:
+  https://list.nih.gov/cgi-bin/wa.exe?SUBED1=afni_digest&A=1
+---------------------------------------------------------------------
+
+========================================================================
+
+AFNI Digest, week of 2019/03/08.
+
+00) AFNI Bootcamp announcement: KUMC Bootcamp (April 1-3).
+The Hoglund Brain Imaging Center at the University of Kansas Medical
+Center in Kansas City will be hosting an AFNI Bootcamp, April 1-3,
+2019.  Please see here for the Bootcamp website and contact details:
+https://afni.nimh.nih.gov/afni/community/board/read.php?1,160656,160656#msg-160656
+And as a reminder, there is an AFNI bootcamp at NIH in just over 2
+weeks, starting March 25, 2019.
+
+01) A new program for analysis of multi-echo fMRI data: 3dMEPFM.
+3dMEPFM is available in the current AFNI distribution (thanks,
+Cesar!).  The program provides estimates of the changes in the
+transverse relaxation parameter (R2*), and also changes in the net
+magnetization (S0) as an option, based on a monoexponential decay
+model of the ME-fMRI signal, i.e. assuming dependence of the BOLD
+signal on the echo time (TE).  To estimate these variables, the
+program solves a deconvolution problem by means of regularized
+estimation in a similar fashion to 3dPFM and 3dTfitter, when the
+latter is used for PPI analyses. A description of the algorithm and
+results are provided here:
+https://www.biorxiv.org/content/10.1101/558288v1
+and in the program's help:
+https://afni.nimh.nih.gov/pub/dist/doc/htmldoc/programs/3dMEPFM_sphx.html#ahelp-3dmepfm
+
+02) Educational note:  AFNI handouts easier to find.
+There is now a direct link to the most current AFNI handouts directory
+in the online documentation:
+https://afni.nimh.nih.gov/pub/dist/doc/htmldoc/educational/handouts.html
+This might make it easier to search for slides and lecture
+information.  Note that the afni_handouts directory is also
+distributed as part of the Bootcamp data, per usual.
+
+03) Container/Dockerfile instructions.
+For folks who use containers, we have some new instructions for
+working with containerized AFNI:
+https://afni.nimh.nih.gov/pub/dist/doc/htmldoc/background_install/container.html
+(Thanks to Dylan and Jakub for that!)
+
+04) Removing outlier subjects during FMRI processing.
+gen_ss_review_table.py has a new -report_outliers option, to help
+specify subjects that should be dropped from a group analysis (for
+example, those with excessive head motion or a high censor fraction).
+gen_group_command.py has corresponding new -dset_sid_list and
+-dset_sid_omit_list options to help select applied and omitted
+subjects when generating group commands.  Please see the help for
+those programs:
+https://afni.nimh.nih.gov/pub/dist/doc/htmldoc/programs/gen_ss_review_table.py_sphx.html
+https://afni.nimh.nih.gov/pub/dist/doc/htmldoc/programs/gen_group_command.py_sphx.html
+
+---------------------------------------------------------------------
++ This Digest is not a comprehensive list of code updates.
++ Please direct comments or questions to the AFNI Message Board:
+  https://afni.nimh.nih.gov/afni/community/board/list.php?1
++ To unsubscribe or otherwise manage your Digest settings, click here:
+  https://list.nih.gov/cgi-bin/wa.exe?SUBED1=afni_digest&A=1
+---------------------------------------------------------------------
+
+========================================================================
+
+AFNI Digest, week of 2019/02/28.
+
+00) APQC HTML updates/online docs.
+Some new functionality has been added to afni_proc.py's existing
+arsenal of QC tools.  Now, afni_proc.py will automatically create an
+HTML combining the features of @ss_review_basic and @ss_reviewer
+driver into one, with some fun extras.  A brief tutorial description
+of this is here:
+https://afni.nimh.nih.gov/pub/dist/doc/htmldoc/tutorials/apqc_html/main_toc.html
+This is a still-developing tool, with more functionality coming.  But
+as it is, we think this is a useful+efficient way to check out a lot
+of aspects of your processing.
+
+01) Un annuncio riguardante il nuovo AFNI Bootcamp in Italia.
+There will be an AFNI Bootcamp held at the IMT in Lucca, Italy, from
+June 3-7.  If you are interested in attending, please see the IMT
+website here: 
+https://afni.imtlucca.it/ 
+for more information, a contact email and a preliminary schedule.
+
+02) MNI Atlases.
+The Eickhoff-Zilles atlases (still the 1.8 version) have now been
+moved into the standard AFNI distribution, so you won't have to
+download these separately. Previously, only the original version (in
+their native MNI_ANAT format, used in the SPM Anatomy Toolbox) had
+been included. Along with this, the Talairach daemon atlas has been
+demoted in the default order for whereami reports. The new default
+order of the atlases shows the atlas names with those that include
+"MNI" as those in MNI space, and those with "MNIA" in MNI_ANAT space:
+CA_ML_18_MNI,CA_MPM_18_MNI,CA_LR_18_MNI,CA_GW_18_MNIA,
+CA_PM_18_MNIA,CA_N27_LR,DD_Desai_MPM,DKD_Desai_MPM,TT_Daemon.
+
+
+---------------------------------------------------------------------
++ This Digest is not a comprehensive list of code updates.
++ Please direct comments or questions to the AFNI Message Board:
+  https://afni.nimh.nih.gov/afni/community/board/list.php?1
++ To unsubscribe or otherwise manage your Digest settings, click here:
+  https://list.nih.gov/cgi-bin/wa.exe?SUBED1=afni_digest&A=1
+---------------------------------------------------------------------
+
+========================================================================
+
+AFNI Digest, week of 2019/02/15.
+
+00) New SUMA tutorial: spherical ROIs.
+There is a new demo example of no less than 5 ways to make+view
+spheres in SUMA:
+https://afni.nimh.nih.gov/pub/dist/doc/htmldoc/tutorials/rois_corr_vis/suma_spheres.html
+This can be usefully combined with the "driving" aspects of SUMA to
+setup+take snapshots of the surfaces, as well; for example, see here:
+https://afni.nimh.nih.gov/pub/dist/doc/htmldoc/tutorials/rois_corr_vis/cat_netcorr.html#drive-suma-to-save-snapshots-of-the-surface-view-along-some-major-planes
+
+01) AFNI Bootcamp at NIH (March, 2019).
+The next AFNI Bootcamp at NIH (Bethesda, Maryland, USA) will be held
+March 25-29, 2019.  Information such as the registration form, a
+preliminary schedule (for both the main AFNI lectures and the DTI
+Breakout day, which is on a *Wednesday* this year), campus map and
+practical information for attending are all conveniently located here:
+https://afni.nimh.nih.gov/bootcamp/
+There is no charge to attend the Bootcamp, but attendees must pay all
+of their own expenses if traveling, sleeping indoors, eating, etc.
+
+02) More Bootcamp recordings available online.
+We have some new recordings of AFNI Bootcamps available online for
+your home entertainment (hey, it's almost the weekend!).  These
+lectures were recorded at MIT in May, 2018, and kindly made available
+by the good folks at the CBMM there:
+https://cbmm.mit.edu/afni
+Those are also available through the "Educational resources" page of
+the AFNI documentation, along with other outside lectures:
+https://afni.nimh.nih.gov/pub/dist/doc/htmldoc/educational/main_toc.html
+such as recordings (with subtitles) from an AFNI Bootcamp at NIH in
+October, 2017:
+https://afni.nimh.nih.gov/pub/dist/doc/htmldoc/educational/bootcamp_recordings.html
+
+03) Free MBA certification with AFNI!
+A new program for matrix-based analysis (MBA) is available in the most
+recent AFNI release (19.0.13). MBA performs analysis on matrix data
+from each subject with correlation-type values ("connectivity" matrix)
+or white-matter properties (e.g., fractional anisotropy, mean
+diffusivity, radial diffusivity, axial diffusivity, etc.) among brain
+regions.  A description of the theory+practice is provided here:
+https://www.biorxiv.org/content/10.1101/459545v1
+
+
+---------------------------------------------------------------------
++ This Digest is not a comprehensive list of code updates.
++ Please direct comments or questions to the AFNI Message Board:
+ https://afni.nimh.nih.gov/afni/community/board/list.php?1
++ To unsubscribe or otherwise manage your Digest settings, click here:
+ https://list.nih.gov/cgi-bin/wa.exe?SUBED1=afni_digest&A=1
+---------------------------------------------------------------------
+
+
+========================================================================
+
+AFNI Digest, week of 2019/01/24.
+
+00) Registration for next AFNI Bootcamp at NIH now open.
+The next AFNI Bootcamp at NIH (Bethesda, Maryland, USA) will be held
+March 25-29, 2019.  Registration is now open, and information such as
+the registration form, a preliminary schedule (for both the main AFNI
+lectures and the DTI Breakout day, which is on a *Wednesday* this
+year), campus map and practical information for attending are all
+conveniently located here:
+https://afni.nimh.nih.gov/bootcamp/
+There is no charge to attend the Bootcamp, but attendees must pay all
+of their own expenses if traveling, sleeping indoors, eating, etc.
+
+**Please read the above website carefully for information.  If you
+  register now and later decide not to attend, please have the
+  courtesy to let us know.**
+
+01) afni_proc.py now applies motion regressors using -ort in
+3dDeconvolve, which cleans up the commands.  It should not have any
+effect on the results.  Please use "-regress_mot_as_ort no" to revert
+to the old style.
+
+02) afni_proc.py now has the ability to use 3dAllineate for motion
+correction (in place of 3dvolreg).  This is probably for special cases
+only, and is not recommended for general use.
+
+03) 3dQwarp speedup.
+There is some new speedupability of 3dQwarp, by using the "-lite"
+option (~30-40.0001% speedup).  By using this option, you use slightly
+less filling mathematically (12 parameter cubics and 30 parameter
+quintics instead of 24 parameter cubics and 81 parameter quitics), but
+the results should still taste great.  Technical aspects are discussed
+in 3dQwarp's help.  This "-lite" option is now the default setting in
+the omni-useful @SSwarper (but you can still use the older version
+with "-nolite").
+
+
+========================================================================
+
+AFNI Digest, week of 2018/08/29.
+
+00) New examples of scripting images, montages and matrices of images.
+There are several wrapper programs in AFNI that make use of the
+convenient ability to "drive" the AFNI GUI from the command line,
+generating images automatically. This can make it easier to view
+individual subject results during processing, as well as to make
+matrices of images across subjects for group analysis and/or
+presentations.  Examples using AFNI Bootcamp datasets (for
+@chauffeur_afni and 2dcat so far) are now available here:
+https://afni.nimh.nih.gov/pub/dist/doc/htmldoc/tutorials/auto_image/main_toc.html
+
+01) Ubuntu 18.04 installation instructions.
+Installation instructions for AFNI on Ubuntu 18.04 (Bionic Beaver) are
+now available:
+https://afni.nimh.nih.gov/pub/dist/doc/htmldoc/background_install/install_instructs/steps_linux_ubuntu18.html
+Thanks to several people on the Message Board for weighing in on this
+and essentially sorting these out for us!
+
+02) Build instructions for administered systems now available.
+On administered systems, the pieces installed by the administrator and
+regular user are split up.  We have made this more clear for both
+parties now (on administered Macs) here:
+https://afni.nimh.nih.gov/pub/dist/doc/htmldoc/background_install/install_admins/index.html
+
+03) The hills are alive, with the sound of AFNI.
+... Or at least your computers can be: AFNI can now generate and play
+sound from timeseries data.
+The new program "1dsound" will read .1D files (columns of ASCII
+numbers) and generate an audio .au file (an old Sun format). Sound is
+played through an external (non-AFNI) program, such as 'sox', 'afplay'
+(Mac), 'mplayer', or 'aplay' (Linux). If one of these programs is
+installed on your system, you can also play sound directly from the
+AFNI GUI graph viewer. The 'p' keypress into a graph viewer will play
+sound computed from the central subgraph. The 'P' keypress will play
+sound combined from the central subgraph and the average of all
+visible subgraphs. The 'K' keypress will kill any playing sound, if
+you get tired of it before it finishes. (There are checks to prevent
+you playing sound from the AFNI GUI except when you are running on a
+local computer.)
+
+========================================================================
+
+AFNI Digest, week of 2018/07/04.
+
+00) The syntax of running @SSwarper is changed now in the latest AFNI.
+As foretold in the 2018/05/30 Digest, the way that @SSwarper is run is
+now changing, in order to allow more generalized running (changing
+output directory, unlimited variety of template targets, etc.).  Note
+that the inner workings of the program have not changed, nor have its
+outputs files, nor has its method of integration into afni_proc.py.
+In summary: New look, same great taste!
+
+01) New target template(s) for @SSwarper.  
+The program @SSwarper uses a specific, multi-volume type of dataset to
+be a target volume for its skullstripping+nonlinear registration.
+Traditionally, there was only one set for this; however, now this
+program has more generalized behavior, including the ability to use
+different reference volumes.  We are now distributing a couple of
+these, and plan to probably make more.  Please see this MB post for
+more description and links to documentation:
+https://afni.nimh.nih.gov/afni/community/board/read.php?1,158536,158536#msg-158536
+
+02) Including "netpbm" on Macs.
+We have now started to include an additional step on Mac OS installs:
+installing "netpbm", which is an image toolkit used in a few programs.
+(For other OSs, it was already included).  There are just a few lines
+to copy+paste in order to install this, as described here:
+https://afni.nimh.nih.gov/pub/dist/doc/htmldoc/background_install/install_instructs/steps_mac.html#install-netpbm
+(Applicable whether you installed AFNI with the either the "App"
+version or old-school instructions.)
+
+========================================================================
+
+AFNI Digest, week of 2018/07/02.
+
+00) Registration for next AFNI Bootcamp at NIH now open.
+The next AFNI Bootcamp at NIH (Bethesda, Maryland, USA) will be held
+October 22-26, 2018.  Registration is now open, and information such
+as the registration form, a preliminary schedule (for both the main
+AFNI lectures and the DTI Breakout day), campus map and practical
+information for attending can be obtained at this top secret web
+address:
+https://afni.nimh.nih.gov/bootcamp/
+There is no charge to attend the Bootcamp, but attendees must pay all
+of their own expenses if traveling, sleeping indoors, eating, etc. (if
+you do *none* of those things, then it is an exceptional bargain, I
+suppose).
+
+========================================================================
+
+AFNI Digest, week of 2018/06/05.
+
+00) *Important* notice for Mac users.
+AFNI binary package "macosx_10.7_Intel_64" will no longer receive
+updates after June 30, 2018 (after OHBM/ISMRM...).  The basically
+identical macosx_10.7_local package will still be updated.
+
+If "afni -ver" shows "macosx_10.7_Intel_64", then the next time you
+would update your binaries, please consider updating them to
+macosx_10.7_local or macosx_10.12_local. Updating can be done by
+running, for example:
+
+  @update.afni.binaries -defaults -package macosx_10.7_local
+
+Verification of the update can be done with "afni -ver", which should
+then show macosx_10.7_local.  *NB: An update is not necessary now-now,
+only when one would otherwise be done (so, then-now).
+
+========================================================================
+
+AFNI Digest, week of 2018/05/30.
+
+00) Some important thoughts on how to do basic statistical testing.
+... and some equally important thoughts on how *not* to do it.  Anyone
+performing statistical tests, please check out the following:
+https://www.biorxiv.org/content/early/2018/05/23/328567
+for some straightforward guidelines that apply to both voxelwise and
+clusterwise testing (and beyond!).  Additionally, descriptions of
+"bi-sided" clustering in AFNI are given.  Finally, there is perhaps
+some useful scripting to also check out with this, for clusterizing
+~efficiently from the command line:
+https://afni.nimh.nih.gov/pub/dist/doc/htmldoc/codex/main_det_2018_ChenEtal.html
+
+01) There are a couple of new scripts to deal with BIDS data and json files.
+They all start with "abids". Short for afni BIDS. There are a few
+changes that need to be made, so they won't be up to date until the
+next update...
++ abids_tool.py is basically a wrapper for 3drefit that pulls info
+  from the matching .json file and modifies the NIFTI dataset.
++ abids_json_info.py pulls information from .json files. Most options
+  are specific for BIDS formatted .json files but it can also pull any
+  field in a .json file and list the entries available in the file.
+
+02) Changing syntax to @SSwarper.
+The tool, @SSwarper, which provides functionality of both nonlinear
+alignment to a template space and skullstripping, will soon have a new
+syntax.  Presently, just a few arguments are given (e.g., "@SSwarper A
+B C"); however, in order to generalize its behavior, it will start
+having command line options (e.g., "@SSwarper -input A -prefix B
+-subid C ...").  There will also be new template space maps (which
+aren't so special, but do require having a few different
+subbrick's-worth of information).  So, this is just a "save the date"
+for updating your scripts (we will write more when the changes take
+place).
+
+03) New MNI152_2009_template surfaces for SUMA.
+Surfaces for display on the MNI152_2009_template dataset have been
+created using FreeSurfer+@SUMA_Make_Spec_FS, and are available here:
+https://afni.nimh.nih.gov/pub/dist/tgz/suma_MNI152_2009.tgz
+This is the same dataset that currently is the target space for
+@SSwarper.  Similar surfaces for the TT_N27 and its MNI-ish version
+are also available:
+https://afni.nimh.nih.gov/pub/dist/tgz/suma_TT_N27.tgz
+https://afni.nimh.nih.gov/pub/dist/tgz/suma_MNI_N27.tgz
+
+04) All AFNI colormaps shown.
+On a somewhat lighter note, examples of all AFNI colormaps are now
+provided here:
+https://afni.nimh.nih.gov/pub/dist/doc/htmldoc/educational/all_afni_cbars.html
+This may be convenient when you are trying to decide what colorbar to
+use.  Or not.
+
+========================================================================
+
+AFNI Digest, week of 2018/05/22.
+
+00) AFNI Bootcamp spots available for Boston, MA, USA, *next week*.
+There are a couple recent openings for the AFNI Bootcamp being held at
+MIT in Boston during the week of May 28-June 1, 2018. For more
+information, including registration information and contact details
+for the organizers, please see here:
+https://afni.nimh.nih.gov/afni/community/board/read.php?1,158136,158136#msg-158136
+
+========================================================================
+
+AFNI Digest, week of 2018/05/16.
+
+00) New executable script @grayplot reads a results directory created
+by afni_proc.py and creates a grayplot of each errts*+tlrc.HEAD
+dataset it finds. The output Grayplot.*.png images have a motion
+magnitude trace on top (with the censored intervals marked), and the
+time series grayscale plot below. The voxels (downwards) are ordered
+with Gray Matter on top, White Matter below, and CSF at the bottom,
+with tissue types separated by black-and-white dashed lines. These
+images are quick way to see if there are any strange artifacts left in
+the data after processing, and also to see how much the censoring has
+affected the dataset time series.
+
+01) A program called BayesianGroupAna.py is available now for running
+ROI-based group analysis. The underlying mechanism is laid out in a
+manuscript at:
+https://www.biorxiv.org/content/early/2018/02/20/238998. 
+Please read the program help for more details: BayesianGroupAna.py -help.
+
+02) afni_proc.py now has options for extracting orthogonalized terms
+from tedana.py for cleaning multi-echo time series data.  They can be
+applied via -combine_choice methods 'OC_tedort' and
+'tedana_OC_tedort'.  Please see the output of '@extract_meica_ortvec
+-help' for details.
+
+Also, afni_proc.py will now suggest '-blur_in_mask yes' when combining
+echoes via tedana.py.
+
+03) The full_mask dataset created by afni_proc.py will no longer be
+slightly dilated by default.  This will not typically affect results,
+but it will affect some of the mask-based quality control measures
+output by @ss_review_basic.
+
+04) There is a new clusterizing sheriff in town-- 3dClusterize.  It
+actual just takes a lot of the existing clusterizing functionality
+from 3dclust but simplifies the syntax and adds in some more
+functionality, such as being able to include a mask, run bi-sided
+tests, or threshold based on p-values.  Along with p2dsetstat and
+'1d_tool.py -csim_alpha ... -csim_pthr ...', this should make
+scripting easier all along the clusterizing process.
+
+========================================================================
+
+AFNI Digest, week of 2018/04/30.
+
+00) Discussion of FMRI processing with AFNI.
+A recently-submitted bioRxiv draft (not by AFNI authors) described
+"default FMRI processing" using various softwares, including AFNI.  In
+further dialogue with this work, we comment on many of the steps
+chosen therein with AFNI, and provide several recommendations in the
+forms of both code snippets and philosophical musings.  The AFNI draft
+is located on bioRxiv:
+https://www.biorxiv.org/content/early/2018/04/28/308643
+and some of the associated codes are located here:
+https://afni.nimh.nih.gov/pub/dist/doc/htmldoc/codex/fmri_detailed.html
+(Note that while some those codes do contain fixes from the other
+paper and recommended steps in analyzing FMRI data, there are still
+several cases where things we would *not* recommend were left in the
+codes, for the purposes of comparison with the other authors' text;
+please refer to our bioRxiv comments for details.)
+
+01) NIH Brainhack 2018, May 2-3, will be on the NIH campus in
+Bethesda.  For details, please see:
+https://brainhacknih.github.io/NIHBrainHack2018
+
+02) Processing of multi-echo data using afni_proc.py.
+Recent updates have been made to afni_proc.py for processing
+multi-echo data.  Processing for all steps leading up to the "combine"
+block is run on each echo. Registration of the data is driven by a
+"favorite" echo (default 2nd), which is then applied to all echoes,
+and can include typical transformations: blip distortion correction,
+EPI to EPI base, EPI to anat, affine anat to template, and subsequent
+anat to template non-linear registration.  The multi-echo data can
+then be combined using the "optimally combined" method from Posse
+et. al., 1999, applied by Kundu et. al., 2011.
+Alternatively, echoes can be combined running ME-ICA via tedana.py,
+called from the resulting proc script, with control over passed
+options.
+Those going to the NIH Brainhack 2018, May 2-3, can bring data for
+processing.  Please see:
+https://afni.nimh.nih.gov/pub/dist/doc/htmldoc/programs/afni_proc.py_sphx.html#ahelp-afni-proc-py
+
+03) Mapping data from surface to volumes has been holier than thou
+might want it. You can fill your volume with @surf_to_vol_spackle. You
+can use these with thickness measurements generated on the surface
+like the ones from FreeSurfer or with the thickness measurements from
+our newish thickness scripts.
+
+========================================================================
+
+AFNI Digest, week of 2018/04/11.
+
+00) New AFNI Bootcamp:  UW, Seattle, USA (July, 2018).
+We will be having an AFNI Bootcamp in the sunny Northwest in July.
+Please see here for more information, if you are interested:
+https://afni.nimh.nih.gov/afni/community/board/read.php?1,157746,157746#msg-157746
+
+01) More info about "equitable" clustering (ETAC) in AFNI.
+A new draft about the ETAC method in AFNI is available for general
+edufication:
+https://www.biorxiv.org/content/early/2018/04/05/295931
+Go forth, and cluster!
+
+02) Complex warping in AFNI:  i, i, Cap'n!
+Program 3dNwarpApply will now warp complex-valued source datasets
+correctly, transforming the real and imaginary parts, and then
+recombining them to form a complex-valued output dataset. Previously,
+it would have converted the source dataset to the magnitude values,
+and output the float-valued dataset of the warped magnitude volume.
+
+03) New AFNI analysis recipe:  noodle al phreno.
+In case you missed a very *important* posting on April 1.
+https://afni.nimh.nih.gov/afni/community/board/read.php?1,157722,157722#msg-157722
+
+04) Gray's time series anatomy.
+New program 3dGrayplot will take a 3D+time dataset and make a summary
+2D image for data quality review, in the style of Jonathan Power
+(x-axis=time axis, y-axis=all spatial dimensions):
+https://www.ncbi.nlm.nih.gov/pubmed/27510328
+https://www.jonathanpower.net/2017-ni-the-plot.html 
+The result is saved to a PNG (or JPEG) image for your viewing
+pleasure. This program is new, and will probably be upgraded in the
+future to provide more control over the image manufacturing process.
+
+========================================================================
+
+AFNI Digest, week of 2018/03/26.
+
+00) Updated X-server for Windows Subsystem for Linux (WSL).
+For the newest form of having Linux capability on Windows (WSL), we
+recently found that a different X-server worked better with AFNI than
+in the previous, beta-version of Linux on Windows (BoUoW).  We have
+updated the instructions for installing it here:
+https://afni.nimh.nih.gov/pub/dist/doc/htmldoc/background_install/install_instructs/steps_windows10.html
+(as well as instructions how how to be able to copy+paste in the WSL
+terminal, which somehow is not enabled by default???).
+
+01) Grouping functionality of all AFNI programs.
+There are over 500 programs in AFNI.  That's a lot of functionality to
+get to know, especially for new users.  To help with this process, we
+have painstakingly (= heuristically) classified almost all of them,
+put brief descriptions of each, and highlighted what we think are the
+most useful ones to get to know.  That effort is recorded for the
+future historians of AFNI here:
+https://afni.nimh.nih.gov/pub/dist/doc/htmldoc/educational/classified_progs.html 
+(and this will probably be a growing/adapting project over time).
+
+02) More Insta in the AFNI GUI.
+Bob and some of his followers on Twitter like to see time series
+statistics NOW NOW NOW, and so he has added 3dTstat Insta-calculation
+capability to the AFNI GUI, as described here:
+https://afni.nimh.nih.gov/afni/community/board/read.php?1,157684,157684#msg-157684
+New statistics were added to 3dTstat to measure the fluctuations of
+time series volumes, including Von Neumann's MSSD (mean square of
+successive differences) https://www.jstor.org/stable/2235765
+
+03) fat_proc* diffusion tools: default updates + new demo.
+The fat_proc* programs for DWI/DTI analyzing have gone through some
+minor revisions.  The names of the automatically generated QC
+snapshots have been altered to be clearer (hopefully).  The default
+orientation of the dsets after DICOM conversion has also been set to
+be RAI (other values can still be set via command line).  The online
+help docs here:
+https://afni.nimh.nih.gov/pub/dist/doc/htmldoc/tutorials/fatcat_prep/main_toc.html
+should soon reflect these changes, as should the new FATCAT_DEMO2,
+which is available via "@Install_FATCAT_DEMO2".
+
+04) New program name, same great functionality.
+The program formerly known as "@FATCAT_matplot_shiny," used to view
+matrix output from 3dNetCorr and 3dTrackID, has now been shortened to
+"FATCAT_matplot".  More about this program can be seen here:
+https://afni.nimh.nih.gov/pub/dist/doc/htmldoc/tutorials/FATCAT_matplot/FATCAT_matplot.html
+Additional tools for setting up stats in a similar, user-interactive
+vein can be learned about here:
+https://afni.nimh.nih.gov/pub/dist/doc/htmldoc/tutorials/3dMVM_validator/3dMVM_validator_overview.html 
+
+========================================================================
+
+AFNI Digest, week of 2018/01/05.
+
+00)  The AFNI Bootcamp cometh!
+What better way to shake away the cold than to think about freshly
+baked FMRI data, hot out of the afni_proc.py pipeline?  Registration
+for the next AFNI Bootcamp, to be held at NIH in March (2018!) is now
+open.  Please see the "Registration" link, as well other useful
+information, here:
+https://afni.nimh.nih.gov/bootcamp/
+
+01)  ROI-based group analysis using Bayesian hierarchical modeling
+The current practice of handling multiple testing through controlling
+the overall FPR in neuroimaging under the null hypothesis significance
+testing (NHST) paradigm excessively penalizes the statistical power
+with inflated type II errors ("false negatives" or "low power"). An
+ROI-based approach has been proposed to handling neuroimaging group
+analysis using Bayesian hierarchical modeling (BHM) to achieve two
+goals: 1) improving modeling efficiency via one integrative (instead
+of many separate) model and dissolving the multiple testing issue, and
+2) turning the focus of conventional NHST on FPR into quality control
+by calibrating type S errors while maintaining a reasonable level of
+inference efficiency. See more details here:
+https://doi.org/10.1101/238998
+
+02)  Startup tips in AFNI
+The latest edition of the AFNI program now prints out a usage tip (to
+the terminal window) when it finishes starting up. An example:
+
+   ------------------------- AFNI Startup Tip (13/54)------------------
+   You can run InstaCorr on several subjects at the same time, using
+   multiple AFNI controllers opened with the 'New' button.
+   --------------------------------------------------------------------
+
+---------------------------------------------------------------------
++ This Digest is not a comprehensive list of code updates.
++ Please direct comments or questions to the AFNI Message Board:
+ https://afni.nimh.nih.gov/afni/community/board/list.php?1
++ To unsubscribe or otherwise manage your Digest settings, click here:
+ https://list.nih.gov/cgi-bin/wa.exe?SUBED1=afni_digest&A=1
+---------------------------------------------------------------------
+========================================================================
+
+========================================================================
+
+AFNI Digest, week of 2017/12/23.
+
+00) Notes on temporal autocorrelation modelling in major FMRI packages.
+Some new and interesting methods work comparing different programs, by
+Olszowy et al.  https://arxiv.org/abs/1711.09877 From the abstract:
+    "Though temporal autocorrelation modelling in AFNI was not
+    perfect, its performance was much higher than the performance of
+    temporal autocorrelation modelling in FSL and SPM. FSL and SPM
+    could improve their autocorrelation modelling approaches for
+    example adopting a noise model similar to the one used by AFNI."
+AFNI models the temporal autocorrelation using an ARMA(1,1) model. The
+feature that makes AFNI most distinct from FSL and SPM in this area is
+that the autocorrelation model parameters are estimated separately for
+each voxel time series (program 3dREMLfit), rather than globally (SPM)
+or over regions (FSL).
+
+01) A new option "-Tslices" in 3drefit.
+This option allows a user to add slice time offsets directly to a
+dataset. The purpose of this is to let a user (or script) set the
+slice timing when the dataset creation process did not do so
+correctly. AFNI allows arbitrary slice timing to be added to NIFTI
+files, using the AFNI extension to the NIFTI header. These slice times
+will be used by the "tshift" processing block in afni_proc.py. Details
+of how to specify slice time offsets are described in the output of
+3drefit -help.
+
+02) Fixed "-substatpar" in 3drefit.
+The -substatpar option in 3drefit did not always work properly for
+some types of datasets. This problem has (hopefully) been fixed, so
+that the statistical type and parameters associated with a dataset
+sub-brick can now be changed. The main application for this is when
+(say) 3dcalc is used to process a dataset: the statistical information
+is usually removed from the output dataset, since 3dcalc cannot "know"
+if the calculations affected the statistical distribution. Option
+-substatpar would usually be combined with option -sublabel to change
+the label of the same sub-brick, to match the new statistical type
+(e.g., "Correlation"). Details of how to set statistical parameters
+and type for a sub-brick are described in 3drefit -help.
+
+03) A new AFNI driver command is now available.
+The new command "DATASET#N" drives the Dataset#N "transformation" used
+in graph viewers to overlay time series plots from more than one
+dataset. This change allows a script to drive the creation of such
+overlaid time series graphs and then save them to image files. The
+details are described in the updated README.driver file. At this time,
+this is the only AFNI plugin that can be controlled by driving.
+
+04) Larger montages for AFNI viewer.
+The maximum array size for an image viewer Montage has been increased,
+significantly. This change is principally for driving the AFNI GUI to
+produce image snapshots with lots of slices.
+
+05) New recommended options in afni_proc.py.
+Some of the more recent afni_proc.py option recommendations include:
+      -volreg_align_to MIN_OUTLIER
+      -tlrc_base MNI152_T1_2009c+tlrc (assuming one wants MNI space)
+      -regress_motion_per_run
+Please see "afni_proc.py -help" for details.
+
+06) A note on python2 and python3 "fun".
+We are in the process of enhancing python programs to work with both
+python2 and python3. Programs that should already be python3
+compatible include afni_proc.py, afni_system_check.py, 1d_tool.py,
+make_random_timing.py and timing_tool.py.
+
+07) Enhancements in make_random_timing.py.
+The program can now handle more complicated designs. One can define
+stimulus and rest timing classes with their own probability
+distributions, including limits. See "Advanced Usage" in the -help
+output for details.
+
+08) Intraclass Correlation (ICC) can improve your life.
+Well, at least it might improve some of your analysis and results
+interpretation, as described by G. Chen et al. in a new paper in HBM:
+http://onlinelibrary.wiley.com/doi/10.1002/hbm.23909/full
+
+-----------------------------
+Updates 01-03 were suggested by our interactions with students during
+our recent Bootcamps in Shenzhen and Guangzhou (China). Thanks go to
+them for excellent hosting and such fruitful discussions!
+
+---------------------------------------------------------------------
++ This Digest is not a comprehensive list of code updates.
++ Please direct comments or questions to the AFNI Message Board:
+  https://afni.nimh.nih.gov/afni/community/board/list.php?1
++ To unsubscribe or otherwise manage your Digest settings, click here:
+  https://list.nih.gov/cgi-bin/wa.exe?SUBED1=afni_digest&A=1
+---------------------------------------------------------------------
+========================================================================
+
+
+========================================================================
+
+AFNI Digest, week of 2017/11/22.
+
+00) Job Opening in the AFNI group.
+The Scientific and Statistical Computing Core (a.k.a. the AFNI group)
+at the NIMH, NIH (Bethesda, MD, USA) is lookin' to hire a postdoc,
+particularly someone with C and/or C++ experience, with Python and
+OpenGL skills also being quite useful.
+
+If you like problem solving and working with a fun group of people,
+then check out the advert here for details:
+https://afni.nimh.nih.gov/afni/community/board/read.php?1,156739,156739#msg-156739
+(And please feel free to forward on.)
+
+01) 3dLME: new fun option in the program.
+Option "-ML" has been added in 3dLME, which can be invoked when
+Maximum Likelihood is desirable, instead of the default method,
+Restricted Maximum Likelihood (REML).
+
+02) Have a good Thanksgiving!
+And remember: "An optimist is a person who starts a new diet on
+Thanksgiving Day." -- I. Kupcinet
+
+---------------------------------------------------------------------
++ This Digest is not a comprehensive list of code updates.
++ Please direct comments or questions to the AFNI Message Board:
+  https://afni.nimh.nih.gov/afni/community/board/list.php?1
++ To unsubscribe or otherwise manage your Digest settings, click here:
+  https://list.nih.gov/cgi-bin/wa.exe?SUBED1=afni_digest&A=1
+---------------------------------------------------------------------
+========================================================================
+
+
+========================================================================
+AFNI Digest, week of 2017/09/26.
+
+00) More FMRI cluster exploration.
+A recent (brief) study by Mueller et al. found that SPM12 exhibits a
+large, uniform dependence of FMRI clustering results on resampling
+(i.e., voxel size, spatial resolution).  So, Bob checked what happens
+in AFNI when resampling, to see if any such badness occurs.  In short
+the effect is small (about 4x smaller), and not as uniform-- phew.
+The MB post here:
+https://afni.nimh.nih.gov/afni/community/board/read.php?1,156093,156093#msg-156093
+contains a link to the AFNI work now available arXiv, as well as to
+the Mueller et al. article.
+
+01) New program: 3dBrainSync
+This program "synchronizes" one dataset's time series with another
+dataset, in the sense of maximizing the average time series
+correlation of the transformed dataset with the reference dataset. Two
+different methods for the transformation are provided: orthogonal
+matrix, and time index permutation. One goal is to allow direct
+inter-run correlation between rs-FMRI datasets.  This program was
+inspired by the nice poster on the BrainSync approach by Joshi et
+al. at this past year's OHBM (also see here
+http://neuroimage.usc.edu/neuro/Resources/BrainSync).
+
+
+02) Bug Fix: 3dttest++ -ETAC
+A bug was introduced when the multiple blur cases option "-ETAC_blur"
+was added: runs without multiple blur cases would fail because the
+intermediate filenames (used to communicate between 3dttest++ and
+3dXClustSim) were formatted incorrectly. This bug has (fondly do we
+hope) been patched.
+
+
+03) Re. AFNI Bootcamp at NIH (October 2-6, 2017).
+For those attending the AFNI bootcamp starting October 2nd, please get
+your laptops ready.  Installation instructions are available at
+https://afni.nimh.nih.gov/pub/dist/doc/htmldoc/background_install/install_instructs/index.html.  
+Once ready, please sent the output from: 
+afni_system_check.py -check_all 
+to afni.bootcamp@gmail.com with your first name in the
+subject.  We will verify the output and help resolve any issues.  
+(And please note that all spots for this Bootcamp have already been
+filled.)
+
+
+========================================================================
+AFNI Digest, week of 2017/07/28.
+
+00) ETAC notes.
+A presentation by Bob describing philosophy+implementation of some new
+clustering options in AFNI:
+https://afni.nimh.nih.gov/afni/community/board/read.php?1,155528,155528#msg-155528
+
+---------------------------------------------------------------------
++ This Digest is not a comprehensive list of code updates.
++ Please direct comments or questions to the AFNI Message Board:
+ https://afni.nimh.nih.gov/afni/community/board/list.php?1
+---------------------------------------------------------------------
+
+========================================================================
+AFNI Digest, week of 2017/07/21.
+
+00) Dartmouth Bootcamp announcement:
+    https://afni.nimh.nih.gov/afni/community/board/read.php?1,155427
+
+01) 3dFWHMx will now output the mixed model ACF parameters by default,
+    rather than the Gaussian FWHM ones.  This follows from recent
+    discussion+changes related to FMRI clustering.  To discourage use,
+    the Gaussian FWHM output row will show zeros (and will be reported
+    by afni_proc.py as such, until the options are updated).
+
+
+02) New program: 3dTto1D - a general program for collapsing time series data.
+    The most useful computations are probably:
+
+    enorm  - Euclidean norm of first differences 
+             (of motion parameters or of EPI time series data, say)
+    RMS    - Root Mean Square (a.k.a DVARS) of first differences
+             (= enorm/sqrt(nvoxels))
+    SRMS   - Scaled RMS, scaled by mean of input
+             (= RMS/mean)
+             (probably very good for censoring)
+             (might be the same as DVARS censoring in FSL)
+
+    Censoring with SRMS has not yet been incorporated into afni_proc.py.
+
+
+03) Changes+problems with OpenGL on very recent versions MacOS (10.12.5).
+    These changes will result in SUMA crashing under some circumstances,
+    namely when the object controller panel (ctrl+s) is opened, then closed,
+    then opened again;  something like this often occurs behind the scenes
+    when scripts are driving SUMA.
+    This new OpenGL behavior on Mac has been affecting many different
+    softwares;  while we are looking into any fixes/workarounds, it is
+    likely that a full solution is outside of our hands and will have to
+    come from Mac.
+
+========================================================================
+AFNI Digest, week of 2017/07/07.
+
+00) AFNI Bootcamp at NIH October 2-6, 2017: Registration open.
+    Please see here:
+    https://afni.nimh.nih.gov/bootcamp/
+    ... for the registration page and for more information.
+
+01) We will be retiring some of the AFNI packages.  Please let us know
+    via the AFNI Message Board if there is a need to keep any of them.
+    a) Linux_fedora_21_64.tgz     - not replaced
+    b) macosx_10.8_gcc/icc.tgz    - not replaced
+    c) macosx_10.10_gcc/icc.tgz   - probably replaced by a local version
+    d) linux_xorg7/_64.tgz        - not replaced
+
+02) New or planned AFNI binary packages include:
+    a) new: linux_ubuntu_16_64.tgz
+    b) new: linux_centos_7_64.tgz
+    c) planned: macosx_10.10_local.tgz  (convenient for 10.10, 10.11)
+    d) planned: macosx_10.12_local.tgz  (convenient for 10.12+)
+    e) possibly: linux_fedora_25_64.tgz
+
+ 
+ 
+---------------------------------------------------------------------
++ This Digest is not a comprehensive list of code updates.
++ Please direct comments or questions to the AFNI Message Board:
+ https://afni.nimh.nih.gov/afni/community/board/list.php?1
+---------------------------------------------------------------------
+
+===========================================================================
+AFNI Digest, week of 2017/06/23. 
+
+00) Posters from the AFNI group for the OHBM (Organization for Human
+Brain Mapping) conference are available online:
+
+++ New FMRI clustering tools (more?!?), here with an emphasis on being
+   "equitable" across the brain and in dependence on various
+   parameters such as smoothing, voxelwise p-value, etc.:
+   https://afni.nimh.nih.gov/pub/dist/OHBM2017/OHBM_2017_ETAC.pdf
+
+++ New work on calculating intraclass correlation (ICC):
+   https://afni.nimh.nih.gov/pub/dist/OHBM2017/OHBM_2017_ICC.pdf
+
+++ New tools for FATCAT (whose online help is being written...)
+   https://afni.nimh.nih.gov/pub/dist/OHBM2017/OHBM_2017_FATCAT.pdf
+
+++ Comparisons of two FMRI task paradigms: "naturalistic" (=movie) and
+   rest:
+   https://afni.nimh.nih.gov/pub/dist/OHBM2017/OHBM_2017_ISC_and_RSFMRI.pdf
+
+No doubt these make great plane reading for anyone flying to
+Vancouver, or metro reading for any city.
+
+---------------------------------------------------------------------
++ This Digest is not a comprehensive list of code updates.
++ Please direct comments or questions to the AFNI Message Board:
+  https://afni.nimh.nih.gov/afni/community/board/list.php?1
+---------------------------------------------------------------------
+
+===========================================================================
+AFNI Digest, week of 2017/06/09. 
+
+00) Updated N27 FreeSurfer surfaces are available in MNI and Talairach spaces.
+These were remade with FS 6.0 and the updated "@SUMA_MakeSpecFS -NIFTI
+...".  The surfaces are available at their standard address:
+https://afni.nimh.nih.gov/pub/dist/tgz/suma_TT_N27.tgz
+https://afni.nimh.nih.gov/pub/dist/tgz/suma_MNI_N27.tgz
+ 
+01) AFNI now usable on Windows (who'd have thought??).
+Via the "Bash on Ubuntu on Windows 10" interface, AFNI and SUMA can
+now be run directly on Windows systems.  Setup instructions are
+provided here:
+https://afni.nimh.nih.gov/pub/dist/doc/htmldoc/background_install/install_instructs/steps_windows10.html
+ 
+02) New AFNI binary package for Linux Ubuntu 16.
+We now distribute a set of new precompiled binaries for Ubuntu 16 (and
+potentially for later systems), streamlinining installation.  Setup
+instructions are provided here:
+https://afni.nimh.nih.gov/pub/dist/doc/htmldoc/background_install/install_instructs/steps_linux_ubuntu16.html
+ 
+03) SUMA and AFNI in concert at the Kennedy Center.
+Internationally famous soprano, Renee Fleming, performed with her own
+functional results overlaid on the aforementioned N27 brain
+surfaces. Dr. David Jangraw, a post-doc in Peter Bandettini's group,
+used AFNI+SUMA for the analysis and display. Ms. Fleming and SUMA
+presented the "high notes" of the evening:
+https://www.facebook.com/KennedyCenter/photos/a.10155104350680865.1073741876.73250630864/10155104351155865/?type=3&theater
+Associated article by Dr. Francis Collins and Ms. Fleming:
+http://jamanetwork.com/journals/jama/fullarticle/2630954
+ 
+---------------------------------------------------------------------
++ This Digest is not a comprehensive list of code updates.
++ Please direct comments or questions to the AFNI Message Board:
+ https://afni.nimh.nih.gov/afni/community/board/list.php?1
+---------------------------------------------------------------------
+
+===========================================================================
+AFNI Digest, week of 2017/05/26.
+
+00) AFNI is starting a new "Digest" email distribution-- welcome!
+
+01) FMRI Clustering has been a widely discussed topic this year. These
+recent papers by the AFNI group discuss the work by Eklund et
+al. (with useful summaries of their results) and discuss both old and
+new AFNI clustering functionality.
++ Full Brain Connectivity paper:
+  http://online.liebertpub.com/doi/full/10.1089/brain.2016.0475
++ And its "Executive Summary":
+  https://drive.google.com/file/d/0B6Sn11ZTBrhvR2VYWmhvYmpZU2M/view
++ PNAS reply Letter:
+  http://www.pnas.org/content/114/17/E3370.full
++ Presentation slides:
+  https://drive.google.com/file/d/0B6Sn11ZTBrhvMi1TRDdKRUlMaEk/view
+
+02) In afni_proc.py, blur estimation and clustering are now done using
+the ACF method by default, replacing Gaussian FWHM (as of Aug. 15,
+2016). Further progress in this area will be debuted at the OHBM
+meeting in Vancouver BC (end of June).
+
+03) The AFNI team has a new member, Justin "DiscoRaj" Rajendra.
+Please direct your most complicated inquiries directly to him.
+
+04) For Mac users, a note about AFNI compiling, installation, and
+updates: For relative ease, please use the "local" Mac version now
+(easier dependencies), described in Step #2 here:
+  https://afni.nimh.nih.gov/pub/dist/doc/htmldoc/background_install/install_instructs/steps_mac.html
+
+05) The command line form of dcm2niix is now distributed with AFNI, as
+"dcm2niix_afni" (renamed to avoid potential filename conflicts for
+anyone with it already installed from elsewhere):
+   https://afni.nimh.nih.gov/pub/dist/doc/program_help/dcm2niix_afni.html
+Thanks very much to Chris Rorden!
+
+06) For convenient referencing+remembering, the AFNI version number is
+now stored in the header of data files, as part of the history
+(viewable with 3dinfo).  For example,
+   ----- HISTORY -----
+   [user@computer: Mon May 22 17:21:52 2017] {AFNI_17.1.06:linux_openmp_64} 3dmask_tool -input ...
+
+---------------------------------------------------------------------
++ This Digest is not a comprehensive list of code updates.
++ Please direct comments or questions to the AFNI Message Board:
+  https://afni.nimh.nih.gov/afni/community/board/list.php?1
++ To unsubscribe or otherwise manage your Digest settings, click here:
+  https://list.nih.gov/cgi-bin/wa.exe?SUBED1=afni_digest&A=1
+---------------------------------------------------------------------
+

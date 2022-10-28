@@ -1,0 +1,47 @@
+#### Makefile for RS6000 Afni version 2.2.0 / AFNI98
+
+## for IBM RS6000 (AIX 3.2.5, GCC 2.7.2.1)
+## no plug_in support, no dynamic loading, use make all_noplugins
+## From Doug Morris (dmorris@bmrl.med.uiuc.edu)
+
+CCDEBS = -DAFNI_DEBUG -DIMSEQ_DEBUG -DDISPLAY_DEBUG -DTHD_DEBUG
+CC     = gcc -O2 -DRS6000 -DUSE_TRACING  -DNO_FRIVOLITIES
+CCVOL  = gcc -DRS6000 -DUSE_TRACING  -DNO_FRIVOLITIES
+CCFAST = $(CC)
+CCMIN  = gcc
+CCD    = $(CC) $(CCDEBS)
+CCOLD  = $(CC)
+
+IFLAGS = -I.
+LFLAGS = -s -L.
+
+CCSVD  = gcc -O0
+
+
+PLUGIN_SUFFIX = so
+PLUGIN_LFLAGS = -shared 
+PLUGIN_CC     = $(CC)
+PLFLAGS       = -L.
+
+AR     = /bin/ar
+RANLIB = /bin/touch
+TAR    = /bin/tar
+MKDIR  = /bin/mkdir
+LD     = /bin/ld
+GZIP   = /usr/local/bin/gzip
+
+RM = /bin/rm -f
+MV = /bin/mv -f
+CP = /bin/cp -f
+
+LINT = /usr/bin/lint -a -b -u -v -x $(IFLAGS) $(CCDEFS)
+
+INSTALLDIR = ./rs6000
+LIBDIR = $(INSTALLDIR)
+
+LLIBS  = -lmri -lf2c -lXm -lXt -lX11 -lm -lc
+
+###############################################################
+
+MAKE = make
+include Makefile.INCLUDE

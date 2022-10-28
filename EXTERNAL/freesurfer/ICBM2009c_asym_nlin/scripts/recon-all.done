@@ -1,0 +1,13 @@
+------------------------------
+SUBJECT ICBM2009c_fs6
+START_TIME Wed Oct 26 03:50:18 PDT 2016
+END_TIME Wed Oct 26 09:31:14 PDT 2016
+RUNTIME_HOURS 5.682
+USER chrisgor
+HOST sh-0-28.local
+PROCESSOR x86_64
+OS Linux
+UNAME Linux sh-0-28.local 2.6.32-573.12.1.el6.x86_64 #1 SMP Tue Dec 15 21:19:08 UTC 2015 x86_64 x86_64 x86_64 GNU/Linux
+VERSION $Id: recon-all,v 1.580.2.13 2016/10/18 14:39:30 zkaufman Exp $
+CMDPATH /opt/freesurfer/bin/recon-all
+CMDARGS -s ICBM2009c_fs6 -i /scratch/users/chrisgor/ICBM2009c_freesurfer/mni_icbm152_t1_tal_nlin_asym_09c.nii.gz -all -openmp 16 -sd /scratch/users/chrisgor/ICBM2009c_freesurfer/subjects_dir/

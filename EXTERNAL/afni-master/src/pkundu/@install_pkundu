@@ -1,0 +1,46 @@
+#!/bin/tcsh -f
+
+if ("$1" == '' || "$1" =~ "-h*") then
+   echo "Usage: `basename $0` <INSTALL_DIR>"
+   echo "Script to install Prantik Kundu's tools into the executables directory" 
+   echo ""
+   exit 0
+endif
+
+set idir = $1
+
+if ("${idir}" =~ /* || "${idir}" =~ '~*') then
+   echo "Have full path ('${idir}'), good"
+else
+   echo "Have relative path, turn to full"
+   set hdir = $PWD
+   cd ../
+   if ( ! -d ${idir}) then
+      echo "Directory ${idir} does not exist under $PWD"
+      cd -
+      exit 1
+   endif
+   cd ${idir}
+   set idir = $PWD
+   cd $hdir
+endif
+
+if ( ! -d ${idir} ) then
+   echo "Directory ${idir} does not exist"
+   exit 1
+endif
+
+echo "Coping meica.py to ${idir}"
+cp -p meica.py ${idir}
+if ($status) then
+   echo "Failed to write meica.py into ${idir}"
+   exit 1
+endif
+echo "Copying meica.libs to ${idir}"
+cp -rp meica.libs ${idir}
+if ($status) then
+   echo "Failed to write meica.libs into ${idir}"
+   exit 1
+endif
+
+exit 0

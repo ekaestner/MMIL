@@ -1,0 +1,25 @@
+#!/bin/csh
+
+# Run ni_test_r in one window and ni_test_w in another
+
+echo "First test of writing: tcp"
+nicat tcp:localhost:53211 << END
+  *** This is the test data. ***
+      Beware the Ides of March.
+      Call me Ishmael.
+      It is a far far better thing I do than I have ever done.
+      Four score and seven years ago.
+  *** This is the end of the test data.  Have a nice day. ***
+END
+
+sleep 1
+
+echo "Second test of writing: shm"
+nicat shm:junk:53211 << END
+  *** This is the test data. ***
+      It is an ancient mariner, and he stoppeth one of three.
+      I wake and feel the fell of dark, not day.
+      I leant upon a coppice gate, when frost was spectre grey.
+      When lilacs last in the dooryard bloomed.
+  *** This is the end of the test data.  Have a nice day. ***
+END

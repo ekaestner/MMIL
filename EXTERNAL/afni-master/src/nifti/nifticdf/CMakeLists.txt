@@ -1,0 +1,47 @@
+set(NIFTI_CDFLIB_NAME ${NIFTI_PACKAGE_PREFIX}nifticdf)
+
+add_nifti_library(${NIFTI_CDFLIB_NAME} nifticdf.c )
+set_target_properties(
+  ${NIFTI_CDFLIB_NAME}
+  PROPERTIES
+    PUBLIC_HEADER
+    "${CMAKE_CURRENT_LIST_DIR}/nifticdf.h"
+  )
+target_compile_options(${NIFTI_CDFLIB_NAME} PRIVATE "-D__COMPILE_UNUSED_FUNCTIONS__")
+target_link_libraries(${NIFTI_CDFLIB_NAME} PUBLIC ${NIFTI_PACKAGE_PREFIX}niftiio)
+get_lib_version_vars("nifticdf_version.h" NIFTICDF_VERSION NIFTICDF_MAJOR_VERSION)
+if(BUILD_SHARED_LIBS)
+    set_target_properties(${NIFTI_CDFLIB_NAME}
+      PROPERTIES
+        ${NIFTI_LIBRARY_PROPERTIES}
+        VERSION ${NIFTICDF_VERSION}
+        SOVERSION ${NIFTICDF_MAJOR_VERSION}
+        )
+endif()
+install_nifti_target(${NIFTI_CDFLIB_NAME})
+if(NIFTI_BUILD_APPLICATIONS)
+  add_nifti_executable(${NIFTI_PACKAGE_PREFIX}nifti_stats nifti_stats.c)
+  target_link_libraries( ${NIFTI_PACKAGE_PREFIX}nifti_stats PUBLIC ${NIFTI_PACKAGE_PREFIX}niftiio ${NIFTI_PACKAGE_PREFIX}nifticdf)
+  install_nifti_target(${NIFTI_PACKAGE_PREFIX}nifti_stats)
+  install_man_page(
+    ${NIFTI_PACKAGE_PREFIX}nifti_stats
+    OPTS "--help-option=-help;--version-string=${NIFTICDF_VERSION};--no-info"
+              )
+endif()
+
+
+if(NIFTI_BUILD_TESTING AND NIFTI_BUILD_APPLICATIONS)
+  foreach(DISTRIBUTION CORREL TTEST FTEST ZSCORE CHISQ BETA BINOM GAMMA POISSON NORMAL FTEST_NONC CHISQ_NONC LOGISTIC LAPLACE UNIFORM TTEST_NONC WEIBULL CHI INVGAUSS EXTVAL PVAL LOGPVAL LOG10PVAL )
+    add_test( NAME ${NIFTI_PACKAGE_PREFIX}nifti_stats_${DISTRIBUTION}_test COMMAND $<TARGET_FILE:${NIFTI_PACKAGE_PREFIX}nifti_stats> 0:4:1 ${DISTRIBUTION})
+    add_test( NAME q${NIFTI_PACKAGE_PREFIX}nifti_stats_${DISTRIBUTION}_test COMMAND $<TARGET_FILE:${NIFTI_PACKAGE_PREFIX}nifti_stats> -q 0:4:1 ${DISTRIBUTION})
+    add_test( NAME q1${NIFTI_PACKAGE_PREFIX}nifti_stats_${DISTRIBUTION}_test COMMAND $<TARGET_FILE:${NIFTI_PACKAGE_PREFIX}nifti_stats> -q 0:4:1 ${DISTRIBUTION} 1 1 1)
+    add_test( NAME d${NIFTI_PACKAGE_PREFIX}nifti_stats_${DISTRIBUTION}_test COMMAND $<TARGET_FILE:${NIFTI_PACKAGE_PREFIX}nifti_stats> -d 0:4:1 ${DISTRIBUTION})
+    add_test( NAME d1${NIFTI_PACKAGE_PREFIX}nifti_stats_${DISTRIBUTION}_test COMMAND $<TARGET_FILE:${NIFTI_PACKAGE_PREFIX}nifti_stats> -d 0:4:1 ${DISTRIBUTION} 1 1 1)
+    add_test( NAME 1${NIFTI_PACKAGE_PREFIX}nifti_stats_${DISTRIBUTION}_test COMMAND $<TARGET_FILE:${NIFTI_PACKAGE_PREFIX}nifti_stats> -1 0:4:1 ${DISTRIBUTION})
+    add_test( NAME 11${NIFTI_PACKAGE_PREFIX}nifti_stats_${DISTRIBUTION}_test COMMAND $<TARGET_FILE:${NIFTI_PACKAGE_PREFIX}nifti_stats> -1 0:4:1 ${DISTRIBUTION} 1 1 1)
+    add_test( NAME z${NIFTI_PACKAGE_PREFIX}nifti_stats_${DISTRIBUTION}_test COMMAND $<TARGET_FILE:${NIFTI_PACKAGE_PREFIX}nifti_stats> -z 0:4:1 ${DISTRIBUTION})
+    add_test( NAME z1${NIFTI_PACKAGE_PREFIX}nifti_stats_${DISTRIBUTION}_test COMMAND $<TARGET_FILE:${NIFTI_PACKAGE_PREFIX}nifti_stats> -z 0:4:1 ${DISTRIBUTION} 1 1 1)
+    add_test( NAME h${NIFTI_PACKAGE_PREFIX}nifti_stats_${DISTRIBUTION}_test COMMAND $<TARGET_FILE:${NIFTI_PACKAGE_PREFIX}nifti_stats> -h 0:4:1 ${DISTRIBUTION})
+    add_test( NAME h1${NIFTI_PACKAGE_PREFIX}nifti_stats_${DISTRIBUTION}_test COMMAND $<TARGET_FILE:${NIFTI_PACKAGE_PREFIX}nifti_stats> -h 0:4:1 ${DISTRIBUTION} 1 1 1)
+  endforeach()
+endif()

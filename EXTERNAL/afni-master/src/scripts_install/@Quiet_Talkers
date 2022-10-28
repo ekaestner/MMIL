@@ -1,0 +1,274 @@
+#!/bin/tcsh -f
+
+@global_parse `basename $0` "$*" ; if ($status) exit 0
+
+set stat = 0
+set sdir = "$PWD"
+set pname = `basename $0`
+
+goto PARSE
+RET_PARSE:
+
+foreach prog ($proglist)
+   if ("$pif" == '') then
+      echo "searching for talking $prog..."
+      if ($no_npb == 1) then
+         set pidl = `ps ${psopt} |  \grep -w $prog |\
+                              \grep -v grep |\
+                              \grep -v $pname |\
+                              \sed 's/^[ \t]*//g' | \
+                              \cut -d ' ' -f 1`   
+         if ($list == 1) then
+            echo $pidl
+            goto END
+         endif
+         if ($#pidl > 0) then
+            foreach pid ($pidl)
+               if ($quiet == 0) echo killing $prog with pid $pid 
+               if ($dosudo) then
+                  sudo kill -9 $pid
+               else
+                  kill -9 $pid
+               endif
+               if ($status) echo "Murder of $prog pid $pid failed"
+            end 
+         endif                       
+      else
+         set cc = 1
+         #don't use foreach npb ($npb_vals), it won't work if npb_vals = ('')
+         while ($cc <= $#npb_vals) 
+            set npb = $npb_vals[$cc]
+            set pidl = `ps ${psopt} |  \grep -w $prog |\
+                                 \grep -v grep |\
+                                 \grep -v $pname |\
+                                 \grep "\-npb[[:space:]][[:space:]]*$npb" | \
+                                 \sed 's/^[ \t]*//g' | \
+                                 \cut -d ' ' -f 1`
+            if ($list == 1) then
+               echo $pidl
+               goto END
+            endif
+            if ($#pidl > 0) then
+               foreach pid ($pidl)
+                  if ($quiet == 0) echo killing $prog with pid $pid 
+                  if ($dosudo) then
+                     sudo kill -9 $pid
+                  else
+                     kill -9 $pid
+                  endif
+                  if ($status) echo "Murder of $prog pid $pid failed"
+               end 
+            endif
+            @ cc ++                       
+         end
+      endif
+   else
+      set pidl = `ps ${psopt} |  \grep -w $prog |\
+                           \grep -v grep  |\
+                           \grep -v $pname |\
+                           \grep "$pif"   |\
+                           \sed 's/^[ \t]*//g' | \
+                           \cut -d ' ' -f 1`   
+      if ($list == 1) then
+         echo $pidl
+         goto END
+      endif
+      if ($#pidl > 0) then
+         foreach pid ($pidl)
+            if ($quiet == 0) echo killing $prog with pid $pid 
+            if ($dosudo) then
+               sudo kill -9 $pid
+            else
+               kill -9 $pid
+            endif 
+            if ($status) echo "Murder of $prog pid $pid failed"
+         end 
+      endif     
+   endif
+end
+
+goto END
+
+PARSE:
+   set Narg = $#
+   set proglist = (afni 3dGroupInCorr plugout_drive suma DriveSuma \
+                   3dSkullStrip SurfSmooth)
+   set npb_vals = ('')
+   set no_npb = 0
+   set iprog = 0
+   set pif = ''
+   set dosudo = 0
+   set list = 0
+   set quiet = 0
+   set psopt = '-o pid -o user -o command'
+   set cnt = 1
+   while ($cnt <= $Narg)
+		set donext = 1;
+      if ($donext && "$argv[$cnt]" == "-echo") then
+         set echo
+         set donext = 0; goto NEXT		
+      endif
+      
+      if ($donext && ("$argv[$cnt]" == "-h" || "$argv[$cnt]" == "-help")) then
+         goto HELP
+         set donext = 0;	 goto NEXT	
+      endif
+      
+      if ($donext && "$argv[$cnt]" == "-no_npb") then
+         set no_npb = 1
+         set donext = 0; goto NEXT		
+      endif
+      
+      if ($donext && "$argv[$cnt]" == "-list") then
+         set list = 1
+         set donext = 0; goto NEXT		
+      endif
+      
+      if ($donext && "$argv[$cnt]" == "-quiet") then
+         set quiet = 1
+         set donext = 0; goto NEXT		
+      endif
+      
+      if ($donext && "$argv[$cnt]" == "-sudo") then
+         set dosudo = 1
+         set psopt = "-A $psopt"
+         set donext = 0; goto NEXT		
+      endif
+
+      if ($donext && "$argv[$cnt]" == "-prog") then
+         if ($cnt == $Narg) then
+            echo "Option -prog needs a program name"
+            goto BEND
+         endif
+         @ cnt ++
+         if ($iprog == 0) then
+            set proglist = ($argv[$cnt])
+         else
+            set proglist = ($proglist $argv[$cnt])
+         endif
+         @ iprog ++
+         set donext = 0; goto NEXT		
+      endif
+      
+      if ($donext && "$argv[$cnt]" == "-pif") then
+         if ($cnt == $Narg) then
+            echo "Option -pif needs a string"
+            goto BEND
+         endif
+         @ cnt ++
+         set pif = "$argv[$cnt]"
+         set donext = 0; goto NEXT		
+      endif
+      
+      if ($donext && "$argv[$cnt]" == "-npb_val") then
+         if ($cnt == $Narg) then
+            echo "Option -npb_val needs an interger"
+            goto BEND
+         endif
+         @ cnt ++
+         set npb_vals = ($npb_vals $argv[$cnt])
+         set donext = 0; goto NEXT		
+      endif
+      
+      if ($donext && "$argv[$cnt]" == "-npb_range") then
+         if ($cnt == $Narg) then
+            echo "Option -npb_range needs 2 interger"
+            goto BEND
+         endif
+         @ cnt ++
+         set npb0 = $argv[$cnt]
+         if ($cnt == $Narg) then
+            echo "Option -npb_range needs 2 interger"
+            goto BEND
+         endif
+         @ cnt ++
+         set npb1 = $argv[$cnt]
+         foreach nn (`count -digits 1 $npb0 $npb1`)
+            set npb_vals = ($npb_vals $nn)
+         end
+         set donext = 0; goto NEXT		
+      endif
+      if ($donext == 1) then
+         echo "Error: Option or parameter '$argv[$cnt]' not understood"
+         apsearch -popt `basename $0` -word $argv[$cnt]
+         goto END
+      endif
+      
+      NEXT:
+		@ cnt ++
+	end
+   
+goto RET_PARSE
+
+HELP:
+   echo ""
+   echo "A script to find and kill AFNI processes"
+   echo "ps is used to lookfor processes running certain AFNI programs"
+   echo "(default list: $proglist)"
+   echo "with certain command line options"
+   echo ""
+   echo "   `basename $0` [-sudo] [-prog PROG]"
+   echo "                 [-npb_val NV] [-npb_range NV0 NV1]"
+   echo "                 [-pif KEY_STRING] [-no_npb]"
+   echo "                 [-list] [-quiet]"
+   echo ""
+   echo "OPTIONS"
+   echo " -sudo: Invoke higher powers to kill processes that you do not own"
+   echo " -prog PROG: Instead of the default program list, only kill PROG"
+   echo "             You can use multiple -prog options"          
+   echo " -npb_val NV: Kill those programs using NIML port block NV"
+   echo " -npb_range NV0 NV1: Kill those using NIML port blocks between "
+   echo "                     NV0 and NV1"
+   echo " -pif KEY_STRING: Kill those programs that have a string matching"
+   echo "                  KEY_STRING in their commandline."
+   echo "                  Most AFNI programs allow for a -pif KEY_STRING"
+   echo "                  option that does nothing but serve a process"
+   echo "                  identification purpose"
+   echo " -no_npb: Kill any program in the list regardless of -npb options"
+   echo "          or -pif"
+   echo " -list: Just list process numbers, don't run kill command"
+   echo " -quiet: Do it quietly"
+   echo ""
+   @global_parse -gopts_help
+   echo ""
+   echo "Examples:"
+   echo "   To kill all programs in list that used the -npb option"
+   echo "   `basename $0`"
+   echo ""
+   echo "   To kill all those with either -npb 3 or 6"
+   echo "   `basename $0` -npb_val 3 -npb_val 6"
+   echo ""
+   echo "   To kill all those with -npb values in the range 5..9"
+   echo "   `basename $0` -npb_range 5 9"
+   echo ""
+   echo "   To restrict the search to certain programs only:"
+   echo "   `basename $0` -prog suma -prog afni -npb_range 5 9"
+   echo ""
+   echo "General purpose destruction:"
+   echo "You can also kill process that have a certain string in the"
+   echo "command line. Usually such commands are flagged with the "
+   echo "hidden AFNI option -pif."
+   echo "Example:"
+   echo "   suma -pif SOME_KEY_STRING &"
+   echo "   `basename $0` -prog suma -pif SOME_KEY_STRING"
+   echo ""
+   echo "Note that with -pif, the npb options are disabled."
+   echo ""
+   echo "Say you want to kill any 'afni'"
+   echo "   `basename $0` -prog afni -pif ' '"
+   echo " or "
+   echo "   `basename $0` -prog afni -no_npb"
+   echo ""
+   echo "Ziad S. Saad   saadz@mail.nih.gov"
+   echo ""
+   goto END
+
+BEND:
+   echo "Failed"
+   set stat = 1
+   goto END
+   
+END:
+   exit $stat
+
+

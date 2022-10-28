@@ -1,0 +1,555 @@
+#!/bin/tcsh -fe
+
+# Make AFNI's help readable in a text editor again!
+@global_parse `basename $0` "$*" ; if ($status) exit 0
+
+set retval = 0   # return a status (do we need to goto END?)
+
+PARSE:
+   set Narg = $#
+   set cnt = 1
+   set v1_list = ()     # init as list             18 Nov 2016 [rickr]
+   set v2i = ""
+   set v1i = ""
+   set usecp = 1
+   set xmat_only = 0
+   set v2coord = 0
+   set xmat_only_meanit = 0  # really don't make new dsets
+   set oprefix = "" # optional output prefix       18 Nov 2016 [rickr]
+   set shift_xform1D = ""  # apply xform or inv xform shifts from 1D file  - 13 Feb 2020 [drg]
+   set mode = 'grid'   # grid, cm, shift1D or shift1D_inv
+   set cm_amask = '-automask' # -automask or ''     6 Nov 2015 [rickr]
+   set overw = 0
+   set overf = ''
+   if ("$1" == '') goto HELP
+   while ($cnt <= $Narg)
+      set donext = 1
+
+      if ($donext && "$argv[$cnt]" == "-echo") then
+         set echo
+         set donext = 0 
+      endif
+      
+      if ($donext && "$argv[$cnt]" == "-help" || "$argv[$cnt]" == "-h") then
+         goto HELP
+      endif
+
+      if ($donext && "$argv[$cnt]" == "-base") then
+         set pLoc = $cnt      
+         if ($pLoc == $Narg) then
+            echo "Need string after -base"
+            set retval = 1
+            goto END
+         else
+            @ cnt ++
+            set v2i = "$argv[$cnt]"
+            #script fails on any status (-fe) echo $v2i | grep -q '^...:' > & /dev/null
+            set cv2i = `echo $v2i | sed 's/^...:.*,.*,.*//g'`
+            if ("$cv2i" == '') then
+               set v2coord = 1
+               if ( "$v2i" !~ 'RAI:*' ) then
+                  echo "Only RAI: supported for now"
+                  goto END
+               endif
+            endif
+            set donext = 0   
+         endif   
+      endif
+
+      if ($donext && "$argv[$cnt]" == "-overwrite") then
+         set overw = 1
+         set overf = ' -overwrite '
+         set donext = 0   
+      endif
+      
+      if ($donext && "$argv[$cnt]" == "-cm") then
+         set mode = 'cm'
+         set donext = 0   
+      endif
+      if ($donext && "$argv[$cnt]" == "-cm_no_amask") then
+         set mode = 'cm'
+         set cm_amask = ''
+         set donext = 0   
+      endif
+      if ($donext && "$argv[$cnt]" == "-grid") then
+         set mode = 'grid'
+         set donext = 0   
+      endif
+      if ($donext && "$argv[$cnt]" == "-no_cp") then
+         set usecp = 0
+         set donext = 0   
+      endif
+      
+      if ($donext && "$argv[$cnt]" == "-1Dmat_only") then
+         set xmat_only = 1
+         set donext = 0   
+      endif
+
+      if ($donext && "$argv[$cnt]" == "-1Dmat_only_nodset") then
+         set xmat_only = 1
+         set xmat_only_meanit = 1
+         set donext = 0   
+      endif
+      
+      if ($donext && "$argv[$cnt]" == "-dset") then
+         set pLoc = $cnt      
+         if ($pLoc >= $Narg) then
+            echo "Need dset after -dset"
+            set retval = 1
+            goto END
+         else
+            @ cnt ++
+            set v1i = ($argv[$cnt])
+            set donext = 0   
+         endif   
+      endif
+      if ($donext && "$argv[$cnt]" == "-child") then
+         set pLoc = $cnt      
+         if ($pLoc == $Narg) then
+            echo "Need dsets after -child"
+            set retval = 1
+            goto END
+         else
+            @ cnt ++
+            set v1_list = ($argv[$cnt-])
+            set nv1 = $#v1_list
+            set cnt = `expr $cnt + $nv1 - 1`
+            set donext = 0   
+         endif   
+      endif
+      # -prefix, if we do not want _shft        18 Nov 2016 [rickr]
+      if ($donext && "$argv[$cnt]" == "-prefix") then
+         set pLoc = $cnt      
+         if ($pLoc == $Narg) then
+            echo "Need name after -prefix"
+            set retval = 1
+            goto END
+         else
+            @ cnt ++
+            set oprefix = ($argv[$cnt])
+            set donext = 0   
+         endif   
+      endif
+
+      if ($donext && "$argv[$cnt]" == "-shift_xform") then
+         set pLoc = $cnt      
+         if ($pLoc == $Narg) then
+            echo "Need name after -shift_xform"
+            set retval = 1
+            goto END
+         else
+            @ cnt ++
+            set shift_xform1D = ($argv[$cnt])
+            set mode = "shift1D"
+            set donext = 0   
+         endif   
+      endif
+
+      if ($donext && "$argv[$cnt]" == "-shift_xform_inv") then
+         set pLoc = $cnt      
+         if ($pLoc == $Narg) then
+            echo "Need name after -shift_xform_inv"
+            set retval = 1
+            goto END
+         else
+            @ cnt ++
+            set shift_xform1D = ($argv[$cnt])
+            set mode = "shift1D_inv"
+            set donext = 0   
+         endif   
+      endif
+
+      if ($donext == 1) then
+         echo "Error: Option or parameter '$argv[$cnt]' not understood"
+            set retval = 1
+         goto END
+      endif
+      @ cnt ++
+   end
+
+if ("$v1i" == "" || (("$v2i" == "") && ( $shift_xform1D == ""))) then
+   echo "Error: Missing input"
+            set retval = 1
+   goto END
+endif   
+
+# -prefix should not be combined with -child or -no_cp    18 Nov 2016
+if ( $oprefix != "" ) then
+   set retval = 0
+   if ( $#v1_list > 0 ) then
+      echo "Error: cannot use -prefix with -child"
+      set retval = 1
+   endif
+   if ( ! $usecp ) then
+      echo "Error: cannot use -prefix with -no_cp"
+      set retval = 1
+   endif
+   if ( $retval ) then
+      goto END
+   endif
+endif
+
+# don't need the base if applying a xform
+if ( $shift_xform1D != "") then
+   if ($v2i == "") then # simpler to use same dataset name for input as base
+      set v2i = $v1i # don't need a base anyway when applying xform
+   endif
+   goto SETCENTER
+endif
+
+SET_PARAMS: 
+if ( $v2coord != 1 ) then
+   set v2_vw = `@GetAfniView $v2i`
+   set pth2 = $v2i:h
+   if ("$pth2" == "$v2i") then 
+
+      set pth2 = .
+
+      # allow for template datasets in path, etc.  24 Apr 2011 [rickr]
+      # We execute with -e, and @FADP may exit with 1 if the dataset is
+      # not found.  So to fail here instead, put it in the background.
+
+      set test_path = `@FindAfniDsetPath $v2i &`
+      if ( $#test_path == 1 && "$test_path" != "./" ) then
+         set pth2 = $test_path
+      endif
+   endif
+
+   set v2_pref = `@GetAfniPrefix $v2i`
+   set v2 = $pth2/$v2_pref$v2_vw
+else
+   set v2 = ${v2i}
+endif
+
+CHECKS:
+#make sure input exists
+if ( $v2coord != 1 ) then
+   if (`@CheckForAfniDset $v2` < 2) then
+      echo "Error: base brick $v2 not found."
+      set retval = 1
+      goto END
+   endif
+endif
+
+SETCENTER:
+   set v1_vw = `@GetAfniView $v1i`
+   set v1_pth = $v1i:h
+   if ("$v1_pth" == "$v1i") then 
+      set v1_pth = .
+   endif
+
+   set v1_pref = `@GetAfniPrefix $v1i`
+   set v1 = $v1_pth/$v1_pref$v1_vw
+   set oname = `ParseName -app _shft  -out PrefixView $v1`
+   # possibly apply -prefix
+   if ( $oprefix != "" ) then
+      set dsview = `@GetAfniView $oname`
+      set oname = $oprefix$dsview
+   endif
+
+if ($mode == 'grid') then
+   #orientation of v1
+   set v1_orient = `@GetAfniOrient $v1`
+   #center of v1, in native orientation
+   set v1_center = `@VolCenter -dset $v1`
+   #center of v2, in v1's orientation
+   if ($v2coord == 1) then
+      set XYZ = (`echo $v2i | sed 's/^...://g' | sed 's/,/ /g'`)
+      set v2_center_v1or = `@FromRAI -xyz $XYZ[1] $XYZ[2] $XYZ[3] -or $v1_orient`
+   else
+      set v2_center_v1or = `@VolCenter -dset $v2 -or $v1_orient`
+   endif
+   #calculate deltas
+   set del = ( 0 0 0 )
+   foreach i (1 2 3)
+      set del[$i] = `ccalc -eval "$v2_center_v1or[$i] - $v1_center[$i]"`
+   end
+   
+   #get delta in RAI 
+   #echo "del: $del"
+   set del_RAI = `@ToRAI -xyz $del -or $v1_orient`
+   #echo "del_RAI: $del_RAI"
+   
+   
+   #multiply deltas by axis signs
+   set mp = `@AfniOrientSign $v1_orient`
+   set del_refit = ($del)
+   foreach i ( 1 2 3)
+         # changed to form double  RR/DG  24 Mar 2008
+         set del_refit[$i] = `ccalc -form d -expr "$mp[$i] * $del[$i]"`
+   end
+   #apply delta
+   if ($usecp == 1) then
+      
+      if ($xmat_only_meanit != 1) then
+         if ( $overw == 0 && `@CheckForAfniDset $v1_pth/$oname` != 0 ) then
+            echo ""
+            echo "Error `basename $0`"
+            echo "Dset $v1_pth/$oname found, cleanup first!"
+            echo ""
+            set retval = 1
+            goto END
+         endif
+
+         3dcopy $overf $v1  $v1_pth/$oname
+         3drefit  -dxorigin $del_refit[1] \
+                  -dyorigin $del_refit[2] \
+                  -dzorigin $del_refit[3] $v1_pth/$oname
+      endif
+   else
+      if ($xmat_only_meanit != 1) then
+          3drefit  -dxorigin $del_refit[1] \
+               -dyorigin $del_refit[2] -dzorigin $del_refit[3] $v1
+      endif
+   endif
+else if ($mode == "cm") then
+      #get the center of mass of the base and apply delta
+      if ($v2coord == 0) then
+         set v2_center_RAI = `3dCM $cm_amask $v2i`
+      else
+         set XYZ = (`echo $v2 | sed 's/^...://g' | sed 's/,/ /g'`)
+         set v2_center_RAI = ($XYZ[1] $XYZ[2] $XYZ[3])
+      endif
+      if ($usecp == 1) then
+         if ( $overw == 0 && `@CheckForAfniDset $v1_pth/$oname` != 0 ) then
+            echo ""
+            echo "Error `basename $0`"
+            echo "Dset $v1_pth/$oname found, cleanup first!"
+            echo ""
+            set retval = 1
+            goto END
+         endif
+   
+         if ($xmat_only_meanit != 1) then
+            3dcopy $overf $v1  $v1_pth/$oname
+            set v1_center_RAI = `3dCM $cm_amask -set $v2_center_RAI \
+                                 $v1_pth/$oname`
+         endif
+      else
+         if ($xmat_only_meanit != 1) then
+            set v1_center_RAI = `3dCM $cm_amask -set $v2_center_RAI $v1`
+         endif
+      endif
+      
+      set del_RAI = ( 0 0 0 )
+      foreach i (1 2 3)
+         set del_RAI[$i] = `ccalc -eval "$v2_center_RAI[$i] - $v1_center_RAI[$i]"`
+      end
+      echo base: $v2_center_RAI
+      echo dset: $v1_center_RAI
+      echo delta: $del_RAI
+else if (($mode == "shift1D") || ($mode == "shift1D_inv")) then
+   # need to consider whether to negate translation vector or use inverse
+   if ($mode == "shift1D") then
+      set xfm = `cat_matvec -ONELINE $shift_xform1D`
+   else # invert xform
+      set xfm = `cat_matvec -ONELINE $shift_xform1D -I`
+   endif
+
+   # only interested in the translation shifts here
+   set del_RAI = ( $xfm[4] $xfm[8] $xfm[12] )
+
+   #orientation of v1
+   set v1_orient = `@GetAfniOrient $v1`
+   #change del_RAI to v1fol_orient
+   set del = `@FromRAI -xyz $del_RAI -or $v1_orient`
+   echo $del
+   #multiply deltas by axis signs         (changed from v1_orient  DG/RR)
+   set mp = `@AfniOrientSign $v1_orient` 
+   set del_refit = ($del)
+   foreach i ( 1 2 3)
+        # changed to form double
+        set del_refit[$i] = `ccalc -form d -expr "$mp[$i] * $del[$i]"`
+   end
+
+   #apply delta
+   if ($usecp == 1) then
+      if ($xmat_only_meanit != 1) then
+         if ( $overw == 0 && `@CheckForAfniDset $v1_pth/$oname` != 0 ) then
+            echo ""
+            echo "Error `basename $0`"
+            echo "Dset $v1_pth/$oname found, cleanup first!"
+            echo ""
+            set retval = 1
+            goto END
+         endif
+   
+         3dcopy $overf $v1  $v1_pth/$oname
+         3drefit  -dxorigin $del_refit[1] \
+                  -dyorigin $del_refit[2] \
+                  -dzorigin $del_refit[3] $v1_pth/$oname
+      endif
+   else  # not a copy, refitting the dataset in place!
+      if ($xmat_only_meanit != 1) then
+          3drefit  -dxorigin $del_refit[1] \
+               -dyorigin $del_refit[2] -dzorigin $del_refit[3] $v1
+      endif
+   endif
+
+else
+      echo "Unrecognized mode - nothing to do"
+      exit 1
+endif   # end of mode choices
+
+# if applying a previous shift, continue to children
+if ( $shift_xform1D != "") then
+  goto SETCHILDREN
+endif
+
+DELTA_TO_XMAT:
+   #Output xform matrix for allineating
+   set del_xform = ()
+   foreach delx ($del_RAI)
+      set del_xform = ($del_xform `ccalc -eval "$delx * -1"`)
+   end
+   set oname = `ParseName -app _shft  -out Prefix $v1`
+   # possibly apply -prefix
+   if ( $oprefix != "" ) then
+      set oname = $oprefix
+   endif
+   #get rid of .nii which remains in prefix
+   set o1d = `ParseName -out FNameNoAfniExt $oname`
+   echo "1 0 0 $del_xform[1] 0 1 0 $del_xform[2] 0 0 1 $del_xform[3]" \
+         > ${o1d}.1D
+   if ($xmat_only == 1) then
+      goto END
+   else
+      #echo "Proceeding..."
+   endif
+
+   
+SETCHILDREN:
+foreach v1foli ( $v1_list )
+   set v1fol_vw = `@GetAfniView $v1foli`
+   set v1fol_pth = $v1foli:h
+   if ("$v1fol_pth" == "$v1foli") then 
+      set v1fol_pth = .
+   endif
+
+   set v1fol_pref = `@GetAfniPrefix $v1foli`
+   set v1fol = $v1fol_pth/$v1fol_pref$v1fol_vw
+
+   if ("`@GetAfniID $v1fol`" != "`@GetAfniID $v1i`" && \
+       "`@GetAfniID $v1fol`" != "`@GetAfniID $v2i`") then
+      #orientation of v1fol
+      set v1fol_orient = `@GetAfniOrient $v1fol`
+      #change del_RAI to v1fol_orient
+      set del = `@FromRAI -xyz $del_RAI -or $v1fol_orient`
+      echo $del
+
+      #multiply deltas by axis signs         (changed from v1_orient  DG/RR)
+      set mp = `@AfniOrientSign $v1fol_orient` 
+      set del_refit = ($del)
+      foreach i ( 1 2 3)
+            # changed to form double
+            set del_refit[$i] = `ccalc -form d -expr "$mp[$i] * $del[$i]"`
+      end
+
+      #apply the  delta
+      set oname = `ParseName -app _shft  -out PrefixView ${v1fol_pref}${v1fol_vw}`
+      if ($usecp == 1) then
+         if ( $overw == 0 && `@CheckForAfniDset $v1fol_pth/${oname}` != 0 ) then
+            echo ""
+            echo "Error `basename $0`"
+            echo "Child Dset $v1fol_pth/${oname} found, cleanup first!"
+            echo ""
+            set retval = 1
+            goto END
+         endif
+         3dcopy $overf $v1fol  $v1fol_pth/${oname}
+         3drefit  -dxorigin $del_refit[1] \
+                  -dyorigin $del_refit[2] \
+                  -dzorigin $del_refit[3] $v1fol_pth/${oname}
+      else   
+         3drefit  -dxorigin $del_refit[1] \
+                  -dyorigin $del_refit[2] \
+                  -dzorigin $del_refit[3] $v1fol
+      endif
+   else
+      echo "Child dset $v1fol is same as $v1i or $v2i, skipping it."
+   endif
+end   
+
+goto END  
+
+
+# get rid of quotes here...   18 Nov 2016
+HELP:
+cat << EOF
+
+Usage: `basename $0` <-base BASE> <-dset DSET> [-no_cp] 
+                     [-child CHILD_2 ... CHILD_N] [-echo]
+
+   Moves the center of DSET to the center of BASE.
+   By default, center refers to the center of the volume's voxel grid.
+   Use -cm to use the brain's center of mass instead.
+
+   AND/OR creates the transform matrix XFORM.1D needed for this shift.
+   The transform can be used with 3dAllineate's -1Dmatrix_apply 
+      3dAllineate   -1Dmatrix_apply XFORM.1D    \
+                    -prefix PREFIX -master BASE \
+                    -input DSET
+
+   -echo: Echo all commands to terminal for debugging
+   -overwrite: You know what
+   -prefix PREFIX:  Result will be named using PREFIX, instead of the
+                    current prefix with _shft appended.
+                  * Does not work with -child or -no_cp.
+   -1Dmat_only: Only output the transfrom needed to align
+                the centers. Do not shift any child volumes.
+                The transform is named DSET_shft.1D
+   -1Dmat_only_nodset: Like above, but no dsets at all
+                are created or changed.
+   -base BASE: Base volume, typically a template. You can also replace BASE with RAI:X,Y,Z to have the script set the center of dset to RAI X,Y,Z 
+   -dset DSET: Typically an anatomical dset to be
+               aligned to BASE.
+   -child CHILD_'*': A bunch of datasets, originally
+                     in register with DSET, that
+                     should be shifted in the same
+                     way.
+   -no_cp: Do not create new data, shift existing ones
+           This is a good option if you know what you 
+           are doing. It will save you a lot of space.
+           See NOTE below before using it.
+
+    DSET and CHILD_'*' are typically all the datasets 
+    from a particular scanning session that
+    you want to eventually align to BASE.
+    Such an operation is needed when DSET and CHILD_'*'
+    overlap very little, if at all with BASE
+
+ Note that you can specify *.HEAD for the children even 
+ if the wildcard substitution would contain DSET 
+ and possibly even BASE. The script will not process
+ a dataset twice in one execution.
+
+ Center options:
+   -grid: (default) Center is that of the volume's grid
+   -cm : Center is the center of mass of the volume.
+   -cm_no_amask : Implies -cm, but with no -automask.
+   -shift_xform xxx.1D : apply shift translation from 1D file
+   -shift_xform_inv xxx.1D : apply inverse of shift translation
+
+   See also @Center_Distance
+
+ NOTE: Running the script multiple times on the same data
+       will cause a lot of trouble. That is why the default
+       is to create new datasets as opposed to shifting the
+       existing ones. Do not use -no_cp unless you know what
+       you are doing.
+       To undo errors caused by repeated executions
+       look at the history of each dset and undo
+       the excess 3drefit operations.
+
+
+EOF
+
+   goto END
+
+
+goto END
+
+ 
+END:
+
+exit $retval

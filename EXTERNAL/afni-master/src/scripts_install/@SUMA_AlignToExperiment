@@ -1,0 +1,1321 @@
+#!/bin/tcsh -f
+
+# Jan, 2017: PT reformatted helpfile, which was hard to read in
+# eeeemacs viewer.
+
+@global_parse `basename $0` "$*" ; if ($status) exit 0
+
+set stat = 0
+set CurDir = "$PWD"
+set tmps = `3dnewid -fun`
+
+goto PARSE_COMMAND
+Ret_PARSE_COMMAND:
+
+goto CHECK_PROGRAMS
+Ret_CHECK_PROGRAMS:
+
+goto SET_VARIABLES
+Ret_SET_VARIABLES:
+
+goto CHECK_EXISTENCE
+Ret_CHECK_EXISTENCE:
+
+goto PRE_XFORM
+Ret_PRE_XFORM:
+
+goto DOWNSAMPLE
+Ret_DOWNSAMPLE:
+
+goto STRIP_EXP_VOL
+Ret_STRIP_EXP_VOL:
+
+goto ALIGN_CENTERS
+Ret_ALIGN_CENTERS:
+
+goto RESAMPLE
+Ret_RESAMPLE:
+
+goto REGISTER
+Ret_REGISTER:
+
+echo "Done."
+goto END
+
+
+PARSE_COMMAND:
+   
+   #continue parsing for new options
+   set followers = ()
+   set alli_opt = ""
+   set skstr_opt = ""
+   set folinterp = NN
+   set cleanup = 1
+   set Narg = $#
+   set cnt = 1
+   set cropt = '-coarserot'
+   set prefix = ''
+   set UseWarp = 0
+   set clpbelow = ''
+   set SA_in = ''
+   set EA_in = ''
+   set DownSample = 0
+   set StripSkull = 0
+   set okchangeview = 0
+   set overwrite_resp = ''      # O(verwrite), S(kip) or Q(uit), else ask
+   set no_center = 1;   
+   set prexform = ""
+   set OutResOpt = ""
+   set rmlist = ()
+   set echo_opt = ""            # '' or '-echo' so it can propagate
+   while ($cnt <= $Narg)
+      set donext = 1;
+      if ($donext && "$argv[$cnt]" == '-h' || "$argv[$cnt]" == '-help') then
+         goto USAGE
+      endif
+
+      if ($donext && "$argv[$cnt]" == "-echo") then
+         set echo_opt = "-echo"
+         set echo      
+         set donext = 0      
+      endif
+      
+      if ($donext && "$argv[$cnt]" == "-dxyz") then
+         set pLoc = $cnt      
+         if ($pLoc == $Narg) then
+            echo "Need value after -dxyz"
+            goto END
+         else
+            @ cnt ++
+            set DownSample = "$argv[$cnt]"
+            if ( ! `ccalc -i "ispositive($DownSample - 0.3)"` || \
+                 ! `ccalc -i "ispositive(4 - $DownSample)"` ) then
+               echo "Error: Bad value for dxyz ($argv[$cnt])"
+               echo ""
+               goto BEND
+            endif
+            set donext = 0   
+         endif   
+      endif
+      if ($donext && "$argv[$cnt]" == "-init_xform") then
+         set pLoc = $cnt      
+         if ($pLoc == $Narg) then
+            echo "Need xform file after -init_xform"
+            goto END
+         else
+            @ cnt ++
+            set prexform = `ParseName -out FullName "$argv[$cnt]"`
+            if ( ! -f $prexform) then
+               echo "$prexform not found"
+               goto BEND
+            endif
+            set donext = 0   
+         endif   
+      endif
+      if ($donext && "$argv[$cnt]" == "-out_dxyz") then
+         set pLoc = $cnt      
+         if ($pLoc == $Narg) then
+            echo "Need value after -out_dxyz"
+            goto END
+         else
+            @ cnt ++
+            set OutResOpt = "$argv[$cnt]"
+            if ( ! `ccalc -i "ispositive($OutResOpt - 0.1)"` || \
+                 ! `ccalc -i "ispositive(4 - $OutResOpt)"` ) then
+               echo "Error: Bad value for out_dxyz ($argv[$cnt])"
+               echo ""
+               goto BEND
+            endif
+            set OutResOpt = "-mast_dxyz $OutResOpt "
+            set donext = 0   
+         endif   
+      endif
+      if ($donext && "$argv[$cnt]" == "-EA_clip_below") then
+         set pLoc = $cnt      
+         if ($pLoc == $Narg) then
+            echo "Need Zmm after -EA_clip_below"
+            goto END
+         else
+            @ cnt ++
+            set clpbelow = "$argv[$cnt]"
+            set donext = 0   
+         endif   
+      endif
+      if ($donext && "$argv[$cnt]" == "-prefix") then
+         set pLoc = $cnt      
+         if ($pLoc == $Narg) then
+            echo "Need a string after -prefix"
+            goto END
+         else
+            @ cnt ++
+            set prefix = `@GetAfniPrefix "$argv[$cnt]"`
+            set donext = 0   
+         endif   
+      endif
+      if ($donext && "$argv[$cnt]" == "-surf_anat") then
+         set pLoc = $cnt      
+         if ($pLoc == $Narg) then
+            echo "Need a volume after -surf_anat"
+            goto END
+         else
+            @ cnt ++
+            set SA_in = "$argv[$cnt]"
+            set donext = 0   
+         endif   
+      endif
+      if ($donext && "$argv[$cnt]" == "-exp_anat") then
+         set pLoc = $cnt      
+         if ($pLoc == $Narg) then
+            echo "Need a volume after -exp_anat"
+            goto END
+         else
+            @ cnt ++
+            set EA_in = "$argv[$cnt]"
+            set donext = 0   
+
+            # NIFTI is not handled, warn users  26 Feb 2020 [rickr]
+            if ( `3dinfo -is_nifti $EA_in` == 1 ) then
+               set newpre = `3dinfo -prefix_noext $EA_in`
+               echo "** NIFTI is not currently allowed for -exp_anat, sorry"
+               echo "   consider: 3dcopy $EA_in $newpre"
+               goto END
+            endif
+         endif   
+      endif
+     
+      if ($donext && "$argv[$cnt]" == "-wd") then
+         set UseWarp = 1;      
+         set donext = 0      
+      endif
+      
+      if ($donext && "$argv[$cnt]" == "-al") then
+         set UseWarp = 2;      
+         set donext = 0      
+      endif
+      
+      if ($donext && "$argv[$cnt]" == "-al_opt") then
+         set pLoc = $cnt      
+         if ($pLoc == $Narg) then
+            echo "Need parameter(s) after -al_opt"
+            goto END
+         else
+            @ cnt ++
+            set alli_opt = "$argv[$cnt]"      
+            set donext = 0   
+         endif   
+      endif
+      if ($donext && "$argv[$cnt]" == "-skull_strip_opt") then
+         set pLoc = $cnt      
+         if ($pLoc == $Narg) then
+            echo "Need parameter(s) after -skull_strip_opt"
+            goto END
+         else
+            @ cnt ++
+            set skstr_opt = "$argv[$cnt]"      
+            set donext = 0   
+         endif   
+      endif
+      if ($donext && "$argv[$cnt]" == "-align_centers") then
+         set no_center = 0;      
+         set donext = 0      
+      endif
+      
+      if ($donext && "$argv[$cnt]" == "-ok_change_view") then
+         set okchangeview = 1;      
+         set donext = 0      
+      endif
+      
+      if ($donext && "$argv[$cnt]" == "-strip_skull") then
+         set pLoc = $cnt      
+         if ($pLoc == $Narg) then
+            echo "Need a parameter after -strip_skull"
+            goto END
+         else
+            @ cnt ++
+            if ("$argv[$cnt]" == "exp_anat") then
+               set StripSkull = 1;
+            else if ("$argv[$cnt]" == "both") then
+               set StripSkull = 3;
+            else if ("$argv[$cnt]" == "surf_anat") then
+               set StripSkull = 2;
+            else if ("$argv[$cnt]" == "neither" || \
+                     "$argv[$cnt]" == "none") then
+               set StripSkull = 0;
+            else
+               echo "Acceptable options for -strip_skull are:"
+               echo "'neither', 'exp_anat', 'surf_anat', or 'both'"
+               goto END
+            endif
+        endif      
+        set donext = 0      
+      endif
+      
+      if ($donext && "$argv[$cnt]" == "-surf_anat_followers") then
+         set pLoc = $cnt      
+         if ($pLoc == $Narg) then
+            echo "Need at least a volume after -surf_anat_followers"
+            goto END
+         else
+            @ cnt ++
+            set followers = ($argv[$cnt-])
+            foreach fol ($followers)
+               set exx = `@CheckForAfniDset $fol`
+               if ( $status) then
+                  echo "Error follower dset $fol cannot be found"
+                  echo "Note that option -surf_anat_followers must be "
+                  echo "the last one on the command line"
+                  goto BEND
+               endif
+               if ( $exx < 2) then
+                  echo "Error follower dset $fol appears not to be a dset"
+                  echo "Note that option -surf_anat_followers must be "
+                  echo "the last one on the command line"
+                  goto BEND
+               endif
+            end
+            set cnt = `expr $cnt + $#followers - 1`
+            set donext = 0   
+         endif   
+      endif
+      
+      if ($donext && "$argv[$cnt]" == "-atlas_followers") then
+         set pLoc = $cnt      
+         
+         if ("$SA_in" == '') then
+            echo "-atlas_followers must follow -surf_anat"
+            goto BEND
+         endif
+         
+         set folpath = `ParseName -out AbsPath $SA_in`
+         #echo $folpath
+         set followers = ()
+         if ( -d $folpath ) then
+            cd $folpath
+            # avoid wildcards (maybe we should make an afni_glob program?)
+            set follcand = (`find . -maxdepth 1 -name '*.nii'` \
+                            `find . -maxdepth 1 -name '*.nii.gz'`)
+            #echo $follcand
+            set followers = ()
+            if ($#follcand > 0) then
+               foreach foll ($follcand)
+                  set isatl = `3dinfo -is_atlas $foll`
+                  if ("$isatl" == 1) then
+                     set followers = ($followers $folpath/$foll)
+                  endif
+               end
+            endif
+            cd -
+         endif
+         foreach fol ($followers)
+            set exx = `@CheckForAfniDset $fol`
+            if ( $status) then
+               echo "Error follower dset $fol cannot be verified"
+               goto BEND
+            endif
+            if ( $exx < 2) then
+               echo "Error follower dset $fol appears not to be a dset"
+               goto BEND
+            endif
+         end
+         echo "Adding $followers as followers"
+         set donext = 0   
+      endif
+      
+      if ($donext && "$argv[$cnt]" == "-followers_interp") then
+         set pLoc = $cnt      
+         if ($pLoc == $Narg) then
+            echo "Need an interpolation kernel after -followers_interp"
+            goto END
+         else
+            @ cnt ++
+            set folinterp = $argv[$cnt]
+            if (  $folinterp != NN  && \
+                  $folinterp != linear  && \
+                  $folinterp != cubic  && \
+                  $folinterp != quintic  ) then
+               echo "Interpolation kernel $folinterp is not recognized"
+               echo "Choose one of: NN, linear, cubic, or quintic"
+               echo ""
+               goto END
+            endif
+         endif
+         set donext = 0      
+      endif
+          
+      if ($donext && "$argv[$cnt]" == "-ncr") then
+         set cropt = '';      
+         set donext = 0      
+      endif
+      
+      if ($donext && "$argv[$cnt]" == "-keep_tmp") then
+         set cleanup = 0;      
+         set donext = 0      
+      endif
+      
+      if ($donext && "$argv[$cnt]" == "-overwrite_resp") then
+         set pLoc = $cnt      
+         if ($pLoc == $Narg) then
+            echo "Need O/S/Q/A parameter after -overwrite_resp"
+            goto END
+         else
+            @ cnt ++
+            set or = "$argv[$cnt]"
+            set donext = 0   
+            if ( $or != 'O' && $or != 'S' && $or != 'Q' && $or != 'A' ) then
+                echo "** -overwrite_resp parameter '$or'"
+                echo "   should be one of O/S/Q/A"
+                goto END
+            endif
+            set overwrite_resp = $or
+         endif   
+      endif
+     
+      #ADD NO NEW OPTIONS BELOW THIS LINE
+      
+      if ($donext == 1 && $cnt == 1) then
+         set EA_in = "$argv[$cnt]"
+         echo "Note: Guessing that '$EA_in' is the experiment anatomy."
+         echo "Better use -exp_anat flag in your command."
+         echo ""
+         set donext = 0
+      endif      
+      
+      if ($donext == 1 && $cnt == 2) then
+         set SA_in = "$argv[$cnt]"
+         echo ""
+         echo "Note: Guessing that '$SA_in' is the surface anatomy."
+         echo "Better use -surf_anat flag in your command."
+         echo ""
+         set donext = 0
+      endif         
+
+      if ($donext == 1 && $cnt == 3) then
+         #probably the dxyz parameter
+         set DownSample = $argv[$cnt]
+         if ("$DownSample" =~ *[^0-9]*) then
+            echo "Error: Option '$argv[$cnt]' not understood"
+            echo ""
+            goto BEND
+         endif
+         if ($DownSample < 0.3 || $DownSample > 4) then
+            echo "Error: Option '$argv[$cnt]' not understood"
+            echo ""
+            goto BEND
+         endif
+         set donext = 0
+      endif
+      if ($donext == 1) then
+         echo "Error: Option or parameter '$argv[$cnt]' not understood"
+         apsearch -popt `basename $0` -word $argv[$cnt]
+         goto BEND
+      endif
+      
+      @ cnt ++
+   end
+   if ($cnt < 2) then
+      echo "Error: Too few parameters. See `basename $0` -help"
+      goto BEND
+   endif
+   
+   if ("$SA_in" == "" || "$EA_in" == "") then 
+      echo "Error: Failed to find surface and/or experiment anatomies on command line."
+      goto BEND
+   else
+         set ExpAnatPrefix = `@GetAfniPrefix $EA_in`
+         set ExpAnatView = `@GetAfniView $EA_in`
+         set SA_in_noaext = `ParseName -out FNameNoAfniExt $SA_in`
+         set SA_in_orig = ''
+         set SA_in_aview = `3dinfo -av_space $SA_in`
+         if ( "`3dinfo -is_nifti $SA_in`" == 1 ) then
+            set SA_in_orig = $SA_in
+            3dcopy $SA_in $SA_in_noaext$SA_in_aview
+            set SA_in = $SA_in_noaext$SA_in_aview
+            set rmlist = ($rmlist $SA_in_noaext$SA_in_aview.????*) 
+         endif
+         set SurfAnatPrefix = `@GetAfniPrefix $SA_in` 
+         set SurfAnatView = `@GetAfniView $SA_in` 
+         set SurfAnatPath = $SA_in:h
+         if ( $SurfAnatPath == $SA_in:t ) then 
+            #no path given
+            set SurfAnatPath = .
+         endif
+   endif
+   
+   goto Ret_PARSE_COMMAND
+
+SET_VARIABLES:
+   set ExpAnat = $ExpAnatPrefix$ExpAnatView
+   set SurfAnat = $SurfAnatPrefix$SurfAnatView
+   set Resampled = 0 #flag set when resampling is done
+   set SkullStripped = 0
+   goto Ret_SET_VARIABLES
+
+PRE_XFORM:
+   set Skip = 0
+   set nopre_anat_in = $SurfAnat
+   if ($prexform != '') then
+      echo "applying initial xform"
+      cd $SurfAnatPath
+      3dWarp   -overwrite -matvec_out2in $prexform \
+               -prefix pre.${tmps}.${SurfAnatPrefix} $SurfAnat
+      #This operation is the same as
+      #  cat_matvec $prexform -ONELINE > d1.$prexform
+      #  3dAllineate -1Dmatrix_apply d1.$prexform \
+      #            -prefix Horse2 struct+orig.
+      # The 3dAllineate is the way users should verify
+      # if their init_xform is good.
+      set SurfAnatPrefix = pre.${tmps}.${SurfAnatPrefix}
+      set SurfAnat = $SurfAnatPrefix$SurfAnatView
+   endif
+   goto Ret_PRE_XFORM
+
+DOWNSAMPLE:
+   set Skip = 0
+   if ($DownSample != 0) then
+      echo "Downsampling ..."
+      cd $SurfAnatPath
+      set tmpPrefix = $SurfAnatPrefix"_"$DownSample"mm"
+      if (-f $tmpPrefix$SurfAnatView.BRIK) then
+         if ( $overwrite_resp == "" ) then
+            echo ""
+            echo "Warning: $tmpPrefix$SurfAnatView exists in $SurfAnatPath"
+            echo "Enter O/S/Q to Overwrite/Skip/Quit:"
+            set sel = $<
+         else
+            set sel = $overwrite_resp
+         endif
+         if ("$sel" == 'O' || "$sel" == 'o') then
+            rm -f $tmpPrefix$SurfAnatView.BRIK $tmpPrefix$SurfAnatView.HEAD
+         endif
+         if ("$sel" == 'S' || "$sel" == 's') then
+            echo "Skipping downsampling, existing data set $DownSample will be used"
+            set Skip = 1
+         endif
+         if ("$sel" == 'Q' || "$sel" == 'q') then
+            echo "Quitting ..."
+            goto END
+         endif
+         echo ""
+      endif
+      if ($Skip == 0) then
+         echo "running: adwarp -force -prefix $tmpPrefix -apar $SurfAnat -dpar $SurfAnat -dxyz $DownSample -resam Cu"
+         adwarp -force -prefix $tmpPrefix -apar $SurfAnat -dpar $SurfAnat -dxyz $DownSample -resam Cu
+         if (!(-f $tmpPrefix$SurfAnatView.BRIK || -f $tmpPrefix$SurfAnatView.BRIK.gz || -f $tmpPrefix$SurfAnatView.BRIK.Z || -f $tmpPrefix$SurfAnatView.BRIK.bz2 )) then
+            goto NO_DOWNGOOD_BADBAD
+         endif
+         
+      endif
+      set SurfAnatPrefix = $tmpPrefix
+      set SurfAnat = $SurfAnatPrefix$SurfAnatView
+      cd "$CurDir"
+   endif
+   goto Ret_DOWNSAMPLE
+
+STRIP_EXP_VOL:
+   #strip skull off of EXP_VOL
+   set Skip = 0
+   cd "$CurDir"
+   if ($StripSkull == 1 || $StripSkull == 3 ) then
+      set ExpAnat_NoSkullPrefix = $ExpAnatPrefix"_ns"
+      set ExpAnat_NoSkull = $ExpAnatPrefix"_ns"$ExpAnatView
+      echo "Stripping exp vol ..."
+      if (`@CheckForAfniDset $ExpAnat_NoSkull` > 0) then
+         if ( $overwrite_resp == "" ) then
+            echo ""
+            echo "Warning: $ExpAnat_NoSkull exists in $CurDir"
+            echo "Enter O/S/Q to Overwrite/Skip/Quit:"
+            set sel = $<
+         else
+            set sel = $overwrite_resp
+         endif
+         if ("$sel" == 'O' || "$sel" == 'o') then
+            rm -f $ExpAnat_NoSkull.BRIK* $ExpAnat_NoSkull.HEAD
+         endif
+         if ("$sel" == 'S' || "$sel" == 's') then
+            echo "Skipping stripping, existing data set "
+            echo " $ExpAnat_NoSkull will be used"
+            set Skip = 1
+         endif
+         if ("$sel" == 'Q' || "$sel" == 'q') then
+            echo "Quitting ..."
+            goto END
+         endif
+         echo ""
+      endif
+      if ($Skip == 0) then
+         3dSkullStrip -input $ExpAnat -prefix $ExpAnat_NoSkull $skstr_opt
+         if (`@CheckForAfniDset $ExpAnat_NoSkull` < 2) then
+            goto NO_SS
+         endif
+      endif
+      set ExpAnatPrefix = $ExpAnat_NoSkullPrefix
+      set ExpAnat = $ExpAnat_NoSkull
+      set SkullStripped = 1
+   endif
+   if ($StripSkull == 2 || $StripSkull == 3 ) then
+      set Skip = 0
+      set SurfAnat_NoSkullPrefix = $SurfAnatPrefix"_ns"
+      set SurfAnat_NoSkull = $SurfAnatPrefix"_ns"$SurfAnatView
+      echo "Stripping surf vol ..."
+      if (`@CheckForAfniDset $SurfAnatPath/$SurfAnat_NoSkull` > 0) then
+         if ( $overwrite_resp == "" ) then
+            echo ""
+            echo "Warning: $SurfAnatPath/$SurfAnat_NoSkull exists in $CurDir"
+            echo "Enter O/S/Q to Overwrite/Skip/Quit:"
+            set sel = $<
+         else
+            set sel = $overwrite_resp
+         endif
+         if ("$sel" == 'O' || "$sel" == 'o') then
+            rm -f $SurfAnatPath/$SurfAnat_NoSkull.BRIK* $SurfAnatPath/$SurfAnat_NoSkull.HEAD
+         endif
+         if ("$sel" == 'S' || "$sel" == 's') then
+            echo "Skipping stripping, existing data set $SurfAnatPath/$SurfAnat_NoSkull will be used"
+            set Skip = 1
+         endif
+         if ("$sel" == 'Q' || "$sel" == 'q') then
+            echo "Quitting ..."
+            goto END
+         endif
+         echo ""
+      endif
+      if ($Skip == 0) then
+         3dSkullStrip -input $SurfAnatPath/$SurfAnat -prefix $SurfAnatPath/$SurfAnat_NoSkull $skstr_opt
+         if (`@CheckForAfniDset $SurfAnatPath/$SurfAnat_NoSkull` < 2) then
+            goto NO_SS
+         endif
+      endif
+      set SurfAnatOri = $SurfAnat
+      set SurfAnatPrefix = $SurfAnat_NoSkullPrefix
+      set SurfAnat = $SurfAnat_NoSkull
+      set SkullStripped = 2
+   endif
+   goto Ret_STRIP_EXP_VOL
+
+ALIGN_CENTERS:
+   if ($no_center == 0) then
+      echo "Calculating center shift..."
+      rm -f $ExpAnatPrefix"_shft$ExpAnatView."* >& /dev/null
+      # echo_opt is "-echo" or "", to propagate
+      @Align_Centers -base $SurfAnatPath/$SurfAnat.HEAD \
+                     $echo_opt                          \
+                     -dset $ExpAnat.HEAD 
+      set mpref = $ExpAnatPrefix
+      set center_mat = $mpref"_shft.1D"
+      if ( ! -f $center_mat) then
+         echo "Failed to create shift matrix"
+         goto END
+      endif
+      set ExpAnatPrefixOrig = $ExpAnatPrefix
+      set ExpAnatPrefix = $ExpAnatPrefixOrig"_shft"
+      set ExpAnatOrig = $ExpAnat
+      set ExpAnat = $ExpAnatPrefix$ExpAnatView
+   else
+      #Nothing really...
+      set ExpAnatOrig = $ExpAnat
+      set ExpAnatPrefixOrig = $ExpAnatPrefix
+   endif
+   goto Ret_ALIGN_CENTERS
+   
+RESAMPLE:
+   #resample Experiment volume to look like SurfAnat
+   set Skip = 0
+   cd "$CurDir"
+   set ExpAnat_ResampPrefix = $ExpAnatPrefix"_resamp_"$clpbelow
+   set ExpAnat_Resamp = $ExpAnat_ResampPrefix$SurfAnatView
+   echo ""
+   echo "resampling $ExpAnat to match $SurfAnatPath/$SurfAnat"
+   if (`@CheckForAfniDset  $ExpAnat_Resamp.BRIK` > 0) then
+      echo ""
+      echo "Warning: $ExpAnat_Resamp exists in $CurDir"
+      echo "Enter O/S/Q to Overwrite/Skip/Quit:"
+      set sel = $<
+      if ("$sel" == 'O' || "$sel" == 'o') then
+         rm -f $ExpAnat_Resamp.BRIK* $ExpAnat_Resamp.HEAD
+      endif
+      if ("$sel" == 'S' || "$sel" == 's') then
+         echo "Skipping resampling, existing data set $ExpAnat_Resamp "
+         echo "  will be used"
+         set Skip = 1
+      endif
+      if ("$sel" == 'Q' || "$sel" == 'q') then
+         echo "Quitting ..."
+         goto END
+      endif
+      echo ""
+   endif
+   if ($Skip == 0) then
+      set tmpref = '___tmp__rs'"$ExpAnat_ResampPrefix"
+      if ($clpbelow != '') then
+         \rm -rf ${tmpref}*.???? >& /dev/null
+         @clip_volume -below $clpbelow -input $ExpAnat -prefix $tmpref
+         set nxt = "$tmpref""$ExpAnatView"
+         if (!(-f $nxt.BRIK || -f $nxt.BRIK.gz || -f $nxt.BRIK.Z || -f $nxt.BRIK.bz2)) then 
+            goto NO_RESAMP
+         endif
+      else   
+         set nxt = "$ExpAnat"
+      endif
+      echo "3dresample -master $SurfAnatPath/$SurfAnat -prefix $ExpAnat_ResampPrefix -rmode Cu -inset $nxt"
+      echo ""
+      3dresample -master $SurfAnatPath/$SurfAnat -prefix $ExpAnat_ResampPrefix -rmode Cu -inset $nxt
+      if (  ! -f $ExpAnat_Resamp.HEAD && \
+            !(-f $ExpAnat_Resamp.BRIK || -f $ExpAnat_Resamp.BRIK.gz || \
+              -f $ExpAnat_Resamp.BRIK.Z || -f $ExpAnat_Resamp.BRIK.bz2)) then 
+         goto NO_RESAMP
+      endif
+      \rm -rf ${tmpref}*.???? >& /dev/null
+   endif
+   set ExpAnatPrefix = $ExpAnat_ResampPrefix
+   set ExpAnat = $ExpAnat_Resamp
+   set Resampled = 1
+   goto Ret_RESAMPLE
+   
+REGISTER:
+   cd "$CurDir"
+   if ($prefix == '') then
+      set VolRegPrefix = $SurfAnatPrefix"_Alnd_Exp"
+   else
+      set VolRegPrefix = $prefix
+   endif
+   echo ""
+   if (-f $VolRegPrefix$SurfAnatView.BRIK) then
+      echo ""
+      echo "Warning: $VolRegPrefix$SurfAnatView exists in $CurDir"
+      echo "Enter O/Q to Overwrite/Quit:"
+      set sel = $<
+      if ("$sel" == 'O' || "$sel" == 'o') then
+         rm -f $VolRegPrefix$SurfAnatView.BRIK $VolRegPrefix$SurfAnatView.HEAD
+      endif
+      if ("$sel" == 'Q' || "$sel" == 'q') then
+         echo "Quitting ..."
+         goto END
+      endif
+      echo ""
+   endif
+   
+   echo "Registering $SurfAnatPath/$SurfAnat to $ExpAnat"
+   if ($UseWarp == 0) then
+      echo "3dvolreg -wtrim -clipit -twopass -twodup -zpad 8 \"
+      echo "         -rotcom -verbose -base $ExpAnat \"
+      echo "         -prefix $VolRegPrefix $SurfAnatPath/$SurfAnat"
+      echo ""
+      if ( -f ${VolRegPrefix}.A2E.1D) then
+        \rm -f ${VolRegPrefix}.A2E.1D 
+      endif
+      3dvolreg -wtrim -clipit -twopass \
+               -twodup -zpad 8 -rotcom \
+               -verbose -base $ExpAnat \
+               -1Dmatrix_save  ${VolRegPrefix}.A2E.1D \
+               -prefix ./$VolRegPrefix \
+               -cubic   \
+               $SurfAnatPath/$SurfAnat
+      if ( ! ( -f $VolRegPrefix$SurfAnatView.BRIK || \
+               -f $VolRegPrefix$SurfAnatView.BRIK.gz || \
+               -f $VolRegPrefix$SurfAnatView.BRIK.Z || \
+               -f $VolRegPrefix$SurfAnatView.BRIK.bz2)) then
+         echo "Failed to find $VolRegPrefix$SurfAnatView"
+         goto NO_VOLREG
+      endif
+      #differing views?
+      #mv $SurfAnatPath/$VolRegPrefix* ./
+      if ("$ExpAnatView" !~ "" && "$SurfAnatView" != "$ExpAnatView") then
+         echo "Changing view from $SurfAnatView to $ExpAnatView."
+         if ($okchangeview == 0) then
+            echo "Note that only rigid-body registration was used here."
+            echo "So change of view may not be appropriate." 
+         endif
+         3drefit -view $ExpAnatView $VolRegPrefix$SurfAnatView
+         set fview = $ExpAnatView
+      else
+         set fview = $SurfAnatView
+      endif
+   else if ($UseWarp == 1) then      
+      set tmpref = '___tmp__zp'"$ExpAnatPrefix$SurfAnatPrefix"
+      \rm -rf ${tmpref}*.???? >& /dev/null
+      set pd = 8
+      
+      #echo "3dZeropad -I $pd -S $pd -A $pd -P $pd -L $pd -R $pd \"
+      #echo "          -mm -prefix ./${tmpref}_pad $SurfAnatPath/$SurfAnat"
+      #echo ""
+cat <<EOF
+3dZeropad -I $pd -S $pd -A $pd -P $pd -L $pd -R $pd \
+          -mm -prefix ./${tmpref}_pad $SurfAnatPath/$SurfAnat
+
+EOF
+      
+      3dZeropad   -I $pd -S $pd -A $pd -P $pd -L $pd -R $pd \
+                  -mm -prefix ./${tmpref}_pad $SurfAnatPath/$SurfAnat
+      3dZeropad   -I $pd -S $pd -A $pd -P $pd -L $pd -R $pd \
+                  -mm -prefix ./${tmpref}_refpad $ExpAnat
+
+      if ( -f ${VolRegPrefix}.A2E.1D) then
+        \rm -f ${VolRegPrefix}.A2E.1D 
+      endif
+
+      3dWarpDrive $cropt -twopass -verb -affine_general \
+                  -cubic -final quintic \
+                  -1Dmatrix_save ${VolRegPrefix}.A2E.1D \
+                  -base ./${tmpref}_refpad$SurfAnatView \
+                  -prefix ./${tmpref}_pad_wd ./${tmpref}_pad$SurfAnatView
+      if ($StripSkull >= 2) then
+         #Have to apply same transform to original SurfAnat
+         3dZeropad   -I $pd -S $pd -A $pd -P $pd -L $pd -R $pd \
+                     -mm \
+                     -prefix ./${tmpref}_padori $SurfAnatPath/$SurfAnatOri
+         3dWarp   -matparent ./${tmpref}_pad_wd$SurfAnatView \
+                  -quintic \
+                  -prefix ./${tmpref}_pad_wdori ./${tmpref}_padori$SurfAnatView
+         set wdnext = ${tmpref}_pad_wdori  
+      else
+         set wdnext = ${tmpref}_pad_wd   
+      endif
+      
+      3dZeropad   -I -$pd -S -$pd -A -$pd -P -$pd -L -$pd -R -$pd \
+                  -mm \
+                  -prefix ./$VolRegPrefix ${wdnext}$SurfAnatView
+      #copy the WARPDRIVE_MATVEC_ fields to the zero unpadded dude
+      set atrlist = (`3dAttribute -all ${wdnext}$SurfAnatView | \
+                        \sort | \grep WARPDRIVE | \cut -f 1 -d ' '`)
+      foreach atr ($atrlist) 
+         if ($atr == WARPDRIVE_INPUT_IDCODE  || \
+             $atr == WARPDRIVE_INPUT_NAME  || \
+             $atr == WARPDRIVE_BASE_IDCODE || \
+             $atr == WARPDRIVE_MATVEC_FOR_000000 || \
+             $atr == WARPDRIVE_MATVEC_INV_000000 ) then
+            3drefit  -atrcopy ${wdnext}$SurfAnatView $atr   \
+                                    $VolRegPrefix$SurfAnatView    
+         endif
+      end
+      #differing views?
+      if ("$SurfAnatView" != "$ExpAnatView") then
+         echo "Changing view from $SurfAnatView to $ExpAnatView."
+         3drefit -view $ExpAnatView $VolRegPrefix$SurfAnatView
+         set fview = $ExpAnatView
+      else
+         set fview = $SurfAnatView
+      endif
+      if ( ! ( -f ./$VolRegPrefix$fview.BRIK || \
+               -f ./$VolRegPrefix$fview.BRIK.gz || \
+               -f ./$VolRegPrefix$fview.BRIK.Z || \
+               -f ./$VolRegPrefix$fview.BRIK.bz2)) then
+         goto NO_WARPDRIVE
+      endif
+      if ($cleanup == 1) then
+         \rm -rf ${tmpref}*.???? ${tmpref}*.????.* >& /dev/null
+      endif
+   else
+      set tmpref = '___tmp__zp'"$ExpAnatPrefix$SurfAnatPrefix"
+      \rm -rf ${tmpref}*.???? >& /dev/null
+      set pd = 8
+      
+      #echo "3dZeropad -I $pd -S $pd -A $pd -P $pd -L $pd -R $pd \"
+      #echo "          -mm -prefix ./${tmpref}_pad $SurfAnatPath/$SurfAnat"
+      #echo ""
+cat <<EOF
+3dZeropad -I $pd -S $pd -A $pd -P $pd -L $pd -R $pd \
+          -mm -prefix ./${tmpref}_pad $SurfAnatPath/$SurfAnat
+EOF
+      
+      3dZeropad   -I $pd -S $pd -A $pd -P $pd -L $pd -R $pd \
+                  -mm -prefix ./${tmpref}_pad $SurfAnatPath/$SurfAnat
+      3dZeropad   -I $pd -S $pd -A $pd -P $pd -L $pd -R $pd \
+                  -mm -prefix ./${tmpref}_refpad $ExpAnat
+
+      if ( -f ${VolRegPrefix}.A2E.1D) then
+        \rm -f ${VolRegPrefix}.A2E.1D 
+      endif
+
+      3dAllineate -twopass -verb -warp affine_general \
+                  -cubic -final quintic \
+                  -1Dmatrix_save ${VolRegPrefix}.A2E.1D \
+                  -base ./${tmpref}_refpad$SurfAnatView \
+                  -cost lpa   \
+                  -prefix ./${tmpref}_pad_al ./${tmpref}_pad$SurfAnatView  \
+                  $alli_opt   
+      if ($StripSkull >= 2) then
+         #Have to apply same transform to original SurfAnat
+         3dZeropad   -I $pd -S $pd -A $pd -P $pd -L $pd -R $pd \
+                     -mm \
+                     -prefix ./${tmpref}_padori $SurfAnatPath/$SurfAnatOri
+         3dAllineate -1Dmatrix_apply ${VolRegPrefix}.A2E.1D \
+            -input ./${tmpref}_padori$SurfAnatView \
+            -prefix ./${tmpref}_pad_alori  \
+            -overwrite  \
+            -final quintic
+         set wdnext = ${tmpref}_pad_alori  
+      else
+         set wdnext = ${tmpref}_pad_al   
+      endif
+      
+      3dZeropad   -I -$pd -S -$pd -A -$pd -P -$pd -L -$pd -R -$pd \
+                  -mm \
+                  -prefix ./$VolRegPrefix ${wdnext}$SurfAnatView
+      #copy the WARPDRIVE_MATVEC_ fields to the zero unpadded dude
+      3drefit  -atrcopy ${wdnext}$SurfAnatView \
+               ALLINEATE_MATVEC_B2S_000000 $VolRegPrefix$SurfAnatView
+      3drefit  -atrcopy ${wdnext}$SurfAnatView \
+               ALLINEATE_MATVEC_S2B_000000 $VolRegPrefix$SurfAnatView
+      #differing views?
+      if ("$SurfAnatView" != "$ExpAnatView") then
+         echo "Changing view from $SurfAnatView to $ExpAnatView."
+         3drefit -view $ExpAnatView $VolRegPrefix$SurfAnatView
+         set fview = $ExpAnatView
+      else
+         set fview = $SurfAnatView
+      endif
+      if ( ! ( -f ./$VolRegPrefix$fview.BRIK || \
+               -f ./$VolRegPrefix$fview.BRIK.gz || \
+               -f ./$VolRegPrefix$fview.BRIK.Z || \
+               -f ./$VolRegPrefix$fview.BRIK.bz2)) then
+         goto NO_WARPDRIVE
+      endif
+      if ($cleanup == 1) then
+         \rm -rf ${tmpref}*.???? ${tmpref}*.????.* >& /dev/null
+      endif   
+   endif
+   
+   #If have center shift, combine and reapply
+   if ($no_center == 0 || $prexform != '') then
+      echo "Combining xform with init xform and/or shift..."
+      mv ${VolRegPrefix}.A2E.1D ${VolRegPrefix}".A2E_shft".1D
+      if ($no_center == 0 && $prexform != '') then
+         cat_matvec -ONELINE $center_mat -I \
+                             ${VolRegPrefix}".A2E_shft".1D $prexform \
+               > ${VolRegPrefix}.A2E.1D 
+         set SurfAnatPrefix = `@GetAfniPrefix $nopre_anat_in`
+         set SurfAnat = $SurfAnatPrefix$SurfAnatView
+      else if ($prexform != '') then
+         cat_matvec -ONELINE ${VolRegPrefix}".A2E_shft".1D $prexform \
+               > ${VolRegPrefix}.A2E.1D 
+         set SurfAnatPrefix = `@GetAfniPrefix $nopre_anat_in`
+         set SurfAnat = $SurfAnatPrefix$SurfAnatView
+      else if ($no_center == 0) then
+         cat_matvec -ONELINE $center_mat -I ${VolRegPrefix}".A2E_shft".1D \
+               > ${VolRegPrefix}.A2E.1D 
+      else
+         echo "Real bad logic error"
+         goto BEND
+      endif
+      #set echo
+      3dAllineate -master $ExpAnatOrig \
+            -1Dmatrix_apply ${VolRegPrefix}.A2E.1D \
+            -input $SurfAnatPath/$SurfAnat \
+            -prefix ./${VolRegPrefix}$fview  \
+            -overwrite  \
+            $OutResOpt  \
+            -final quintic
+   else  
+      if ("$OutResOpt" != "") then
+         #Reproduce output with 3dAllineate, when no shifting is needed.
+         set echo
+         3dAllineate -master $ExpAnatOrig \
+               -1Dmatrix_apply ${VolRegPrefix}.A2E.1D \
+               -input $SurfAnatPath/$SurfAnat \
+               -prefix ./${VolRegPrefix}$fview  \
+               -overwrite  \
+               $OutResOpt  \
+               -final quintic
+      endif
+   endif
+      
+FOLLOWERS:
+   #If you have follower dsets, do them here
+   if ($#followers) then
+      foreach fol ($followers)
+         #set echo
+         set folPrefix = `@GetAfniPrefix $fol`
+         echo "Applying same transform to $folPrefix..."
+         set isatl = `3dinfo -is_atlas $fol`
+         if ("$isatl" == 1) then
+            echo "Follower $fol is an atlas, giving it the special treatment."
+            3dAllineate -master $ExpAnatOrig \
+               -1Dmatrix_apply ${VolRegPrefix}.A2E.1D \
+               -input $fol \
+               -prefix ./${folPrefix:r}"_Alnd_Exp"$fview  \
+               -overwrite  \
+               -final NN
+            @Atlasize -dset ./${folPrefix:r}"_Alnd_Exp"$fview 
+         else 
+         3dAllineate -master $ExpAnatOrig \
+               -1Dmatrix_apply ${VolRegPrefix}.A2E.1D \
+               -input $fol \
+               -prefix ./${folPrefix:r}"_Alnd_Exp"$fview  \
+               -overwrite  \
+               -final $folinterp
+         endif
+      end
+   endif
+   
+   #remove _resamp_
+   if ($Resampled == 1 && $cleanup == 1) then
+      echo "removing temporary bricks ..."
+      rm -f $ExpAnat_Resamp".HEAD"
+      rm -f $ExpAnat_Resamp".BRIK"
+      if ($no_center == 0) then
+         rm -f $ExpAnatPrefixOrig"_shft"$ExpAnatView"."* >& /dev/null
+         rm -f ${VolRegPrefix}".A2E_shft".1D >& /dev/null
+      endif
+   endif
+   
+   #add a history note
+   3dNotes -h "`basename $0` $argv[*]" $VolRegPrefix$fview
+   
+   goto Ret_REGISTER
+
+CHECK_EXISTENCE:
+   if (`@CheckForAfniDset $ExpAnat` < 2) goto NO_EXPANAT
+   
+   #if (!(-f $ExpAnat.HEAD || -f $ExpAnat)) goto NO_EXPANAT
+   #if (!(-f $ExpAnat.BRIK || -f $ExpAnat.BRIK.gz || -f $ExpAnat.BRIK.Z || -f $ExpAnat.BRIK.bz2)) then
+   #   goto NO_EXPANAT
+   #endif
+
+   if (`@CheckForAfniDset $SurfAnatPath/$SurfAnat` < 2) goto NO_SURFANAT
+   
+   #test -f $SurfAnatPath/$SurfAnat.HEAD || goto NO_SURFANAT
+   #if (!(-f $SurfAnatPath/$SurfAnat.BRIK || -f $SurfAnatPath/$SurfAnat.BRIK.gz || -f $SurfAnatPath/$SurfAnat.BRIK.Z || -f $SurfAnatPath/$SurfAnat.BRIK.bz2)) then
+   #   goto NO_SURFANAT
+   #endif
+   
+   if ($no_center) then
+      #check for large center difference
+      set dist_cent = `@Center_Distance -dset $ExpAnat $SurfAnatPath/$SurfAnat`
+      if ($status) then
+         echo "Failed to get center distance"
+         goto BEND
+      endif
+      set ishuge = `ccalc -form int -eval "step($dist_cent - 80)"`
+      set isbig = `ccalc -form int -eval "step($dist_cent - 30)"`
+      if ($isbig) then
+         echo ""
+         echo "*********** Warning *************"
+         echo "Dataset centers are $dist_cent mm"
+         echo "apart. If registration fails, try"
+         echo "adding option -align_centers"
+         #echo "recentering all the input data using" /**** The olde WAY ****/
+         #echo "@Align_Centers -base $SurfAnatPath/$SurfAnat.HEAD -dset $ExpAnat.HEAD -child CHILDREN"
+         #echo "and rerun `basename $0` using the shifted dset"
+         #echo "See @Align_Centers for more help."
+         #echo "*********************************"
+         if ($ishuge) then
+            echo ""
+            echo "Hit Enter to proceed or ctrl+c to quit."
+            echo ""
+            set junk = $<
+         endif
+      else
+         echo "Center distance of $dist_cent mm"   
+      endif 
+      set center_mat = ''
+   else
+      #Center shifting is best done after skull stripping, if any is needed  
+   endif
+     
+   goto Ret_CHECK_EXISTENCE
+
+CHECK_PROGRAMS:
+    set failed_pgms = 0
+    foreach test_command ( 3dvolreg adwarp @GetAfniView @GetAfniPrefix )
+      (which $test_command) >& /dev/null
+
+      if ( $status ) then
+          echo "program not found in path: $test_command"
+          @ failed_pgms ++
+      endif
+    end
+
+    if ( $failed_pgms ) then
+      echo "$failed_pgms program(s) not found"
+      goto END
+    endif
+
+   goto Ret_CHECK_PROGRAMS
+   
+NO_SURFANAT:
+   echo ""
+   echo "Error: No Surface Anatomy $SurfAnat (.HEAD or .BRIK) "
+   echo "  volume in $SurfAnatPath"
+   echo ""
+   goto BEND
+
+NO_EXPANAT:
+   echo ""
+   echo "Error: No Experiment Anatomy $ExpAnat (.HEAD or .BRIK) "
+   echo "  in current directory"
+   echo ""
+   goto BEND
+
+NO_DOWNGOOD_BADBAD:
+   echo ""
+   echo "Error: adwarp failed."
+   echo ""
+   goto BEND
+
+NO_SS:
+   echo ""
+   echo "Error: SkullStripping failed."
+   echo ""
+   goto BEND
+   
+NO_VOLREG:
+   echo ""
+   echo "Error: 3dvolreg failed."
+   echo ""
+   goto BEND
+   
+NO_WARPDRIVE:
+   echo ""
+   echo "Error: 3dwarpdrive failed."
+   echo ""
+   goto BEND
+   
+NO_RESAMP:
+   echo ""
+   echo "Error: 3dresample failed."
+   echo ""
+   goto BEND
+   
+USAGE:
+
+cat << EOF
+
+Usage: 
+
+@SUMA_AlignToExperiment                                                 \
+    <-exp_anat Experiment_Anatomy> <-surf_anat Surface_Anatomy>         \
+    [dxyz] [-wd] [-prefix PREFIX]                                       \
+    [-EA_clip_below CLP] [-align_centers] [-ok_change_view]             \
+    [-strip_skull WHICH]
+
+Creates a version of Surface Anatomy that is registered to Experiment
+Anatomy.
+
+Mandatory parameters:
+
+    <-exp_anat Experiment_Anatomy>
+        Name of high resolution anatomical data set in register with
+        experimental data.
+
+    <-surf_anat Surface_Anatomy> 
+        Path and name of high resolution antomical data set used to
+        create the surface.
+
+  NOTE: In the old usage, there were no -exp_anat and -surf_anat flags
+  and the two volumes had to appear first on the command line and in
+  the proper order.
+
+Optional parameters:
+
+   [-dxyz DXYZ]: This optional parameter indicates that the anatomical
+                volumes must be downsampled to dxyz mm voxel
+                resolution before registration. That is only necessary
+                if 3dvolreg runs out of memory.  You MUST have
+                3dvolreg that comes with afni distributions newer than
+                version 2.45l. It contains an option for reducing
+                memory usage and thus allow the registration of large
+                data sets.
+
+   [-out_dxyz DXYZ]: Output the final aligned volume at a cubic
+                voxelsize of DXYZmm. The default is based on the grid
+                of ExpVol.
+
+   [-wd]: Use 3dWarpDrive's general affine transform (12 param)
+                instead of 3dvolreg's 6 parameters.  If the anatomical
+                coverage differs markedly between 'Experiment Anatomy'
+                and 'Surface Anatomy', you might need to use
+                -EA_clip_below option or you could end up with a very
+                distorted brain.  The default now is to use -coarserot
+                option with 3dWarpDrive, this should make the program
+                more robust. If you want to try running without it the
+                add -ncr with -wd I would be interested in examining
+                cases where -wd option failed to produce a good
+                alignment.
+
+   [-al]: Use 3dAllineate to do the 12 parameter alignment. Cost
+                function is 'lpa'.
+
+   [-al_opt 'Options for 3dAllineate']: Specify set of options between
+                quotes to pass to 3dAllineate.
+
+   [-ok_change_view]: Be quiet when view of registered volume is
+                changed to match that of the Experiment_Anatomy, even
+                when rigid body registration is used.
+
+   [-strip_skull WHICH]: Use 3dSkullStrip to remove non-brain tissue
+                and potentially improve the alignment. WHICH can be
+                one of 'exp_anat', 'surf_anat', 'both', or 'neither'
+                (default).  In the first case, the skull is removed
+                from Experiment_Anatomy dataset, in the second it is
+                removed from the surf_anat dataset.  With 'both' the
+                skull is removed from Experiment_Anatomy and
+                Surface_Anatomy.
+
+   [-skull_strip_opt 'Options For 3dSkullStrip']: Pass the options
+                between quotes to 3dSkullStrip.
+
+   [-align_centers]: Adds an additional transformation to align the
+                volume centers. This is a good option to use when
+                volumes are severely out of alignment.
+
+   [-init_xform XFORM0.1D]: Apply affine transform in XFORM0.1D to
+                Surface_Anatomy before beginning registration.  After
+                convergence, combine XFORM.1D and the the registration
+                matrix to create the output volume To verify that
+                XFORM0.1D does what you think it should be doing, try:
+                    3dWarp -matvec_out2in XFORM0.1D           \
+                           -prefix pre.SurfVol SurfVol+orig
+                and verify that 'pre.SurfVol+orig' is transformed by
+                XFORM0.1D as you expected it to be.
+                XFORM0.1D can be obtained in a variety of ways. One
+                of which involves extracting it from a transformed
+                volume.  For example, say you want to perform an
+                initial rotation that is equivalent to:
+                    3drotate -matvec_order RotMat.1D          \
+                          -prefix struct.r struct+orig 
+                The equivalent XFORM0.1D is obtained with:
+                    cat_matvec 'struct.r+orig::ROTATE_MATVEC_000000' -I  \
+                           > XFORM0.1D  
+                See cat_matvec -help for more details on extracting
+                appropriate affine transforms from dataset headers.
+                See also Example 4 below.
+
+   [-EA_clip_below CLP]: Set slices below CLPmm in 'Experiment
+                Anatomy' to zero.  Use this if the coverage of
+                'Experiment Anatomy' dataset extends far below the
+                data in 'Surface Anatomy' dataset.  To get the value
+                of CLP, use AFNI to locate the slice below which you
+                want to clip and set CLP to the z coordinate from
+                AFNI's top left corner. Coordinate must be in RAI,
+                DICOM.
+
+   [-prefix PREFIX]: Use PREFIX for the output volume. Default is the
+                prefix
+
+   [-surf_anat_followers Fdset1 Fdset2 ...]: Apply the same alignment
+                transform to datasets Fdset1, Fdset2, etc.  This must
+                be the last option on the command line.  All
+                parameters following it are considered datasets.  You
+                can transform other follower dsets manually by
+                executing:
+                    3dAllineate -master Experiment_Anatomy              \
+                        -1Dmatrix_apply Surface_Anatomy_Alnd_Exp.A2E.1D \
+                        -input Fdset                                    \
+                        -prefix Fdset_Alnd_Exp+orig                     \
+                        -final NN
+
+   [-followers_interp KERNEL]: Set the interpolation mode for the
+                follower datasets. Default is NN, which is appropriate
+                for ROI datasets.  Allowed KERNEL values are: NN,
+                linear, cubic, or quintic
+                Note: For atlas datasets, the KERNEL is forced to NN
+                regardless of what you set here.
+        of the 'Surface Anatomy' suffixed by _Alnd_Exp.
+
+   [-atlas_followers]: Automatically set the followers to be atlases
+                in the directory of -surf_anat. This way all the
+                parcellations will get aligned to the experiment.
+
+   [-echo]: Echo all commands to terminal for debugging
+
+   [-keep_tmp]: Keep temporary files for debugging. Note that you
+                should delete temporary files before rerunning the
+                script.
+
+   [-overwrite_resp RESP]: Answer 'overwrite' questions automatically.
+                RESP (response) should be one of O/S/Q/A:
+                    O : overwrite previous result
+                    S : skip this step (applying previous result)
+                    Q : quit the script
+                    A : pause script and ask at each occurance
+
+
+NOTE: You must run the script from the directory where Experiment
+Anatomy resides.
+
+Example 1: For datasets with no relative distortion and comparable
+           coverage.  Using 6 param. rigid body transform.
+@SUMA_AlignToExperiment                                   \
+    -exp_anat DemoSubj_spgrsa+orig.                       \
+    -surf_anat ../FreeSurfer/SUMA/DemoSubj_SurfVol+orig.
+
+Example 2: For datasets with some distortion and different coverage.
+           Using 12 param. transform and clipping of areas below
+           cerebellum:
+@SUMA_AlignToExperiment                                      \
+    -exp_anat ABanat+orig. -surf_anat DemoSubj_SurfVol+orig. \
+    -wd -prefix DemoSubj_SurfVol_WD_Alnd_Exp                 \
+    -EA_clip_below -30
+
+Example 3: For two monkey T1 volumes with very different resolutions
+           and severe shading artifacts.
+
+@SUMA_AlignToExperiment                                      \
+    -surf_anat MOanat+orig. -al                              \
+    -exp_anat MoExpanat+orig.                                \
+    -strip_skull both -skull_strip_opt -monkey               \
+    -align_centers                                           \
+    -out_dxyz 0.3
+
+Example 4: When -exp_anat and -surf_anat have very different
+           orientations Here is an egregious case where -exp_anat (EA)
+           was rotated severely out of whack relative to -surf_anat
+           (SV), AND volume centers were way off.  With the 'Nudge
+           Dataset' plugin, it was determined that a 60deg.  rotation
+           got SV oriented more like ExpAnat.  The plugin can be made
+           to spit out an the 3dRotate command to apply the roation:
+                3drotate                                        \
+                    -quintic -clipit                            \
+                    -rotate 0.00I 60.00R 0.00A                  \
+                    -ashift 0.00S 0.00L 0.00P                   \
+                    -prefix ./SV_rotated+orig SV+orig
+           We will get XFROM.1D from that rotated volume:
+                cat_matvec 'SV_rotated+orig::ROTATE_MATVEC_000000' -I \
+                    > XFORM0.1D
+           and tell @SUMA_AlignToExperiment to apply both center
+           alignment and XFORM0.1D
+                @SUMA_AlignToExperiment                        \
+                    -init_xform XFORM0.1D -align_centers       \
+                    -surf_anat SV+orig  -exp_anat EA+orig      \
+                    -prefix SV_A2E_autAUTPre   
+           Note 1: 'Nudge Dataset' can also be used to get the centers
+           aligned, but that would be more buttons to press.
+           Note 2: -init_xform does not need to be accurate, it is
+           just meant to get -surf_anat to have a comparable
+           orientation.
+
+Global Help Options:
+--------------------
+
+   -h_web: Open webpage with help for this program
+   -hweb: Same as -h_web
+   -h_view: Open -help output in a GUI editor
+   -hview: Same as -hview
+   -all_opts: List all of the options for this script
+   -h_find WORD: Search for lines containing WORD in -help
+                 output. Seach is approximate.
+
+More help may be found at:
+https://afni.nimh.nih.gov/ssc/ziad/SUMA/SUMA_doc.htm
+
+Ziad Saad (saadz@mail.nih.gov)
+SSCC/NIMH/ National Institutes of Health, Bethesda Maryland
+
+EOF
+
+   goto END
+
+BEND:
+   echo "Failed."
+   set stat = 1
+   goto END
+   
+END:
+   cd "$CurDir"
+   if ($cleanup) then
+      \rm -f pre.${tmps}.* >& /dev/null
+      foreach ff ($rmlist)
+         \rm -f $ff >& /dev/null
+      end
+   endif
+   exit $stat

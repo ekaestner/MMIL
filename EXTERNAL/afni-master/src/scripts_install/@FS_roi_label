@@ -1,0 +1,511 @@
+#!/bin/tcsh -f
+
+set fsdb = FreeSurferColorLUT.txt
+set uid = `3dnewid -fun`
+set tmpP = "___.${uid}."
+set stat = 1
+if ("$1" == "" || "$1" == '-h' || "$1" == '-help') then
+   goto HELP
+endif
+
+if ("$uid" == "" || $tmpP == '') then
+   echo "Bad news no unique id, or temp file flag"
+   set stat = 1
+   goto END
+endif 
+\rm -f /tmp/${tmpP}.${uid}.* >& /dev/null
+
+goto PARSE
+RETURN_PARSE:
+
+if ( $Do_Surf ) then
+   #surface parcellation
+   set pplabels = /tmp/${tmpP}tmpsurflabels.txt
+   if ("$SurfLabelFile" != "") then
+      if (! -f ${SurfLabelFile}) then
+         echo "Could not find ${SurfLabelFile}"
+         goto END
+      endif
+   else
+      set lbls = `find ./ -name \*.annot.1D.cmap -maxdepth 4`
+      if ($status) then
+            echo "Could not find a .annot.1D.cmap file"
+            goto END
+      endif
+      if ($#lbls == 2) then
+         #maybe it is lr and rh and in that case they should be identical
+         diff $lbls[1] $lbls[2]
+         if ($status) then
+            echo "Found more than one cmap file and they appear different"
+            echo "choose one of $lbls (see -surf_annot_cmap)"
+            goto END
+         endif
+      else if ($#lbls > 2) then
+         echo "Found more than two cmap files, choose one of"
+         echo "$lbls (see -surf_annot_cmap)"
+         goto END
+      endif
+      set SurfLabelFile = $lbls[1]
+   endif
+   
+   #Now process lbl file
+   set nlbls = `3dnvals ${SurfLabelFile}\'`
+   1dcat ${SurfLabelFile}'[0]' | sed 's/^ */#/g' > /tmp/${tmpP}indices   
+   cat ${SurfLabelFile} | \
+      \grep -E '#[:alpha:]*' | tail -n $nlbls | sed 's/#//g' \
+               > /tmp/${tmpP}labels
+   set l1 = `wc -l /tmp/${tmpP}indices`
+   set l2 = `wc -l /tmp/${tmpP}labels`
+   if ( $l1[1] != $nlbls ) then
+      echo "mismatch in /tmp/${tmpP}indices and /tmp/${tmpP}labels"
+      goto END
+   endif
+   #Now put two together
+   paste -d ' '  /tmp/${tmpP}indices /tmp/${tmpP}labels > $pplabels
+   rm /tmp/${tmpP}indices /tmp/${tmpP}labels >& /dev/null
+else
+   #volume parcellation
+   set pplabels = /tmp/${tmpP}tmpvollabels.txt
+   if (! -f ${pplabels}) then
+      set bin = `which mris_convert`
+      if ($status) then
+         #Try locally, as a quick fix
+         echo "Warning: Searching for ${fsdb} locally..."
+         if ( -f ./${fsdb} ) then
+            set fsp = "$PWD"
+            echo "   Using $fsp/${fsdb}"
+         else if ( -f ./SUMA/${fsdb} ) then
+            set fsp = "$PWD/SUMA"
+            echo "   Using $fsp/${fsdb}"
+         else
+            echo "Could not find ${fsdb}"
+            goto END
+         endif
+
+      else
+         set fsp = "$bin:h"
+         #peel off a couple of layers
+         if ( ! -f "$fsp/${fsdb}") then
+            set fsp = "$fsp:h"
+         endif
+         if ( ! -f "$fsp/${fsdb}") then
+            set fsp = "$fsp:h"
+         endif
+         if ( ! -f "$fsp/${fsdb}") then
+            set fsp = "$fsp:h"
+         endif
+         if ( ! -f "$fsp/${fsdb}") then
+            echo "Cannot find LUT"
+            goto END
+         endif
+      endif
+
+      sed 's/^ *//;s/ *$//;s/ \{1,\}/ /g' "$fsp/${fsdb}" \
+         |   sed 's/^/#/g' | cut -d' ' -f1,2 > ${pplabels}
+   endif
+endif
+
+if ($name != "") then
+   if ($name == "ALL") then
+      \grep -i '#[0123456789]'   ${pplabels} > /tmp/${tmpP}nm.txt
+   else
+      \grep -i $name   ${pplabels} > /tmp/${tmpP}nm.txt
+   endif
+   #echo \grep -i "$name"   ${pplabels}
+   cut -d' ' -f1 /tmp/${tmpP}nm.txt > /tmp/${tmpP}nmi.txt
+   cut -d' ' -f2 /tmp/${tmpP}nm.txt > /tmp/${tmpP}nmn.txt
+   if ($rankmap != "") then
+      set rankmax = 0
+      set cnt_lt = 0
+      #purify 1D file
+      1dcat $rankmap'[1]' > /tmp/${tmpP}rmi.1D
+      1dcat $rankmap > /tmp/${tmpP}rmcl.1D
+      #for each entry found
+      set nl = `wc -l  /tmp/${tmpP}nm.txt`
+      set n = 1
+      printf "%-6s   %-6s  %-8s \n" "Rank" "Label" "Name"
+      while ($n < $nl[1])
+         set lab = `sed -n "${n}p" /tmp/${tmpP}nmi.txt | sed 's/#//'`
+         set nm = `sed -n "${n}p" /tmp/${tmpP}nmn.txt`
+         #Now find lab in  rankmap's second column
+         set ilab = `\grep -n -w $lab /tmp/${tmpP}rmi.1D | sed 's/:/ /g'`
+         if ("$ilab" != '') then
+            #Now get that line from the cleaned up rankmap
+            set li = `sed -n "${ilab[1]}p" /tmp/${tmpP}rmcl.1D`
+            #and the rank is the first value
+            set rank = $li[1]
+            printf "%-6s   %-6s  %-8s \n" $rank $lab $nm
+            printf '"%d" "%s"\n' $rank $nm >> /tmp/${tmpP}lt.txt
+            @ cnt_lt ++
+            if ($rank > $rankmax) then
+               set rankmax = $rank
+            endif
+         else  
+            printf "%-6s   %-6s  %-8s \n" '#' $lab $nm
+         endif
+         @ n ++
+      end
+   else
+      set rankmax = 1024
+      set cnt_lt = `cat /tmp/${tmpP}nmn.txt | wc -l`
+      paste  /tmp/${tmpP}nmi.txt /tmp/${tmpP}nmn.txt > /tmp/${tmpP}lt.txt
+   endif
+   
+   if ($labeltable != "") then
+      #echo $rankmax
+      if ($rankmax < 32) then
+         set pbar = "ROI_i32"
+      else if ($rankmax < 64) then
+         set pbar = "ROI_i64"
+      else if ($rankmax < 128) then
+         set pbar = "ROI_i128"
+      else
+         set pbar = "ROI_i256"
+      endif
+      printf '<VALUE_LABEL_DTABLE\n' > $labeltable
+      printf 'ni_type="2*String"\n' >> $labeltable
+      printf 'ni_dimen="%d"\n' $cnt_lt >> $labeltable
+      printf 'pbar_name="%s">\n' $pbar >> $labeltable
+      if ($rankmap != "") then
+         uniq /tmp/${tmpP}lt.txt >> $labeltable
+      else
+         cat /tmp/${tmpP}lt.txt |sed 's/^#//' >> $labeltable
+      endif
+      if ($status) goto BEND
+      printf '</VALUE_LABEL_DTABLE>\n' >> $labeltable
+   endif
+   set stat = 0
+   goto END 
+endif 
+
+if ($rank != "") then
+   set l = `1dcat $rankmap"{$rank}"`
+   if ("$l" == "" || $#l != 2) then
+      echo "Rank $rank not found in $rankmap or unexpected file format"
+      set stat = 1
+      goto END
+   endif
+   if ($l[1] != $rank) then
+      echo "Rankfile's first column is not continuous"
+      set stat = 1
+      goto END
+   endif 
+   set lab = $l[2]
+endif
+
+if ($lab != "") then
+   set l = `\grep -w "#$lab" ${pplabels}`
+   if ("$l" != "") then
+      echo $l | sed 's/^#//'
+   endif
+else 
+   echo "Error, nothing to do here"
+   goto END
+endif
+
+set stat = 0
+goto END
+
+PARSE:
+   
+   #find the locations of -ts and -roi, etc
+   set name = ''
+   set rankmap = ''
+   set rankmax = 1024
+   set rank = ''
+   set lab = ''
+   set Narg = $#
+   set cnt = 1
+   set SurfLabelFile = ""
+   set Do_Surf = -1
+   set labeltable = ''
+   while ($cnt <= $Narg)
+      if ("$argv[$cnt]" == "-surf_annot_cmap") then
+         set SubLoc = $cnt    
+         if ($Do_Surf == 0) then
+            echo "-surf_annot_cmap is not good for volume annotations"
+            goto END
+         endif
+         if ($SubLoc == $Narg) then
+            echo "Need file after -surf_annot_cmap"
+            goto END
+         else
+            @ cnt ++
+            set SurfLabelFile = "$argv[$cnt]"
+            set Do_Surf = 1
+            set NxtInd = $cnt
+         endif
+      endif
+      if ("$argv[$cnt]" == "-rank") then
+         set SubLoc = $cnt    
+         if ($SubLoc == $Narg) then
+            echo "Need integer after -rank"
+            goto END
+         else
+            @ cnt ++
+            set rank = "$argv[$cnt]"
+            set NxtInd = $cnt
+         endif
+      endif
+      if ("$argv[$cnt]" == "-rankmap") then
+         set SubLoc = $cnt    
+         if ($SubLoc == $Narg) then
+            echo "Need file after -rankmap"
+            goto END
+         else
+            @ cnt ++
+            set rankmap = "$argv[$cnt]"
+            if ("${rankmap:r}.1D" != "$rankmap") then
+               echo "rankmap must have a .1D extension"
+            endif
+            if ( ! -f ${rankmap} ) then
+               echo "rankmap file ${rankmap} not found"
+               goto BEND
+            endif
+            set NxtInd = $cnt
+         endif
+      endif
+      
+      if ("$argv[$cnt]" == "-labeltable") then
+         set SubLoc = $cnt    
+         if ($SubLoc == $Narg) then
+            echo "Need file after -labeltable"
+            goto END
+         else
+            @ cnt ++
+            set labeltable = `@NoExt "$argv[$cnt]" .niml .niml.lt`
+            set labeltable = $labeltable.niml.lt
+            set NxtInd = $cnt
+         endif
+      endif
+      
+      if ("$argv[$cnt]" == "-name") then
+         set SubLoc = $cnt    
+         if ($Do_Surf == 1) then
+            echo "-name is not good for surface annotations"
+            goto END
+         endif
+         if ($SubLoc == $Narg) then
+            echo "Need area name after -name"
+            goto END
+         else
+            @ cnt ++
+            set Do_Surf = 0
+            set name = "$argv[$cnt]"
+            set NxtInd = $cnt
+         endif
+      endif
+      if ("$argv[$cnt]" == "-sname") then
+         set SubLoc = $cnt    
+         if ($Do_Surf == 0) then
+            echo "-sname is not good for surface annotations"
+            goto END
+         endif
+         if ($SubLoc == $Narg) then
+            echo "Need area name after -sname"
+            goto END
+         else
+            @ cnt ++
+            set Do_Surf = 1
+            set name = "$argv[$cnt]"
+            set NxtInd = $cnt
+         endif
+      endif
+      if ("$argv[$cnt]" == "-lab" || "$argv[$cnt]" == "-label") then
+         set SufLoc = $cnt    
+         if ($Do_Surf == 1) then
+            echo "-lab is not good for surface annotations"
+            goto END
+         endif
+         if ($SufLoc == $Narg) then
+            echo "Need option after -label"
+            goto END
+         else
+            @ cnt ++
+            set Do_Surf = 0
+            set lab = "$argv[$cnt]"
+            set NxtInd = $cnt
+         endif
+      endif
+      if ("$argv[$cnt]" == "-slab" || "$argv[$cnt]" == "-surf_label") then
+         set SufLoc = $cnt    
+         if ($Do_Surf == 0) then
+            echo "-slab is not good for volume annotations"
+            goto END
+         endif
+         if ($SufLoc == $Narg) then
+            echo "Need option after -label"
+            goto END
+         else
+            @ cnt ++
+            set Do_Surf = 1
+            set lab = "$argv[$cnt]"
+            set NxtInd = $cnt
+         endif
+      endif
+            
+      @ cnt ++
+   end
+
+   @ NxtInd ++
+   if ( $NxtInd > $#argv ) then
+      set others_list = ( )
+   else
+      set others_list = ( $argv[$NxtInd-$#argv] )
+   endif
+
+   if ("$SurfLabelFile" != "" && $Do_Surf == 0) then
+      echo "Cannot use -surf_annot_cmap with -lab"
+      goto END
+   endif
+    
+   if ($lab == "" && $rank == "") then
+      if ($#others_list == 1) then
+         set lab = $others_list[1]
+         set others_list = ()
+      endif
+   endif
+   if ($#others_list > 0) then
+      echo "Options $others_list not understood"
+      goto END
+   endif
+   if ($lab == "" && $rank == "" && "$name" == "") then
+      echo "Nothing to do."
+      goto END
+   endif
+   if ($lab != "" && $rank != "") then
+      echo "-rank and -label are mutually exclusive"
+      goto END
+   endif
+   if ($rank != "" && $rankmap == "") then
+      echo "Need -rankmap with -rank"
+      goto END
+   endif
+#   if ($labeltable != "" && $rankmap == "") then
+#      echo "Need -rankmap with -labeltable"
+#      goto END
+#   endif
+   if ($labeltable != "" && name == "") then
+      set name = "ALL"
+   endif
+   if ($rankmap != "" && $rank == "" &&  "$name" == "") then
+      echo "-rankmap is useless without -rank or -name"
+      goto END
+   endif
+   if ($name != "" && $rank != "") then
+      echo "-rank and -name are mutually exclusive"
+      goto END
+   endif
+   if ($name != "" && $lab != "") then
+      echo "-label and -name are mutually exclusive"
+      goto END
+   endif
+   
+   if ($Do_Surf == -1) then
+      set Do_Surf = 0
+   endif
+   
+   goto RETURN_PARSE
+
+HELP:
+   echo ""
+   echo "This script is used to get labels associated with "
+   echo "FreeSurfer's parcellation and annotation files.\n"
+   echo ""
+   echo "For volumetric FreeSurfer Parcellations:"
+   echo "----------------------------------------"
+   echo "Usage: `basename $0` <int>"
+   echo "   Return the name of an integer labeled area in FreeSurfer's"
+   echo "   parcellation. Lookup is based on your installed "
+   echo "   ${fsdb} "
+   echo "   Example: "
+   echo "      @FS_roi_label  2180 "
+   echo ""
+   echo " or "
+   echo ""
+   echo "Usage: `basename $0` <-lab int>"
+   echo "   Return the name of an integer labeled area in FreeSurfer's"
+   echo "   parcellation"
+   echo "   Example: "
+   echo "      @FS_roi_label  -lab 2180 "
+   echo ""
+   echo " or "
+   echo ""
+   echo "Usage: `basename $0` <-rank R> <-rankmap M.1D>"
+   echo "   Return the name of ranked integer labeled area from the output "
+   echo "   of 3dRank or 3dmerge -1rank on a FreeSurfer parcellation file."
+   echo "   Example: "
+   echo "      @FS_roi_label  -rank 198 \"
+   echo "                     -rankmap  SUMA/aparc.a2005s+aseg_rank.rankmap.1D"
+   echo ""
+   echo " or "
+   echo ""
+   echo "Usage: `basename $0` <-name NAME> "
+   echo "   Return the entries matching NAME (case insensitive, partial match)"
+   echo "   from FreeSurfer's ${fsdb} "
+   echo "   Example: "
+   echo "      @FS_roi_label  -name cerebra"
+   echo ""
+   echo "   You can use ALL for NAME to get all entries in ${fsdb} "
+   echo ""
+   echo " or "
+   echo ""
+   echo "Usage: `basename $0` <-name NAME> <-rankmap M.1D>"
+   echo "   Return the entries matching NAME and their rank per M.1D"
+   echo "   Unavailable ranks are flagged with the # sign"
+   echo "   Example: "
+   echo "      @FS_roi_label  -name cerebra  \"
+   echo "                     -rankmap SUMA/aparc.a2005s+aseg_rank.rankmap.1D"
+   echo ""
+   echo " or "
+   echo ""
+   echo "Usage: `basename $0` <-name ALL> \"
+   echo "                     <-labeltable LABELTABLE> <-rankmap M.1D>"
+   echo "   Build a label table that can be added to the ranked volume"
+   echo "   so that AFNI can display labels of parcellated volumes."
+   echo "   Use 3drefit -labeltable LABELTABLE DSET to add the table"
+   echo "   to the rank dataset DSET"
+   echo "   Example: 3drefit -labeltable LABELTABLE SUMA/aparc.a2005s+aseg_rank"
+   echo ""
+   echo "For Surface-Based FreeSurfer Annotations  :"
+   echo "------------------------------------------"
+   echo "Usage: `basename $0` <-surf_annot_cmap CMAP> <-slab int>"
+   echo "   Return the name of an integer labeled area in FreeSurfer's"
+   echo "   surface-based annotation. "
+   echo ""
+   echo "   CMAP is the file output by FSread_annot's -roi_1D option."
+   echo "   It should sit by default in the SUMA/ directory. "
+   echo "   The script will search a little for a CMAP under the path from where"
+   echo "   it is launched. However, if the script cannot find a CMAP "
+   echo "   on its own, you'll need to specify it with -surf_annot_cmap on the "
+   echo "   command line."
+   echo "" 
+   echo "   Example:"
+   echo "      @FS_roi_label  -slab 42 \"
+   echo "                     -surf_annot_cmap lh.aparc.a2005s.annot.1D.cmap "
+   echo ""
+   echo "Usage: `basename $0` <-surf_annot_cmap CMAP> <-sname SNAME>"
+   echo "   Return the entries matching NAME (case insensitive, partial match)"
+   echo "   from the CMAP file"
+   echo "   Example:"
+   echo "      @FS_roi_label  -sname occi \"
+   echo "                     -surf_annot_cmap lh.aparc.a2005s.annot.1D.cmap "
+   echo ""
+   echo ""
+   
+   set stat = 0
+   goto END
+   
+   
+goto END
+
+BEND:
+   set stat = 1
+   goto END
+   
+END:
+\rm -f /tmp/${tmpP}.${uid}.* >& /dev/null
+exit $stat   
+
+   
+   

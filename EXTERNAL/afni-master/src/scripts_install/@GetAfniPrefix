@@ -1,0 +1,93 @@
+#!/bin/tcsh -f
+if ("$1" == '' || "$1" == '-h' || "$1" == '-help') then
+	goto USAGE
+endif
+
+set noglob
+
+set withpath=0
+set arlist=()
+foreach aa ($argv)
+   if ("$aa" == "-p") then
+      set withpath=1
+   else
+      set arlist = ($arlist "$aa")
+   endif
+end
+
+set PrefSuf = ''
+if ($#arlist > 1) then
+   set PrefSuf = $arlist[2]
+endif
+
+set cln = `echo "$arlist[1]" | cut -d \[ -f1`
+
+set pt = `dirname $cln`
+
+#remove path
+set Nom = $cln:t
+#remove extension .HEAD or .BRIK
+set ext = $Nom:e
+set fext = ""
+if ("$ext" == "gz") then
+   #remove .gz first
+   set Nom = $Nom:r
+   set ext = $Nom:e
+   set fext = ".gz"
+else if ("$ext" == "bz2") then
+   set Nom = $Nom:r
+   set ext = $Nom:e
+   set fext = ".bz2"
+else if ("$ext" == "Z") then
+   set Nom = $Nom:r
+   set ext = $Nom:e
+   set fext = ".Z"
+else if ("$ext" == ".BRIK" || "$ext" == ".HEAD") then
+   set Nom = $Nom:r
+   set fext = ""
+endif
+if ("$ext" == "nii") then
+   set Nom = $Nom:r$PrefSuf".$ext$fext"
+   goto ECHO
+endif
+    
+#Remove extension only if it is .HEAD or .BRIK
+if ("$ext" == "HEAD" || "$ext" == "BRIK") then
+   set Nom = $Nom:r
+endif
+#remove +orig or whatever it is
+set Nom = `echo $Nom | sed 's/+orig.$//'`
+set Nom = `echo $Nom | sed 's/+acpc.$//'`
+set Nom = `echo $Nom | sed 's/+tlrc.$//'`
+set Nom = `echo $Nom | sed 's/+orig$//'`
+set Nom = `echo $Nom | sed 's/+acpc$//'`
+set Nom = `echo $Nom | sed 's/+tlrc$//'`
+set Nom = $Nom$PrefSuf
+goto ECHO
+
+ECHO:
+if ($withpath) then
+   echo $pt/$Nom
+else
+   echo $Nom
+endif
+unset noglob
+
+goto ENDALL
+
+USAGE:
+	echo "Usage: `basename $0` <Name> [Suffix]"
+	echo "example: `basename $0` /Data/stuff/Hello+orig.HEAD"
+	echo "returns the afni prefix of name (Hello)" 
+	echo "Wildcards are treated as regular characters:"
+	echo "example: `basename $0` 'AAzst1r*+orig'"
+	echo "returns : AAzst1r*"
+	echo ""
+   echo "If a Suffix string is specified, then it is"
+   echo "appended to the returned prefix."
+   echo ""
+   echo "Ziad Saad (saadz@mail.nih.gov)"
+   echo "  LBC/NIMH/ National Institutes of Health, Bethesda Maryland"
+   echo ""
+	goto ENDALL
+ENDALL:

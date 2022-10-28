@@ -1,0 +1,218 @@
+#!/bin/tcsh -f
+
+#
+# Change log:
+#
+# [PT: Oct 15, 2018]
+# + Use 'afni -get_processed_env' to see if AFNI env variables are
+#   set, for broader generality/utility.
+# + Also, allow NIFTI files to be found in more places.  At the
+#   moment, they can only be found in the `which afni` directory.
+#   That is now modernized.
+#
+# [PT: Nov 25, 2018]
+# + Bug fix: dsets weren't being found in places specified by env vars
+#   like AFNI_GLOBAL_SESSION, etc.
+# [DRG: 13 Aug 2019]
+# + Added AFNI_SUPP_ATLAS_DIR to the list of environment paths.
+# + Added atlas name -> dataset file search via whereami
+# + append file name to output
+# [DRG: 31 Aug 2019]
+# + full_path option - include full path in output instead of .
+# + better option processing of argv
+# [DRG: 24 Sep 2019]
+# + full_path - really full path even for directories like ../
+
+set retval = 0
+# default is to print only path and not file name
+set append_file = 0
+# if in current directory, default is to print ./
+set full_path = 0
+
+set ref_in = ""
+
+if ($#argv == 0) then
+   # bad usage sets error status        29 Dec 2015 [rickr]
+   set retval = 1
+   goto HELP
+endif
+
+# process user options
+set ac = 1
+while ($ac <= $#argv)
+    if ("$argv[$ac]" == "-help" || "$argv[$ac]" == "-h") then
+        goto HELP
+    else if ( "$argv[$ac]" == "-append_file") then
+         set append_file = 1
+    else if ( "$argv[$ac]" == "-full_path") then
+         set full_path = 1
+    else 
+         set ref_in = $argv[$ac]
+    endif
+    @ ac ++
+end
+
+if ($ref_in == "") then
+   echo "No datasets on command line?"
+   exit 1
+endif
+
+set dataset_path = './'
+
+# check if this dataset might be an atlas name  13 Aug 2019 [drg]
+# see if the filename ends with .nii, .nii.gz, +orig, +tlrc, .HEAD,.BRIK,...
+set storageguess = ` ParseName ${ref_in} | grep StorageModeNm|awk -F: '{print $2}'`
+# if not a regular dataset, then we might find it as an atlas instead
+if ($storageguess  == "UNDEFINED") then
+   # find the dataset file associated with the atlas (cf. whereami help) 
+   set possibleatlas = `whereami -atlas ${ref_in} -show_atlas_dset`
+   if ($possibleatlas != "") then
+      set ref_in = $possibleatlas
+   endif
+endif
+# get the file name now
+set ref_file = ` ParseName ${ref_in} | grep "FileName "|awk -F: '{print $2}'`
+
+# ------------------- search first with possible path -------------
+
+# if path to dset, test separately    31 Jul 2015 [rickr]
+# (differs from ./$ref_in if path is absolute)
+# [PT: Oct 15, 3018] Update to allow for finding NIFTIs in this way
+set dir = "$ref_in:h"
+if ( "$dir" != "$ref_in" ) then
+    set result = `@CheckForAfniDset ${ref_in}`
+    if ($full_path == 1) then
+       if ($dir == ".") then
+          set dir = `pwd`
+       else
+          cd $dir ; set dir = `pwd` ; cd -
+       endif 
+    endif
+    if ( "$result" == 2 || "$result" == 3 ) then
+        if ($append_file == 0) then
+           echo $dir
+        else
+           echo ${dir}/${ref_file}
+        endif
+        exit 0
+    endif
+endif
+
+# ------------------- search using `afni -get_processed_env` -------------
+
+# Make a list of the possible variables
+set list_of_vars = ( "AFNI_GLOBAL_SESSION" \
+                     "AFNI_SUPP_ATLAS_DIR" \
+                     "AFNI_ATLAS_PATH"     \
+                     "AFNI_PLUGINPATH" )
+
+# Loop through each of those to see if AFNI knows about any (and which)
+foreach vv ( $list_of_vars )
+
+    set aaa = `afni -get_processed_env  | grep "${vv}"`
+
+    if ( "$aaa" != "" ) then
+
+        # remove first occurence of the variable in the string (which
+        # should be the LHS of assignment
+        set bbb = `echo $aaa | sed -E "s/${vv}//"`
+
+        # then remove the equals sign
+        set ccc = `echo $bbb | sed -E "s/=//"`
+        # then remove any colon separating things, and throw in all
+        # vals to the dataset array
+        set dataset_path = ( ${dataset_path} \
+                             `echo $ccc | tr ':' ' '`)
+         #echo $dataset_path
+    endif
+end
+
+# ----------------------- search atlas dir --------------------------
+
+# As before, check about the atlas dir
+if ( -d $HOME/.afni/atlases ) then
+    set dataset_path = (${dataset_path} $HOME/.afni/atlases)
+endif
+
+# ----------------------- check the $dataset_path --------------------------
+
+# [PT: Oct 15, 2018] 
+# + Updating this to be fine with finding NIFTI data sets via the
+#   above (using the '... == 3')!
+foreach dir ( ${dataset_path} )
+    set result = `@CheckForAfniDset ${dir}/${ref_in}`
+    if ( "$result" == 2 || "$result" == 3 ) then
+
+        if ($full_path == 1) then
+            if ($dir == "./") then
+               set dir = `pwd`
+            else 
+               cd $dir ; set dir = `pwd` ; cd -
+            endif 
+        endif
+        # remove last character if "/"
+        set out = `echo $dir | sed 's/\/$//'`
+        if ($append_file == 0) then
+           echo $out
+        else
+           echo ${out}/${ref_file}
+        endif
+
+        exit 0
+    endif
+end
+
+# ------------------- search (final): `which afni` ------------------------
+
+# Check afni bin directory, for compatibility with older installations
+# that installed atlas datasets there.
+### This can *already* find NIFTI sets
+set wa = `which afni`
+if ( $status != 0) then
+   exit 1
+endif
+set ref_path = "$wa:h"
+if ( "$ref_path" == "$wa" ) then
+   exit 1
+endif
+if ( `@CheckForAfniDset ${ref_path}/${ref_in}` ) then
+    if ($append_file == 0) then
+       echo $ref_path
+    else
+       echo ${ref_path}/${ref_file}
+    endif
+    exit 0
+endif
+
+# not found
+exit 1
+
+
+HELP:
+cat << EOF
+
+Usage: `basename $0` <dsetname>
+
+Search AFNI_GLOBAL_SESSION, AFNI_SUPP_ATLAS_DIR, AFNI_ATLAS_PATH, 
+AFNI_PLUGINPATH and afni bin directory  (in that order) for named 
+dataset. If found, echo the first valid path discovered and return 
+zero status. If not found, return non-zero status. If atlas name is
+given, then atlas dataset file name is found (and possibly printed with
+append_file option below
+
+   -append_file show the file appended too (even with atlas name)
+   -full_path print full path instead of '.'   
+   -help to get this message
+
++ [Oct 15, 2018] Updated to do a better job searching for NIFTIs and
+    to possibly use the environment variables set in ~/.afnirc.
+
+Jason W. Bacon
+Medical College of Wisconsin
+Sep 27, 2006
+
+EOF
+
+# be explicit
+exit $retval
+

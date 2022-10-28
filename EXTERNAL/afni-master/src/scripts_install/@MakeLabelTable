@@ -1,0 +1,1284 @@
+#!/bin/tcsh
+onintr END
+
+@global_parse `basename $0` "$*" ; if ($status) exit 0
+
+set tmpdir = .
+set stat = 0
+set RNS = "mlt_`3dnewid -fun`"
+set log = ${tmpdir}/${RNS}.MLT.log
+set COG = ""
+set SKIPNOVOX = ""
+set lncol = ""
+set last_lncol = ""
+set centertype = "-Icent" # internal center - default (DRG - 03/06/2020)
+set centermask = "" # BTJ - 09/15/2020
+set iL = 2
+set iV = 1
+
+if ("$1" == "") then
+   goto HELP
+endif
+
+goto PARSE
+RETURN_PARSE:
+
+#Cut out early ?
+if ("$mode" == 1) then
+   goto PUT_ATLAS_TABLE
+else if ("$mode" == 2) then
+   goto ADD_ATLAS_ENTRY
+endif
+
+# set labeltable if it's not set already
+if  ($labeltable == "LABEL_TABLE_NOT_SET") then
+                 set labeltable = lt_${RNS}.niml.alt
+endif
+
+if ($autolab == 1) then
+   #Get unique set of values using 3dRank
+   #Have to do it for each sub-brick and for now, labeltable will have
+   #to be the same for all sub-bricks so you need to label accordingly
+   #No time for this now....
+endif
+
+if ($ltdset != '') then
+    3dAttribute -ssep ' '  -name  VALUE_LABEL_DTABLE $ltdset \
+      | sed 's/^VALUE_LABEL_DTABLE = //'
+    if ($status) then
+      if (! $quiet_death) echo "Failed to find VALUE_LABEL_DTABLE"
+      goto BEND
+    endif
+    goto END
+endif
+
+if ($showlabels) then
+   if ($word_match == 1) then
+      set gopt = ("$gopt" "-w")
+   endif
+   if ($KeysLabel != '') then
+      niccc -quiet '-#' -stdout file:$labeltable \
+         | \grep $gopt $KeysLabel \
+         | \sed 's/^ //g' | \sed 's/"//g' \
+         | \cut -d ' ' -f 2
+   else
+      niccc -quiet '-#' -stdout file:$labeltable \
+         | \grep -v '^#' | sed '/^$/d' \
+         | \sed 's/^ //g' | \sed 's/"//g' \
+         | \cut -d ' ' -f 2
+   endif
+   goto END
+endif
+
+if ($showkeys) then
+   if ($word_match == 1) then
+      set gopt = ("$gopt" "-w")
+   endif
+   if ($KeysLabel != '') then
+      niccc -quiet '-#' -stdout file:$labeltable \
+         | \grep $gopt $KeysLabel \
+         | \sed 's/^ //g' | \sed 's/"//g' \
+         | \cut -d ' ' -f 1
+   else
+      niccc -quiet '-#' -stdout file:$labeltable \
+         | \grep -v '^#' | sed '/^$/d' \
+         | \sed 's/^ //g' | \sed 's/"//g' \
+         | \cut -d ' ' -f 1
+   endif
+   goto END
+endif
+
+if ($maxkey) then
+   niccc -quiet '-#' -stdout file:$labeltable \
+         | \grep -v '^#' \
+         | \sed 's/^ //g' | \sed 's/"//g' \
+         | \cut -d ' ' -f 1 > __kk.1D
+   set maxkey = `3dBrickStat -slow -max __kk.1D`
+   \rm -f __kk.1D
+   echo $maxkey
+   goto END
+endif
+
+
+if ($KeysLabel != '') then
+   if (! -f $labeltable) then
+      if (! $quiet_death) echo "Error: $labeltable not found"
+      goto BEND
+   endif
+
+   #get the numbers
+   if ($word_match == 1) then
+      set gopt = ("$gopt" "-w")
+   endif
+   set keys = `niccc -quiet '-#' -stdout file:$labeltable \
+      | \grep $gopt $KeysLabel \
+      | \sed 's/^ //g' | \sed 's/"//g' \
+      | \cut -d ' ' -f 1`
+
+   if ($#keys < 1) then
+      if (! $quiet_death) \
+         echo "Error: Label $KeysLabel has no match in labeltable $labeltable"
+      goto BEND
+   endif
+
+   if ($range) then
+      set range = `3dBrickStat -slow -min -max  "1D:$keys"`
+      echo $range
+   else
+      echo $keys
+   endif
+   goto END
+endif
+
+if ($LabelKey != '') then
+   if (! -f $labeltable) then
+      if (! $quiet_death) echo "Error: $labeltable not found"
+      goto BEND
+   endif
+
+   #get the numbers
+   set labels = `niccc -quiet '-#' -stdout file:$labeltable \
+      | \grep '"'$LabelKey'"' \
+      | \sed 's/^ //g' | \sed 's/"//g' \
+      | \cut -d ' ' -f 2`
+
+   if ($#labels < 1) then
+      if (! $quiet_death) \
+         echo "Error: Key $LabelKey has no match in labeltable $labeltable"
+      goto BEND
+   else if ($#labels > 1) then
+      if (! $quiet_death)  \
+echo "Error: Key $LabelKey has $#labels matches in labeltable $labeltable"
+      goto BEND
+   else
+      echo $labels
+   endif
+
+   goto END
+endif
+
+MAKE_TABLE:
+   if ($ltype != 'roi') goto  MAKE_TABLE_END
+   set max_label = `1dcat "1D:$llistmax" | sort -rn`
+   set max_label = $max_label[1]
+   if ($max_label < 32) then
+      set pbar = "ROI_i32"
+   else if ($max_label < 64) then
+      set pbar = "ROI_i64"
+   else if ($max_label < 128) then
+      set pbar = "ROI_i128"
+   else
+      set pbar = "ROI_i256"
+   endif
+
+   if ( -f ${tmpdir}/${RNS}.___lt.txt) rm -f ${tmpdir}/${RNS}.___lt.txt
+   if ( -f ${tmpdir}/${RNS}.___ll.txt) rm -f ${tmpdir}/${RNS}.___ll.txt
+   if ( -f ${tmpdir}/${RNS}.___kk.txt) rm -f ${tmpdir}/${RNS}.___kk.txt
+   set cnt = 1
+   set N_llist = `\wc -l ${tmpdir}/TMPLIST_${RNS}_` ; set N_llist = $N_llist[1]
+   while ($cnt <= $N_llist)
+      # get the label from the temporary file parsed above
+      set ll = `sed -n "${cnt}p" ${tmpdir}/TMPLIST_${RNS}_`
+      # get the value index
+      set inds = `count -digits 1 $llistmin[$cnt] $llistmax[$cnt]`
+      # get the longname if there is one
+      if ($lncol) then
+         set ln = `sed -n "${cnt}p" ${tmpdir}/TMPLIST_${RNS}_ln_`
+      else
+         set ln =  ""
+      endif
+
+      # not sure how this is more than one at a time
+      if ($#inds > 1) then
+         set ci = 1
+         foreach ind ($inds)
+            # check for long names here and add these on if they exist
+            if ("$ln" != "") then
+               printf '"%d" "%s%02d %s"\n' $ind "$ll" $ci "$ln" \
+               >> ${tmpdir}/${RNS}.___lt.txt
+            # the more usual case of no long names - just name and number
+            else
+               printf '"%d" "%s%02d"\n' $ind "$ll" $ci \
+               >> ${tmpdir}/${RNS}.___lt.txt
+
+            endif
+            if ($status) then
+               echo "Error:"
+               echo "printf command failed at: $ind $ll"
+               echo ""
+               goto BEND
+            endif
+            printf '%d\n' $ind >> ${tmpdir}/${RNS}.___kk.txt
+            printf '%s%02d\n' "$ll" $ci >> ${tmpdir}/${RNS}.___ll.txt
+            @ ci ++
+         end
+      else
+         # add long name if it exists to entry
+         if ("$ln" != "") then
+            printf '"%d" "%s" "%s"\n' $llistmin[$cnt] "$ll" "$ln" \
+               >> ${tmpdir}/${RNS}.___lt.txt
+        else
+            # the more usual case of no long names - just name and number
+             printf '"%d" "%s"\n' $llistmin[$cnt] "$ll" \
+               >> ${tmpdir}/${RNS}.___lt.txt
+          endif
+            if ($status) then
+               echo "Error:"
+               echo "printf command failed at: $llistmin[$cnt] $ll"
+               echo ""
+               goto BEND
+            endif
+         printf '%d\n' $llistmin[$cnt] >> ${tmpdir}/${RNS}.___kk.txt
+         printf '%s\n' "$ll" >> ${tmpdir}/${RNS}.___ll.txt
+      endif
+      @ cnt ++
+   end
+
+   set n = `wc -l ${tmpdir}/${RNS}.___ll.txt`
+   set n = $n[1]
+   uniq ${tmpdir}/${RNS}.___ll.txt > ${tmpdir}/${RNS}.___llu.txt
+   set nu = `wc -l ${tmpdir}/${RNS}.___llu.txt`
+   set nu = $nu[1]
+   if ($nu < $n) then
+      if (! $quiet_death) \
+         echo "ERROR: `ccalc -i $n -$nu` Labels dropped because of duplicates"
+      goto BEND
+   endif
+   set n = `wc -l ${tmpdir}/${RNS}.___kk.txt`
+   set n = $n[1]
+   uniq ${tmpdir}/${RNS}.___kk.txt > ${tmpdir}/${RNS}.___kku.txt
+   set nu = `wc -l ${tmpdir}/${RNS}.___kku.txt`
+   set nu = $nu[1]
+   if ($nu < $n) then
+      if (! $quiet_death) \
+         echo "ERROR: `ccalc -i $n -$nu` Keys dropped because of duplicates"
+      goto BEND
+   endif
+
+
+      printf '<VALUE_LABEL_DTABLE\n' > $labeltable
+      printf 'ni_type="2*String"\n' >> $labeltable
+      printf 'ni_dimen="%d"\n' $nu[1] >> $labeltable
+      printf 'pbar_name="%s">\n' $pbar >> $labeltable
+      # take index and label, each in quotes, not longnames if any to labeltable 
+      uniq ${tmpdir}/${RNS}.___lt.txt | awk '{print $1 " " $2}' >> $labeltable
+      printf '</VALUE_LABEL_DTABLE>\n' >> $labeltable
+
+PUT_TABLE:
+   if ($target_dset != '') then
+      3drefit -labeltable $labeltable $target_dset
+   endif
+   MAKE_TABLE_END:
+
+MAKE_ATLAS_TABLE:
+   if ($ltype != 'atlas') goto  MAKE_ATLAS_TABLE_END
+   set max_label = `1dcat "1D:$llistmax" | sort -rn`
+   set max_label = $max_label[1]
+   if ($max_label < 32) then
+      set pbar = "ROI_i32"
+   else if ($max_label < 64) then
+      set pbar = "ROI_i64"
+   else if ($max_label < 128) then
+      set pbar = "ROI_i128"
+   else
+      set pbar = "ROI_i256"
+   endif
+
+   if ( -f ${tmpdir}/${RNS}.___lt.txt) rm -f ${tmpdir}/${RNS}.___lt.txt
+   if ( -f ${tmpdir}/${RNS}.___ll.txt) rm -f ${tmpdir}/${RNS}.___ll.txt
+   if ( -f ${tmpdir}/${RNS}.___kk.txt) rm -f ${tmpdir}/${RNS}.___kk.txt
+   set cnt = 1
+   set N_llist = `\wc -l ${tmpdir}/TMPLIST_${RNS}_` ; set N_llist = $N_llist[1]
+   while ($cnt <= $N_llist)
+      set ll = `sed -n "${cnt}p" ${tmpdir}/TMPLIST_${RNS}_`
+
+      # get the longname if there is one
+      if ($lncol) then
+         set ln = `sed -n "${cnt}p" ${tmpdir}/TMPLIST_${RNS}_ln_`
+      else
+         set ln =  ""
+      endif
+
+      # index of region
+      # odd \r incomplete conversion with printf %d below unless convert
+      #  these to integers here
+      set lli = `ccalc -int -expr "$llistmin[$cnt]"`
+      set llistmin[$cnt] = $lli
+
+      set inds = `count -digits 1 $llistmin[$cnt] $llistmax[$cnt]`
+      if ($#inds > 1) then
+         set ci = 1
+         foreach ind ($inds)
+            printf '"%d" "%s%02d %s"\n' $ind "$ll" $ci "$ln" \
+               >> ${tmpdir}/${RNS}.___lt.txt
+            if ($status) then
+               echo "Error:"
+               echo "printf command failed at: $ind $ll"
+               echo ""
+               goto BEND
+            endif
+            printf '%d\n' $ind >> ${tmpdir}/${RNS}.___kk.txt
+            printf '%s%02d\n' "$ll" $ci >> ${tmpdir}/${RNS}.___ll.txt
+            @ ci ++
+         end
+      else
+         set ln_len = `echo $ln |wc -c`
+         if ("$ln_len" == "1") then
+             printf '"%d" "%s" ""\n' $llistmin[$cnt] "$ll" \
+               >> ${tmpdir}/${RNS}.___lt.txt
+         else
+            printf '"%d" "%s" "%s"\n' $llistmin[$cnt] "$ll" "$ln" \
+               >> ${tmpdir}/${RNS}.___lt.txt
+         endif
+         if ($status) then
+            echo "Error:"
+            echo "printf command failed at: $llistmin[$cnt] $ll"
+            echo "longname is $ln"
+            echo ""
+            goto BEND
+         endif
+         printf '%d\n' $llistmin[$cnt] >> ${tmpdir}/${RNS}.___kk.txt
+         printf '%s\n' "$ll" >> ${tmpdir}/${RNS}.___ll.txt
+      endif
+      @ cnt ++
+   end
+
+   set n = `wc -l ${tmpdir}/${RNS}.___ll.txt`
+   set n = $n[1]
+   uniq ${tmpdir}/${RNS}.___ll.txt > ${tmpdir}/${RNS}.___llu.txt
+   set nu = `wc -l ${tmpdir}/${RNS}.___llu.txt`
+   set nu = $nu[1]
+   if ($nu < $n) then
+      if (! $quiet_death) \
+         echo "ERROR: `ccalc -i $n -$nu` Labels dropped because of duplicates"
+      goto BEND
+   endif
+   set n = `wc -l ${tmpdir}/${RNS}.___kk.txt`
+   set n = $n[1]
+   uniq ${tmpdir}/${RNS}.___kk.txt > ${tmpdir}/${RNS}.___kku.txt
+   set nu = `wc -l ${tmpdir}/${RNS}.___kku.txt`
+   set nu = $nu[1]
+   if ($nu < $n) then
+      if (! $quiet_death) \
+         echo "ERROR: `ccalc -i $n -$nu` Keys dropped because of duplicates"
+      goto BEND
+   endif
+
+
+      uniq ${tmpdir}/${RNS}.___lt.txt > ${tmpdir}/${RNS}.___ult.txt
+      set ne = `wc -l ${tmpdir}/${RNS}.___ult.txt`
+      printf '<atlas_point_list\n' > $labeltable
+      printf ' ni_form="ni_group">\n\n' >> $labeltable
+      foreach n (`count -digits 1 1 $ne[1] 1`)
+         set lln = `sed -n ${n}p ${tmpdir}/${RNS}.___ult.txt`
+         set cogval = `echo $lln[1] |tr -d \"`
+         if ($SKIPNOVOX) then
+            set count = `3dBrickStat -count -non-zero $target_dset"<$cogval>"`
+            if ("$count" == "0") then
+               echo "WARNING: no voxels at $cogval ($lln[2-]), skipping"
+               continue
+            endif
+         endif
+         printf '<ATLAS_POINT\n data_type="atlas_point"\n' >> $labeltable
+         # remove any trailing spaces from the short structure name
+         set lln[2] = `echo $lln[2] | tr -d ' $'`
+         # might have a long name in the last column
+         if ($lncol) then
+            printf ' STRUCT="%s"\n VAL=%s\n' "`echo $lln[2]`" $lln[1] \
+                              >> $labeltable
+            # remove tabs, carriage returns, line feeds
+            # these show up here if no long name
+#            set lln[3] =  `echo $lln[3-] | \tr -d \"|tr -d '\011\012\015'`
+#            set ln_len = `echo $lln[3-] |wc -c`
+            set lname = ( "${lln[3-]}")
+
+            set clname = `echo "$lname" |tr -d \"`
+            if (("$lname" != "") && (${%clname} != 0) && ($#lname >= 1)) then
+               echo ' LONGNAME='\""$clname"\"  >> $labeltable
+            endif
+         else
+            # remove any trailing spaces from the short structure name
+            set longshortname = `echo $lln[2-] | tr -d ' $'`
+            printf ' STRUCT="%s"\n VAL=%s\n' "`echo $longshortname`" $lln[1] \
+                              >> $labeltable                             
+         endif
+         printf ' OKEY=%s\n' $lln[1] >> $labeltable
+         if ($COG) then
+            # restricting range to a single value for this label line without quotes
+            set cog = `3dCM $centertype $centermask $target_dset"<$cogval>"`
+            printf ' GYoAR="0"\n COG="%s %s %s"\n' $cog >> $labeltable
+         else
+            printf ' GYoAR="0"\n COG="0.0 0.0 0.0"\n' >> $labeltable
+         endif
+         printf '/>\n\n' >> $labeltable
+      end
+      printf '</atlas_point_list>\n' >> $labeltable
+
+PUT_ATLAS_TABLE:
+   if ($target_dset != '') then
+      3drefit -atrstring ATLAS_LABEL_TABLE file:$labeltable $target_dset   \
+                                             >& /dev/null
+      3drefit -cmap INT_CMAP $target_dset  >& /dev/null
+   endif
+
+ADD_ATLAS_ENTRY:
+   if ($target_dset != '') then
+      if (${atlas_name} == '') then
+         set atlas_name = `3dinfo -prefix_noext $target_dset`
+      endif
+      if ( -f ${atlas_file} ) then
+         echo ""
+      echo "Notice: $atlas_file already exists, appending to it ${atlas_name}."
+         set ll = `niccc -quiet -stdout \
+               -find_nel_with_attr atlas_name ${atlas_name} \
+               -f ${atlas_file}`
+         if ("$ll" != '') then
+            if ($replace == 0) then
+               echo ""
+               echo "Error: Atlas file already contains atlas named: $atlas_name"
+               echo "Either change the name or use -replace at the command line"
+               goto BEND
+            else
+               echo "        New entry will replace that of atlas with same name"
+            endif
+         endif
+         cp -p ${atlas_file} ${atlas_file}.delete
+         if ($status) then
+            echo "Failed to create temp file"
+            goto BEND
+         endif
+         niccc -quiet -stdout \
+               -skip_nel_with_attr atlas_name ${atlas_name} \
+               -f ${atlas_file}.delete > ${atlas_file}
+         if ($status) then
+            echo "niccc failed, aborting"
+            mv  ${atlas_file}.delete ${atlas_file}
+            goto BEND
+         else
+            \rm -f ${atlas_file}.delete
+         endif
+      endif
+      printf '<ATLAS\n' >> ${atlas_file}
+      printf ' atlas_name="%s"\n' ${atlas_name} >> ${atlas_file}
+      printf ' dset_name="%s"\n' $target_dset >> ${atlas_file}
+      printf ' template_space="%s"\n' `3dinfo -space $target_dset` \
+                                             >> ${atlas_file}
+      printf ' description="%s"\n' "$atlas_desc" >> ${atlas_file}
+      printf ' comment="Created from %s with:\n    %s %s"\n' \
+                  $PWD `basename $0` "$argv[*]" \
+                  >> ${atlas_file}
+      printf '></ATLAS>\n' >> ${atlas_file}
+
+      if ($atlas_file != 'SessionAtlases.niml' &&  \
+          $atlas_file:t != 'CustomAtlases.niml') then
+         printf 'To make AFNI see atlas %s, you will need to run:\n' $target_dset
+         printf ' setenv  AFNI_SUPP_ATLAS %s\n' $atlas_file
+         printf ' setenv AFNI_ATLAS_LIST %s\n' $atlas_name
+      endif
+   endif
+
+   MAKE_ATLAS_TABLE_END:
+
+goto END
+
+PARSE:
+   set labeltable = 'LABEL_TABLE_NOT_SET'
+   set llistmin = ''
+   set llistmax = ''
+	set Narg = $#
+   set target_dset = ''
+   set KeysLabel = ''
+   set LabelKey = ''
+   set verb = 0
+   set range = 0
+   set showlabels = 0
+   set showkeys = 0
+   set ltdset = ''
+   set quiet_death = 0
+   set maxkey = 0
+   set word_match = 0
+   set gopt = ()
+   set ltype = 'roi'
+   set atlas_file = 'SessionAtlases.niml'
+   set atlas_name = ''
+   set atlas_desc = "My Atlas"
+   set replace = 0
+   set delim = ' '
+   set flab = ''
+   set mode = 0
+   set autolab = 0
+   set LONGNAMES = 0
+
+   if ( ! -d ${tmpdir} ) then
+      echo "Temporary files folder '${tmpdir}' does not exist."
+      goto BEND
+   endif
+
+   if ( -f ${tmpdir}/TMPLIST_${RNS}_) \rm -f ${tmpdir}/TMPLIST_${RNS}_
+	set cnt = 1
+   while ($cnt <= $Narg)
+      if ("$argv[$cnt]" == "-d" || "$argv[$cnt]" == "-echo") then
+         set verb = 1
+         set echo
+         goto CONTINUE
+      endif
+
+      if ("$argv[$cnt]" == '-h' || "$argv[$cnt]" == '-help') then
+         goto HELP
+      endif
+
+      if ("$argv[$cnt]" == "-verb") then
+         set verb = 1
+         goto CONTINUE
+      endif
+      if ("$argv[$cnt]" == "-max_key") then
+         set maxkey = 1
+         goto CONTINUE
+      endif
+      if ("$argv[$cnt]" == "-quiet_death") then
+         set quiet_death = 1
+         goto CONTINUE
+      endif
+      if ("$argv[$cnt]" == "-labeltable_of_dset") then
+         set SubLoc = $cnt
+		   if ($SubLoc == $Narg) then
+				if (! $quiet_death) echo "Need dset after -labeltable_of_dset"
+            goto BEND
+			else
+				@ cnt ++
+				set ltdset = "$argv[$cnt]"
+            if (`@CheckForAfniDset $ltdset ` < 1) then
+               if (! $quiet_death) echo "Failed to find $ltdset"
+               goto BEND
+            endif
+			endif
+         goto CONTINUE
+      endif
+
+      if ("$argv[$cnt]" == "-all_labels") then
+         set showlabels = 1
+         set KeysLabel = ""
+         goto CONTINUE
+      endif
+
+      if ("$argv[$cnt]" == "-all_keys") then
+         set showkeys = 1
+         set KeysLabel = ""
+         goto CONTINUE
+      endif
+
+      if ("$argv[$cnt]" == "-match_label") then
+         set showlabels = 1
+         set SubLoc = $cnt
+		   if ($SubLoc == $Narg) then
+				if (! $quiet_death) echo "Need label after -match_label"
+            goto BEND
+			else
+				@ cnt ++
+				set KeysLabel = "$argv[$cnt]"
+			endif
+         goto CONTINUE
+      endif
+
+      if ("$argv[$cnt]" == "-word_label_match") then
+         set word_match = 1
+         set SubLoc = $cnt
+         goto CONTINUE
+      endif
+
+      if ("$argv[$cnt]" == "-labeltable") then
+         set SubLoc = $cnt
+		   if ($SubLoc == $Narg) then
+				if (! $quiet_death) echo "Need file after -labeltable"
+            goto BEND
+			else
+				@ cnt ++
+				set labeltable = `@NoExt "$argv[$cnt]" .niml .niml.lt`
+            set labeltable = $labeltable.niml.lt
+            set ltype = 'roi'
+			endif
+         goto CONTINUE
+      endif
+      if ("$argv[$cnt]" == "-atlas_labeltable" || \
+          "$argv[$cnt]" == "-atlas_pointlist" ) then
+         set SubLoc = $cnt
+		   if ($SubLoc == $Narg) then
+				if (! $quiet_death) echo "Need file after -atlas_pointlist"
+            goto BEND
+			else
+				@ cnt ++
+				set labeltable = `@NoExt "$argv[$cnt]" .niml .niml.alt`
+            set labeltable = $labeltable.niml.alt
+            set ltype = 'atlas'
+			endif
+         goto CONTINUE
+      endif
+      if ("$argv[$cnt]" == "-atlas_file") then
+         set SubLoc = $cnt
+		   if ($SubLoc == $Narg) then
+				if (! $quiet_death) echo "Need name after -atlas_file"
+            goto BEND
+			else
+				@ cnt ++
+				set atlas_file = `@NoExt "$argv[$cnt]" .niml`
+            set atlas_file = $atlas_file.niml
+			endif
+         goto CONTINUE
+      endif
+
+      if ("$argv[$cnt]" == "-replace") then
+         set replace = 1
+         set SubLoc = $cnt
+         goto CONTINUE
+      endif
+
+      if ("$argv[$cnt]" == "-atlas_name") then
+         set SubLoc = $cnt
+		   if ($SubLoc == $Narg) then
+				if (! $quiet_death) echo "Need name after -atlas_name"
+            goto BEND
+			else
+				@ cnt ++
+				set atlas_name = "$argv[$cnt]"
+			endif
+         goto CONTINUE
+      endif
+      if ("$argv[$cnt]" == "-atlas_description") then
+         set SubLoc = $cnt
+		   if ($SubLoc == $Narg) then
+				if (! $quiet_death) echo "Need  string after -atlas_description"
+            goto BEND
+			else
+				@ cnt ++
+				set atlas_desc = "$argv[$cnt]"
+			endif
+         goto CONTINUE
+      endif
+
+      if ("$argv[$cnt]" == "-LT_to_CSV" || "$argv[$cnt]" == "-LT_to_qCSV" ) then
+         set SubLoc = $cnt
+         if ($SubLoc == $Narg) then
+            if (! $quiet_death) echo "Need labeltable after -LT_to_CSV or -LT_to_qCSV"
+            goto BEND
+         else
+            @ cnt ++
+            if ( ! -f $argv[$cnt] ) then
+               echo "Label table $argv[$cnt] not found"
+               goto BEND
+            endif
+            set labeltablecsv = `@NoExt "$argv[$cnt]" .niml .niml.lt .niml.alt`
+            set labeltablecsv = ${labeltablecsv}.csv
+            if ( -f $labeltablecsv ) then
+               echo "Output csv $labeltablecsv already exists"
+               echo "Delete it if you want to recreate it"
+               goto BEND
+            endif
+            echo 'key,label' > $labeltablecsv
+            if ( "$argv[$SubLoc]" == "-LT_to_qCSV" ) then
+               niccc -quiet '-#' -stdout "file:$argv[$cnt]" | \
+                  \sed '/^#/d' | \sed 's/^ //g' | \sed 's/ *$//g' | \
+                  sed '/^[[:blank:]]*$/d' | \
+                  \tr ' ' ',' >> $labeltablecsv
+            else
+               niccc -quiet '-#' -stdout "file:$argv[$cnt]" | \
+                  \sed '/^#/d' | \sed 's/^ //g' | \sed 's/ *$//g' | \
+                  \sed 's/"//g' | sed '/^[[:blank:]]*$/d' | \
+                  \tr ' ' ',' >> $labeltablecsv
+            endif
+            echo "Labeltable now in $labeltablecsv"
+            goto END
+         endif
+         goto CONTINUE
+      endif
+
+      if ("$argv[$cnt]" == "-LT_to_atlas_PL") then
+         set SubLoc = $cnt
+		   if ($SubLoc == $Narg) then
+				if (! $quiet_death) echo "Need labeltable after -LT_to_atlas_PL"
+            goto BEND
+			else
+				@ cnt ++
+				if ( ! -f $argv[$cnt] ) then
+               echo "Label table $argv[$cnt] not found"
+               goto BEND
+            endif
+            set labeltable = `@NoExt "$argv[$cnt]" .niml .niml.lt .niml.alt`
+            set labeltable = $labeltable.niml.alt
+            if ( -f $labeltable ) then
+               echo "Output atlas point list $labeltable already exists"
+               echo "Delete it if you want to recreate it"
+               goto BEND
+            endif
+            set ttdset = dset_${RNS}
+            3dUndump -dimen 3 3 3 -prefix $ttdset >& /dev/null
+            3drefit -labeltable $argv[$cnt] $ttdset*HEAD >& /dev/null
+            3dinfo -labeltable_as_atlas_points $ttdset*HEAD > $labeltable
+            \rm -f dset_${RNS}*
+            echo "Atlas point list now in file $labeltable"
+            goto END
+			endif
+         goto CONTINUE
+      endif
+
+      if ("$argv[$cnt]" == "-dset_LT_to_atlas_PL") then
+         set SubLoc = $cnt
+         @ 	SubLoc++
+		   if ($SubLoc == $Narg) then
+				if (! $quiet_death) \
+               echo "Need dset and labeltable after -dset_LT_to_atlas_PL"
+            goto BEND
+			else
+				@ cnt ++
+				set dset = $argv[$cnt]
+            if ( ! -f `@CheckForAfniDset $argv[$cnt] ` < 1 ) then
+               echo "Dset $argv[$cnt] not found"
+               goto BEND
+            endif
+            @ cnt ++
+            set labeltable = `@NoExt "$argv[$cnt]" .niml .niml.lt .niml.alt`
+            set labeltable = $labeltable.niml.alt
+            if ( -f $labeltable ) then
+               echo "Output atlas point list $labeltable already exists"
+               echo "Delete it if you want to recreate it"
+               goto BEND
+            endif
+            3dinfo -labeltable_as_atlas_points $dset > $labeltable
+            goto END
+			endif
+         goto CONTINUE
+      endif
+
+      if ("$argv[$cnt]" == "-atlasize_labeled_dset") then
+         set SubLoc = $cnt
+		   if ($SubLoc == $Narg) then
+				if (! $quiet_death) \
+               echo "Need dset after -atlasize_labeled_dset"
+            goto BEND
+			else
+				@ cnt ++
+				set dset = $argv[$cnt]
+            if ( ! -f `@CheckForAfniDset $argv[$cnt] ` < 1 ) then
+               echo "Dset $argv[$cnt] not found"
+               goto BEND
+            endif
+
+            set labeltable = lt_${RNS}.niml.alt
+            3dinfo -labeltable_as_atlas_points $dset > $labeltable
+            set target_dset = $dset
+            set ltype = atlas
+            set mode = 1
+         endif
+         goto CONTINUE
+      endif
+
+      if ("$argv[$cnt]" == "-add_atlas_dset") then
+         set SubLoc = $cnt
+		   if ($SubLoc == $Narg) then
+				if (! $quiet_death) \
+               echo "Need dset after -add_atlas_dset"
+            goto BEND
+			else
+				@ cnt ++
+				set dset = $argv[$cnt]
+            set isgood = `3dinfo -is_atlas $dset`
+            if ( $isgood != 1 ) then
+               echo "Dset $argv[$cnt] not found or not an atlas"
+               goto BEND
+            endif
+
+            set target_dset = $dset
+            set ltype = atlas
+            set mode = 2
+			endif
+         goto CONTINUE
+      endif
+
+      if ("$argv[$cnt]" == "-klabel") then
+         set SubLoc = $cnt
+		   if ($SubLoc == $Narg) then
+				if (! $quiet_death) echo "Need LABEL after -klabel"
+            goto BEND
+			else
+				@ cnt ++
+				set LabelKey = `printf %d "$argv[$cnt]"`
+            if ($LabelKey != $argv[$cnt]) then
+               echo "$argv[$cnt] is not interpreted as an integer key"
+               goto BEND
+            endif
+			endif
+         goto CONTINUE
+      endif
+
+      if ("$argv[$cnt]" == "-lkeys") then
+         set SubLoc = $cnt
+		   if ($SubLoc == $Narg) then
+				if (! $quiet_death) echo "Need LABEL after -lkeys"
+            goto BEND
+			else
+				@ cnt ++
+				set KeysLabel = "$argv[$cnt]"
+			endif
+         goto CONTINUE
+      endif
+      if ("$argv[$cnt]" == "-rkeys") then
+         set SubLoc = $cnt
+		   if ($SubLoc == $Narg) then
+				if (! $quiet_death) echo "Need LABEL after -rkeys"
+            goto BEND
+			else
+				@ cnt ++
+				set KeysLabel = "$argv[$cnt]"
+            set range = 1
+			endif
+         goto CONTINUE
+      endif
+
+		if ("$argv[$cnt]" == "-lab_r" || "$argv[$cnt]" == "-label_range") then
+         set nneed = `ccalc -i $cnt + 3`
+         if ($nneed > $Narg) then
+				if (! $quiet_death) echo "Need 2 values after -label_range"
+            goto BEND
+			else
+				@ cnt ++
+            if ($argv[$cnt] =~ -*) then
+               if (! $quiet_death) \
+                  echo "Label name $argv[$cnt] cannot start with '-'"
+               goto BEND
+            endif
+            echo $argv[$cnt] >> ${tmpdir}/TMPLIST_${RNS}_
+            set N_llist = `\wc -l ${tmpdir}/TMPLIST_${RNS}_` ; set N_llist = $N_llist[1]
+
+            @ cnt ++
+            if ($argv[$cnt] =~ -*) then
+               if (! $quiet_death) \
+                  echo "Label min range $argv[$cnt] cannot be '-'"
+               goto BEND
+            endif
+            set llistmin = ($llistmin `ccalc -i $argv[$cnt]`)
+            @ cnt ++
+            if ($argv[$cnt] =~ -*) then
+               if (! $quiet_death) \
+                  echo "Label min range $argv[$cnt] cannot be '-'"
+               goto BEND
+            endif
+            set llistmax = ($llistmax `ccalc -i $argv[$cnt]`)
+            if ($llistmax[$#llistmax] == 0 ||   \
+                $llistmin[$#llistmin] == 0 ||   \
+                $llistmin[$#llistmin] > $llistmax[$#llistmax]) then
+               if (! $quiet_death) \
+                  printf "Bad range values of [%d %d] for label '%s'\n" \
+                   $llistmin[$#llistmin] $llistmax[$#llistmax] \
+                   `sed -n ${N_llist}p ${tmpdir}/TMPLIST_${RNS}_`
+               goto BEND
+            endif
+			endif
+         goto CONTINUE
+      endif
+		if (  "$argv[$cnt]" == "-lab" || \
+            "$argv[$cnt]" == "-lab_v" || \
+            "$argv[$cnt]" == "-label_value") then
+         set nneed = `ccalc -i $cnt + 2`
+         if ($nneed > $Narg) then
+				if (! $quiet_death) \
+               echo "Need 1 value after -label_value"
+            goto BEND
+			else
+				@ cnt ++
+            if ($argv[$cnt] =~ -*) then
+               if (! $quiet_death) \
+                  echo "Label name $argv[$cnt] cannot start with '-'"
+               goto BEND
+            endif
+            echo $argv[$cnt] >> ${tmpdir}/TMPLIST_${RNS}_
+            set N_llist = `\wc -l ${tmpdir}/TMPLIST_${RNS}_` ; set N_llist = $N_llist[1]
+            @ cnt ++
+            if ($argv[$cnt] =~ -*) then
+               if (! $quiet_death) \
+                  echo "Label min range $argv[$cnt] cannot be '-'"
+               goto BEND
+            endif
+            set llistmin = ($llistmin `ccalc -i $argv[$cnt]`)
+            set llistmax = ($llistmax `ccalc -i $argv[$cnt]`)
+			endif
+         goto CONTINUE
+      endif
+
+      if ("$argv[$cnt]" == "-lab_file_delim") then
+         if ($cnt > $Narg) then
+            if (! $quiet_death) \
+               echo "Need a delimiter after -lab_file_delim"
+            goto BEND
+         endif
+         if ("$flab" != '') then
+            echo "You must specify -lab_file_delim BEFORE -lab_file"
+            goto BEND
+         endif
+         @ cnt ++
+         set delim = "$argv[$cnt]"
+         goto CONTINUE
+      endif
+
+      if (  "$argv[$cnt]" == "-lab_file") then
+         set nneed = `ccalc -i $cnt + 3`
+         if ($nneed > $Narg) then
+				if (! $quiet_death) echo "Need 2 values after -lab_file"
+            goto BEND
+			else
+            @ cnt ++
+            set flab = $argv[$cnt]
+            if (! -f $flab) then
+               echo "File $flab not found"
+               goto BEND
+            endif
+            @ cnt ++
+            set iL = `ccalc -i $argv[$cnt]+1`
+            @ cnt ++
+            set iV = `ccalc -i $argv[$cnt]+1`
+          endif
+         goto CONTINUE
+      endif
+
+      if ("$argv[$cnt]" == "-longnames") then
+         if ($cnt > $Narg) then
+            if (! $quiet_death) \
+               echo "Need to specify column index after -longnames"
+            goto BEND
+         endif
+         @ cnt ++
+         set lncol = `ccalc -i $argv[$cnt]+1`
+         goto CONTINUE
+      endif
+
+      if ("$argv[$cnt]" == "-last_longname_col") then
+         if ($cnt > $Narg) then
+            if (! $quiet_death) \
+               echo "Need to specify column index after -last_longname_col"
+            goto BEND
+         endif
+         @ cnt ++
+         set last_lncol = `ccalc -i $argv[$cnt]+1`
+         goto CONTINUE
+      endif
+
+      if ("$argv[$cnt]" == "-dset") then
+         if ($cnt > $Narg) then
+            if (! $quiet_death) \
+               echo "Need a dset after -dset"
+            goto BEND
+         endif
+         @ cnt ++
+         set target_dset = $argv[$cnt]
+         if (`@CheckForAfniDset $target_dset` < 2) then
+            if (! $quiet_death) \
+               echo "-dset $target_dset not found"
+            goto BEND
+         endif
+         goto CONTINUE
+      endif
+
+      if ("$argv[$cnt]" == "-dset_autolab") then
+         if ($cnt > $Narg) then
+            if (! $quiet_death) \
+               echo "Need a dset and suffix after -dset_autolab"
+            goto BEND
+         endif
+         set target_dset = $argv[$cnt]
+         if (`@CheckForAfniDset $target_dset` < 2) then
+            if (! $quiet_death) \
+               echo "-dset $target_dset not found"
+            goto BEND
+         endif
+         if ($cnt > $Narg) then
+            if (! $quiet_death) \
+               echo "Need a dset and suffix after -dset_autolab"
+            goto BEND
+         endif
+         set suff = $argv[$cnt]
+         set autolab = 1
+         goto CONTINUE
+      endif
+
+      if ("$argv[$cnt]" == "-centers") then
+         set COG = 1
+         goto CONTINUE
+      endif
+
+      if ("$argv[$cnt]" == "-centermask") then
+         if ($cnt > $Narg) then
+            if (! $quiet_death) \
+               echo "Need a mask after -centermask"
+            goto BEND
+         endif
+         @ cnt ++
+         if (`@CheckForAfniDset $argv[$cnt]` < 2) then
+            if (! $quiet_death) \
+               echo "-mask $argv[$cnt] not found"
+            goto BEND
+         endif
+         set centermask = "-mask $argv[$cnt]"
+         goto CONTINUE
+      endif
+
+      if ("$argv[$cnt]" == "-centertype") then
+            if ($cnt > $Narg) then
+            if (! $quiet_death) \
+               echo "Need a type after -centertype"
+            goto BEND
+         endif
+         @ cnt ++
+         switch ("$argv[$cnt]")
+            case "Icent":
+            case "Dcent":
+               set centertype = "-$argv[$cnt]"
+            breaksw
+            case "CM":
+            case "cm":   # default for 3dCM
+               set centertype = ""
+            breaksw
+            default:
+               if (! $quiet_death) \
+               echo "Invalid choice for centertype ([Icent],Dcent,cm)"
+               goto BEND
+            breaksw
+         endsw
+         goto CONTINUE
+      endif
+
+
+      if ("$argv[$cnt]" == "-skip_novoxels") then
+         set SKIPNOVOX = 1
+         goto CONTINUE
+      endif
+
+      echo "Error: Option or parameter '$argv[$cnt]' not understood"
+      apsearch -popt `basename $0` -word $argv[$cnt]
+      goto BEND
+
+      CONTINUE:
+		@ cnt ++
+	end
+
+# was above in parsing of options
+# parse the labels here
+#   add longname parsing
+PARSE_LABEL_FILE:
+    if ($flab != "") then
+	    # get value indices from label file
+	    set llistmin = (`awk -F "$delim" '{print $'$iV'}' $flab`)
+
+	    # get labels from label file
+	    awk -F "$delim" '{print $'$iL'}' $flab | \
+	             sed 's/^ *//g' | sed 's/ *$//g' | \
+	             sed '/^ *$/d' > ${tmpdir}/TMPLIST_${RNS}_
+	    set N_llist = `\wc -l ${tmpdir}/TMPLIST_${RNS}_` ; set N_llist = $N_llist[1]
+	    set llistmax = ($llistmin)
+
+	    # get long names from label file
+	    if ($lncol) then
+	#old way        awk -F "$delim" '{print $'$lncol'}' $flab | \
+	#          sed 's/^ *//g' | sed 's/ *$//g' | \
+	#          sed '/^ *$/d' > ${tmpdir}/TMPLIST_${RNS}_ln_
+	# awk way gets all columns after longname column to handle extra spaces
+	#       awk -F "$delim" -v N=$lncol \
+	#          '{sep=""; for (i=N; i<=NF; i++) {printf("%s%s",sep,$i); sep=OFS}; printf("\n")}' $flab \
+	#          > ${tmpdir}/TMPLIST_${RNS}_ln_
+    # cut way - simpler with cut command and works with other delimiters and comma
+    # also supports last column selector
+           ### [PT: Sep 29, 2021] need quotes around ${delim}
+           # unfortunately, mac version doesn't support --delimiter
+    #       cat $flab | cut --delimiter="${delim}" -f${lncol}-${last_lncol} > ${tmpdir}/TMPLIST_${RNS}_ln_
+    # squeeze multiple spaces down to single space
+           cat  $flab | tr -s " " | cut -d"${delim}" -f${lncol}-${last_lncol} > ${tmpdir}/TMPLIST_${RNS}_ln_
+	       set N_lnlist = `\wc -l ${tmpdir}/TMPLIST_${RNS}_ln_` ; set N_lnlist = $N_lnlist[1]
+	    endif
+
+	    set llistmax = ($llistmin)
+	    if ($N_llist < 1 || $#llistmin < 1) then
+	       set jj = '$'
+	       echo "Error:"
+	       echo "Failed to parse label or key columns in $flab"
+	       echo "Make sure column index and delimiters are correct"
+	       echo ""
+	       echo "When -lab_file, and -lab_file_delim are properly set,"
+	       echo "this command should give you all the keys:"
+	       echo "   awk -F '$delim' '{print $jj$iL}' $flab"
+	       echo "and this command should give you all the labels:"
+	       echo "   awk -F '$delim' '{print $jj$iV}' $flab"
+	       echo ""
+	       goto BEND
+	    endif
+	    if ($#llistmin != $N_llist) then
+	       echo "Error:"
+	       echo "Have $N_llist labels, but $#llistmin keys"
+	       echo ""
+	       goto BEND
+	    endif
+	    #More test for goodness
+	    1dcat "1D:$llistmax" >& /dev/null
+	    if ( $status ) then
+	       echo "Failed to parse $flab columns make sure column"
+	       echo "selectors and delimiters are OK."
+	echo "Got '`sed -n $1p ${tmpdir}/TMPLIST_${RNS}_`' for 1st label and '$llistmax[1]' for 1st key"
+	       echo ""
+	       goto BEND
+	    endif
+   endif
+
+   if (0) then
+      echo "Have:"
+      cat ${tmpdir}/TMPLIST_${RNS}_
+      echo $llistmin
+      echo $llistmax
+   endif
+
+   goto RETURN_PARSE
+
+HELP:
+   echo ""
+   echo "Script used to create a label table "
+   echo ""
+   echo "Usage: `basename $0` <-labeltable LABELTABLE> "
+   echo "                     [-atlas_pointlist ATLAS_POINTLIST>"
+   echo "                     [<-lab_r LAB MIN MAX> <-lab_r LAB MIN MAX> <...>]"
+   echo "                     [<-lab_v LAB KEY> <-lab_v LAB VAL> <...>]"
+   echo "                     [<-lab_file FILE cLAB cVAL>]"
+   echo "                     [<-dset DSET>]"
+   echo "   -labeltable LABELTABLE: Name of output label table"
+   echo "   -atlas_pointlist ATLAS_POINTLIST: Instead of a label table"
+   echo "                                     produce an atlas point list"
+   echo "   -lab_r LAB MIN MAX: Define a label LAB its minimum key MIN"
+   echo "                       and its maximum value MAX. "
+   echo "              For example: -lab_r GM 5 7 generates in the labeltable:"
+   echo '                           "5" "GM01"'
+   echo '                           "6" "GM02"'
+   echo '                           "7" "GM03"'
+   echo "   -lab_v LAB KEY: Define a label LAB and its value KEY"
+   echo "              For example: -lab_v  WM 8 generates in the labeltable:"
+   echo '                           "8" "WM"'
+   echo "   -lab_file_delim COL_DELIM: Set column delimiter for -lab_file option"
+   echo "                              Default is ' ' (space), but you can set"
+   echo "                              your own. ';' for example. Note that the "
+   echo "                              delimiter is passed directly to awk's -F"
+   echo "                 Note: This option must be set BEFORE -lab_file option"
+   echo "                       on the command line."
+   echo "   -lab_file FILE cLAB cVAL: Labels and keys are in text file FILE."
+   echo "                          cLAB is the index of column containing labels"
+   echo "                          vVAL is the index of column containing keys"
+   echo "                          (1st column is indexed at 0)"
+   echo "   -longnames cLONGNAME: Additionally, allow for another column of long"
+   echo "                names for regions, e.g. amygdala for AMY"
+   echo "                cLONGNAME is the starting column for the longname continuing"
+   echo "                to the last name of the output (0-based column index)."
+   echo "                Using this option requires using '-atlas_pointlist ..'"
+   echo "   -last_longname_col cLASTLONGNAME: limit longnames to nth column"
+   echo "   -dset DSET: Attach the label table (or atlas point list) to "
+   echo "               dataset DSET"
+#   echo "   -dset_autolab DSET SUFFIX: Create a labeltable from the unique"
+#   echo "                              set of integral values in DSET using"
+#   echo "                              the suffix SUFFIX and put the labeltable"
+#   echo "                              in DSET"
+   echo "   -centers : Compute center of mass location for each ROI"
+   echo "              requires simple blobbish ROIs to work"
+   echo "   -centertype TYPE: Choose Icent, Dcent or cm for different ways"
+   echo "              to compute centers. See 3dCM for details"
+   echo "   -centermask DSET: Calculate center of mass locations for each ROI"
+   echo "              using a subset of voxels. Useful for atlases with"
+   echo "              identical labels in both hemispheres."
+   echo "              See 3dCM -mask for details"
+   echo "   -skip_novoxels : Skip regions without voxels"
+   echo ""
+   echo "   Note that you cannot use the same key for multiple labels."
+   echo "   When redundancies occur, the script preserves just one entry."
+   echo ""
+   echo "   Example:"
+   echo "      @MakeLabelTable   -lab_r CSF 1 3 -lab_r GM 5 7 -lab_v WM 8  \"
+   echo "                        -labeltable example1"
+   echo ""
+   echo "Usage mode 2: Get information about an existing labeltable"
+   echo "    `basename $0` <-labeltable LABELTABLE> "
+   echo "        <[-lkeys LABEL] | [-rkeys LABEL] | [-all_labels] | [-all_keys]>"
+   echo ""
+   echo "    -all_labels: Return a listing of the labels"
+   echo "    -all_keys:  Return a listing of all keys"
+   echo "    -lkeys LABEL: Return the keys whose labels match LABEL"
+   echo "    -rkeys LABEL: Return the range (min max) of keys whose "
+   echo "                  labels match LABEL"
+   echo "    -klabel KEY: Return the label associated with KEY"
+   echo "    -match_label LABEL: Return labels matching LABEL"
+   echo "    -labeltable_of_dset DSET: Dump the labeltable from DSET"
+   echo "    -word_label_match: Use word matching (grep's -w )"
+   echo "                       With this option, 'Out' matches 'Out.l1'"
+   echo "                       but no longer matches 'OutSk'"
+   echo "    -quiet_death: Do not give error messages when failing"
+   echo "   Options in usage 2 are mutually exclusive"
+   echo ""
+   echo "Usage mode 3: Transform Label Tables to Atlas Point Lists or CSV and exit"
+   echo "    `basename $0` [<-LT_to_atlas_PL LABELTABLE>] "
+   echo "                  [<-dset_LT_to_atlas_PL DSET POINTLIST]"
+   echo "                  [<-LT_to_CSV LABELTABLE>"
+   echo ""
+   echo "    -LT_to_atlas_PL LABELTABLE: Transform Label Table LABELTABLE to "
+   echo "                                Atlas Point List"
+   echo "    -dset_LT_to_atlas_PL DSET POINTLIST: Get Label Table in"
+   echo "                                DSET and write it out as an"
+   echo "                                Atlas Point List to POINTLIST"
+   echo "    -LT_to_CSV LABELTABLE: Transform Label Table LABELTABLE to a CSV format"
+   echo "    -LT_to_qCSV LABELTABLE: Transform Label Table LABELTABLE to a quoted CSV format"
+   echo ""
+   echo "   Example:"
+   echo "      @MakeLabelTable -LT_to_atlas_PL aparc.a2009s+aseg_rank.niml.lt"
+   echo ""
+   echo "Usage mode 4: Turn a labeled dataset or an integral valued dset "
+   echo "              into an ATLAS"
+   echo "    `basename $0` [<-atlasize_labeled_dset SOME_LABELED_ROI_DSET>] "
+   echo "                  [<-atlas_file ATLAS_NIML_FILE] "
+   echo "                  [<-atlas_name ATLAS_NAME>] [-replace]"
+   echo ""
+   echo "     -atlasize_labeled_dset SOME_LABELED_ROI_DSET: Change a labeled"
+   echo "                            ROI dataset into an atlas"
+   echo "     -atlas_file ATLAS_NIML_FILE: Specify the name of the NIML file"
+   echo "                            where atlas attributes are stored."
+   echo "                            Default is ./SessionAtlases.niml which"
+   echo "                            is a good choice for single subject atlases"
+   echo "     -atlas_name ATLAS_NAME: Atlas is named based on the prefix, by "
+   echo "                             default. You can override that with this"
+   echo "                             option."
+   echo "     -atlas_description ATLAS_DESC: Atlas description, which appears"
+   echo "                             in afni's whereami window. Default is"
+   echo "                             'My Atlas'"
+   echo "     -replace: If ATLAS_NAME is already in ATLAS_NIML_FILE, the script"
+   echo "               will fail to proceed unless you instruct it to do so "
+   echo "               this option"
+   echo "     -add_atlas_dset ATLAS_DSET: Use if you have an atlas that you want"
+   echo "                                 added to an atlas_file."
+   echo ""
+   echo "   Example:"
+   echo "      @MakeLabelTable -atlasize_labeled_dset SOME_LABELED_ROI_DSET"
+   echo " or you can specify the keys in a file:"
+   echo "      @MakeLabelTable -lab_file FILE cLAB cVAL \"
+   echo "                      -atlas_pointlist apl \"
+   echo "                      -dset target_dset \"
+   echo "                      -atlas_file SessionAtlases.niml"
+   echo ""
+   echo "            -------------------------"
+   echo "            See also @Atlasize script"
+   echo "            -------------------------"
+   echo ""
+   @global_parse -gopts_help
+   echo ""
+   goto END
+
+BEND:
+   set stat = 1
+   goto END
+
+END:
+\rm -f ${tmpdir}/TMPLIST_${RNS}_ >& /dev/null
+if ($stat == 0) then
+   if (-f $log) then
+       \rm ${tmpdir}/${RNS}.$log:t  >& /dev/null
+   endif
+   # delete some of the temporary files
+   \rm LABEL_TABEL_NOT_SET lt_${RNS}.* TMPLIST_${RNS}* ${tmpdir}/TMPLIST_${RNS}* ${tmpdir}/${RNS}*  >& /dev/null
+endif
+exit $stat

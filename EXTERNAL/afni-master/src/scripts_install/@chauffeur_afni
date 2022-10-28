@@ -1,0 +1,3335 @@
+#!/bin/tcsh
+
+# for olay, default will be "show all"-- update fatcats to call for
+# 98%iles of non-zeros
+
+# update fatcats for ulays, as well
+
+@global_parse `basename $0` "$*" ; if ($status) exit 0
+
+# -----------------------------------------------------------------
+# Multipurpose, driven viewer.  Meant to be used for auto QC in
+# scripts. 
+# 
+# This function constructed by: PA Taylor (NIMH, NIH, USoA)
+# 
+# Dec, 2016:
+#     + [PT] conception and start.
+#
+# Jan, 2017:
+#     + [PT] add I/O.
+#
+# Jan, 2017b:
+#     + [PT] if ulay/olay are in different files, have tmp readdir.
+#     + [PT] default now to proceed if no olay given but also no 
+#       '-olay_off' is used.
+#
+# Jan, 2017c:
+#     + [PT] better centering of slices.
+#
+# Jan, 2017d:
+#     + [PT] better slice selection/centering.
+#     + [PT] adjust for different orders of orientation
+#
+#set version   = "1.6";   set rev_dat   = "Feb 6, 2017"
+#     + [PT] olay quotes
+#
+#set version   = "2.1";   set rev_dat   = "Feb 27, 2017"
+#     + [PT] can have IJK labels -> DWImager
+#
+#set version   = "2.2";   set rev_dat   = "Mar 29, 2017"
+#     + [PT] xvfb-run introduced: should work better/more generally
+#       on biowulf? [thanks D. Godlove for suggesting this fix]
+#set version   = "2.3";   set rev_dat   = "May 3, 2017"
+#     + [PT] xvfb-run: new option to set colordepth to 24, so opacity works
+#       in the AFNI commands
+# 
+#set version   = "2.4";   set rev_dat   = "May 20, 2017"
+#     + [PT] more unique naming of tempdir; safer for cluster runs
+# 
+#set version   = "2.5";   set rev_dat   = "June 1, 2017"
+#     + [PT] back to regular xvfb and Bob's search
+# 
+#set version   = "2.6";   set rev_dat   = "June 1, 2017"
+#     + [PT] default interpolation to NN, but add in option to set
+# 
+#set version   = "2.7";   set rev_dat   = "June 20, 2017"
+#     + [PT] new opts, for SET_SUBBRICKS
+# 
+#set version   = "2.8";   set rev_dat   = "Aug 17, 2017"
+#     + [PT] new opt, allow SET_XYZ
+# 
+#set version   = "2.9";   set rev_dat   = "Sep 04, 2017"
+#     + [PT] remove '-outdir ...' and have path set by '-prefix ...',
+#       like most other AFNI programs
+#     + [PT] set default zoom to NN, so no smoothing
+#       via -> AFNI_IMAGE_ZOOM_NN
+#
+#set version   = "3.0";   set rev_dat   = "Nov 24, 2017"
+#     + [PT] start helpifying
+#
+#set version   = "3.1";   set rev_dat   = "Nov 27, 2017"
+#     + [PT] improve/correct slice-width selection (thanks, J. Lee)
+#
+#set version   = "3.2";   set rev_dat   = "Feb 21, 2018"
+#     + [PT] add in p-to-stat capability for thresholding, via 
+#       "-thr_olay_p2stat .." opt
+#
+#set version   = "3.3";   set rev_dat   = "May 29, 2018"
+#     + [PT] add in cropping ability, via '-crop_*' options
+#        
+#set version   = "3.4";   set rev_dat   = "July 11, 2018"
+#     + [PT] start adding in the 4D options:  -mode_4D
+#        
+#set version   = "3.4";   set rev_dat   = "July 12, 2018"
+#     + [PT] mode_4d opts seem to be working now, at least some...
+#        
+#set version   = "3.5";   set rev_dat   = "July 13, 2018"
+#     + [PT] need to require sidedness of test for -thr_olay_p2stat
+#     + [PT] also switch to use p2dsetstat internally for getting that
+#       threshold
+#        
+#set version   = "3.6";   set rev_dat   = "July 20, 2018"
+#     + [PT] in 4D mode, want percentage values to be consistent across all
+#       slice montages.  this will be done by calculating a table for
+#       each of the reassembled volumes (= glued together slices from
+#       across time for a each plane), and then combining these
+#       percentile tables by taking the max at each percentile.
+#        
+#set version   = "3.7";   set rev_dat   = "July 23, 2018"
+#     + [PT] revising ulay percentiles-- of *whole* object, not just of
+#       non-zero values as before.  This should better match AFNI GUI
+#       behavior, and lead masks to not have a range [1,1]
+#     + [PT] now including the new drivability with: SET_ULAY_RANGE
+#       (Thanks, Emperor Zhark)
+#        
+#set version   = "3.8";   set rev_dat   = "July 23, 2018"
+#     + [PT] updating olays for 4d and thresholding
+#     + [PT] no longer using pre-calc'ed tables
+#
+#set version   = "3.9";   set rev_dat   = "July 25, 2018"
+#     + [PT] several small updates; renamed my_slicer, changed some help, 
+#     + [PT] default ulay now 0-98% in vol.
+#
+#set version   = "4.0";   set rev_dat   = "July 27, 2018"
+#     + [PT] deal with percentile values if user entered 4D olay/ulay for
+#       non-4Dmode, but including subbrick selectors
+#
+#set version   = "4.1";   set rev_dat   = "Oct 18, 2018"
+#     + [PT] swap out gapord calc to separate prog: @djunct_slice_space.
+#       this was done because that calc is needed in other places
+#     + [PT] also new option to focus slices on box from desired set:
+#          -box_focus_slices REFBOX
+#
+#set version   = "4.12";   set rev_dat   = "Oct 18, 2018"
+#     + [PT] add in '-pass' option, for other scripty reasons. Does nothing.
+#
+#set version   = "4.2";   set rev_dat   = "Oct 21, 2018"
+#     + [PT] echo variable defs and afni drive command to text file-- can
+#       be driven itself if "-no_clean" is used (but not with xvfb at
+#       the moment
+#
+#set version   = "4.3";   set rev_dat   = "Oct 21, 2018"
+#     + [PT] add colorbar save capability, which is new to AFNI, courtesy
+#       of RWC-- thanks
+#     + [PT] when outputting the pbar, a text file also gets made, with the
+#       max value of the cbar and the threshold for the olay, to help
+#       scripting
+#
+#set version   = "4.4";   set rev_dat   = "Nov 5, 2018"
+#     + [PT] update to match new alpha+boxed functionality and driving
+#
+#set version   = "4.5";   set rev_dat   = "Nov 6, 2018"
+#     + [PT] fixed a recently induced bug in 4dmode gapord
+#       definitioning: in some cases, the delta slices would be
+#       incorrect (i.e., not uniformly 1) 
+#     + [PT] also put a check around AFNI_IMAGE_GLOBALRANGE because it
+#       can get reset, again for 4dmode considerations
+#
+#set version   = "4.51";   set rev_dat   = "Nov 16, 2018"
+#     + [PT] removed earlier testing echo 
+#
+#set version   = "4.6";   set rev_dat   = "Nov 20, 2018"
+#     + [PT] several changes
+#       - new @djunct_montage_coordinator program, to get the location
+#         of xhairs when montaging-- this takes the old pieces that were
+#         in @chauffeur_afni and put them in a better working method into
+#         a separate program, for modularity.
+#       - fixed how this program selects gapord and coors when using
+#         the focus refbox
+#
+#set version   = "4.7";   set rev_dat   = "Nov 27, 2018"
+#     + [PT] fixed delta_slices problem (were ignored)
+#            --> Grazie, S. Torrisi
+#
+#set version   = "4.71";   set rev_dat   = "Dec 5, 2018"
+#     + [PT] fewer dependencies actually needed than listed-- at the
+#            moment, just xvfb
+#        
+#set version   = "4.8";   set rev_dat   = "Jan 28, 2019"
+#     + [PT] can now make a focus box based on automask of ulay or olay
+#            --> uses special keywords after standard opt name:
+#                AMASK_FOCUS_ULAY, AMASK_FOCUS_OLAY
+#        
+#set version   = "4.9";   set rev_dat   = "Jan 30, 2019"
+#     + [PT] add in -montgap and -montcolor options
+#        
+#set version   = "5.0";   set rev_dat   = "Feb 2, 2019"
+#     + [PT] if refbox has >1 slice, automatically choose to use [0]th
+#            --> e.g., useful for correct behavior with *SSW* refs
+#        
+#set version   = "5.01";   set rev_dat   = "Feb 5, 2019"
+#     + [PT] fixed a lonely "if" that was missing its "endif" in life.
+#            --> Thanks (again) to S. Torrisi for pointing it out.
+#        
+#set version   = "5.1";   set rev_dat   = "Feb 12, 2019"
+#     + [PT] change "checks" to use '3dinfo -prefix ...' as a better
+#            methodology
+#               
+#set version   = "5.2";   set rev_dat   = "Mar 15, 2019"
+#     + [PT] improve behavior of refbox: if the grids of the refbox
+#            and ulay are different, need to resample refbox to match
+#            grid of ulay.
+#
+#set version   = "5.3";   set rev_dat   = "Apr 30, 2019"
+#     + [PT] for the -set_subbricks option, one can now input string
+#            labels -- thanks for the suggestion, Rasmus
+#
+#set version   = "5.4";   set rev_dat   = "May 8, 2019"
+#     + [PT] for cbar output, output a file that can be json-ized.
+#            Will be more clear for labels/values/usage, and will allow
+#            for commenting on the meaning of the output
+#
+#set version   = "5.41"; set rev_dat   = "May 13, 2019"
+#   + [PT] fixed help file for sphinxification: got rid of some
+#          wandering "+" symbols in subheading titles
+# 
+#set version   = "5.5"; set rev_dat   = "May 14, 2019"
+#   + [PT] added in "-XXXnpane P" behavior
+# 
+#set version   = "5.51"; set rev_dat   = "May 14, 2019"
+#   + [PT] include pbar_fname as a key in save_pbar jpg
+#   + [PT] also, control pbar image output file name: jpg by default
+# 
+#set version   = "5.52"; set rev_dat   = "July 1, 2019"
+#   + [PT] miniscule new option, '-pbar_for ..'
+# 
+#set version   = "5.6"; set rev_dat   = "July 8, 2019"
+#   + [PT] make DO CLEAN the default (and add opt/switch -no_clean)
+#
+#set version   = "5.7"; set rev_dat   = "Aug 23, 2019"
+#   + [PT] added new option to turn ulay into edges: '-edgy_ulay'
+#
+#set version   = "5.71"; set rev_dat   = "Aug 26, 2019"
+#   + [PT] can now include ulay range and comments directly in pbar txt file
+#   + [PT] added new option to comment on ulay with pbar: -ulay_comm
+#
+#set version   = "5.72"; set rev_dat   = "Aug 26, 2019"
+#   + [PT] switch order of '-com ...' commands, to be more general;
+#          should NOT affect most behavior (only should be better now
+#          on systems where image viewers don't open automatically,
+#          e.g., biowulf)
+#
+#set version   = "5.8"; set rev_dat   = "Aug 29, 2019"
+#   + [PT] allow obliquity information to be applied, in one of three
+#          ways:
+#            + send both ulay and olay to scanner coords
+#            + send ulay to olay oblique coords
+#            + send olay to ulay oblique coords
+#
+#set version   = "5.9"; set rev_dat   = "Aug 30, 2019"
+#   + [PT] finish obliquity cases, and include refbox considerations
+#   + [PT] add '-edge_enhance_ulay EE' opt, to enhance edges of ulay
+#          with 3dedge3 info-- nice idea, D. Glen
+#
+#set version   = "5.91"; set rev_dat   = "Sep 4, 2019"
+#   + [PT] add in resampling opts for obliquity transform
+#
+#set version   = "5.91"; set rev_dat   = "Sep 4, 2019"
+#   + [PT] add in resampling opts for obliquity transform
+#
+#set version   = "5.92"; set rev_dat   = "Sep 12, 2019"
+#   + [PT] now use "\mkdir -p .." with $odir, so it will generate path
+#          to it, if necessary --- simplifies usage in scripts
+#
+#set version   = "5.93"; set rev_dat   = "Jan 16, 2020"
+#   + [PT] put "-no1D" on afni command, so there aren't warnings when
+#          empty 1D files are read (e.g., during resting state APQC)
+#
+#set version   = "5.94"; set rev_dat   = "Feb 22, 2020"
+#   + [PT] add new opt, controlling AGIF delay time from AFNI env vars
+#        + change way movie files are cleaned up, so no __tmp* dir left over
+#
+#set version   = "6.0"; set rev_dat   = "Apr 23, 2020"
+# [PT] new opt: -colorscale_idx_file, to make use of the existing env var
+#      AFNI_COLORSCALE_xx
+#      + user can enter own scale values this way
+#
+#set version   = "6.01"; set rev_dat   = "Apr 23, 2020"
+# [PT] added help example of "fun" cbar usage
+#
+#set version   = "6.1"; set rev_dat   = "Feb 22, 2021"
+# [PT] add '-pbar_comm_gen ..' opt, for TSNR QC
+#    + set AFNI_IMSAVE_WARNINGS if not(ftype == MPEG); stops annoying warning
+#
+#set version   = "6.11"; set rev_dat   = "Mar 6, 2021"
+# [PT] run GUI more quietly, and disable some warning messages
+#
+#set version   = "6.2"; set rev_dat   = "April 16, 2021"
+# [PT] for "-topval .." arg, defined a keyword to mimic empty doublequotes
+#    + also fixed up help example a bit (discrete cbar case)
+#
+#set version   = "6.21"; set rev_dat   = "May 10, 2021"
+# [PT] add "-set_xhair_gap .." opt, for driving crosshair gap 
+#    + default value is -1 (closed)
+#
+#set version   = "6.22"; set rev_dat   = "May 11, 2021"
+# [PT] NIFTI warnings off
+#
+#set version   = "6.23"; set rev_dat   = "May 20, 2021"
+# [PT] clean up exiting from help and ver
+#
+#set version   = "6.24"; set rev_dat   = "June 10, 2021"
+# [PT] set echo opt
+#    + print version numbers near the top
+#
+#set version   = "6.25"; set rev_dat   = "June 14, 2021"
+# [PT] obey paranoia about tcsh subtleties:
+#    + remove every exclamation point from a comment
+#    + ensure space between parenthesis and 'then' (which might have been
+#      a suuuuuper subtle issue on older tcsh)
+#
+#set version   = "6.26"; set rev_dat   = "June 28, 2021"
+# [PT] add in "-olay_alpha .." opt vals: Linear, Quadratic
+#    + Bob added Linear back in, so can specify
+#
+#set version   = "6.27"; set rev_dat   = "Sep 21, 2021"
+# [PT] new opts: '-no_sag', '-no_cor', '-no_axi', in case user wants
+#      to turn off default 3 view planes for everything.
+#    + we will use this for APQC, to turn of cor images.
+#
+#set version   = "6.28"; set rev_dat   = "Sep 21, 2021"
+# [PT] new opt: '-clusterize'
+#    + can do clusterizing internally, with Alpha+Boxed on
+#    + the idat and ithr come from '-subbb ....'
+#    + the thresholding comes from, say, -thr_olay_p2stat, -thr_olay_pside
+#
+#set version   = "6.29";   set rev_dat   = "Sep 27, 2021"
+#     + [PT] chauffeur label_size 3 -> 4, bc imseq.c shifted all sizes
+#       down one level; just changing help examples here
+#
+#set version   = "6.30";   set rev_dat   = "Oct 21, 2021"
+#     + [PT] max allowed bufac is actually 8, not 4.  
+#
+#set version   = "6.31";   set rev_dat   = "Feb 3, 2022"
+#     + [PT] add "-left_is_left .." and "-left_is_posterior .." options
+#
+#set version   = "6.4";   set rev_dat   = "June 3, 2022"
+#     + [PT] add '-ulay_range_am ..' and '-olay_range_am ..' opts
+#
+#set version   = "6.41";   set rev_dat   = "June 6, 2022"
+#     + [PT] add '-ulay_min_fac ..' opt to allow refined control of ulay
+#       brightness/grayscale mapping.  Useful in APQC
+#set version   = "6.42";   set rev_dat   = "Aug 11, 2022"
+#    + [PT] add 'button_press .." opt, for the Colr/Swap/Norm "butpress"
+#      driving functionality
+#
+#set version   = "6.43";   set rev_dat   = "Aug 12, 2022"
+#    + [PT] fix spelling of button_press.  Sigh
+#
+#set version   = "6.5";   set rev_dat   = "Sept 22, 2022"
+#    + [PT] new opt: clusterize_wami
+#
+set version   = "6.51";   set rev_dat   = "Sept 22, 2022"
+#    + [PT] cleaner clust output, sep cmd
+#
+# =====================================================================
+
+# For more info about opts/fields, see:
+#
+# https://afni.nimh.nih.gov/pub/dist/doc/program_help/AFNI.afnirc.html
+#
+# https://afni.nimh.nih.gov/pub/dist/doc/program_help/README.environment.html
+
+# ----------------- default/initialized environments --------------
+
+# GUI settings for simplicity
+setenv AFNI_NOSPLASH          YES
+setenv AFNI_SPLASH_MELT       NO
+setenv AFNI_ENVIRON_WARNINGS  NO
+setenv AFNI_COMPRESSOR        NONE
+setenv AFNI_IMAGE_GLOBALRANGE VOLUME
+setenv AFNI_IMAGE_LABEL_IJK   NO         # thanks, Bob
+setenv AFNI_IMAGE_ZOOM_NN     YES        # [PT: Sep 04, 2017] 
+setenv AFNI_AGIF_DELAY        30         # [PT: Feb 22, 2020] 
+setenv AFNI_NEVER_SAY_GOODBYE    YES     # [PT: Mar 06, 2021]
+setenv AFNI_STARTUP_WARNINGS     NO
+setenv AFNI_MOTD_CHECK           NO
+setenv AFNI_NIFTI_TYPE_WARN      NO
+
+# -------------------------------------------------------------------
+
+# ------------------- default/initialized variables -----------------
+
+set ulay = ""                    # inp underlay 
+set olay = ""                    # inp overlay  
+set see_olay = "+"               # turn *off* olay disp
+
+set ftype = PNG                  # output file format
+
+set impref  = "image_file"       # prefix of output; other things added
+set odir    = "."                # default output directory is "here"
+
+set my_cbar = "Plasma"           # colorbar, if necessary
+set bufac   = "2"                # blowup factor
+set frange  = "0"                # either this (autorange), or user puts in
+set USER_FRANGE = 0              # internal toggle only
+set thrnew  = "0"                # threshold value (zero default)
+set p_thr_val = ""               # for p-to-stat capability in thr
+set p_thr_side = ""              # for p-to-stat capability in thr
+set thrflag = "*"                # threshold flags
+
+set crossh = "OFF"               # crosshairs OFF by default
+set xh_gap = -1                  # default crosshair gap
+set opac   =  6                  # opacity of overlay
+
+set butpress = ""                # DR: button pres for Colr, Swap, Norm 
+set all_butpress = ( Norm Colr Swap )  # allowed values
+
+set mx     =  3                  # 'x' dim of montage
+set my     =  3                  # 'y' dim of montage
+set mgap   =  0                  # gapsize (in px) bt montage slices
+set mcolor = 'black'             # color of montage gap
+set delsag = -1                  # (int) slice space in sag orient
+set delaxi = -1                  # (int) slice space in axi orient
+set delcor = -1                  # (int) slice space in cor orient
+set USER_COORS = 0               # switch to let user pick IJK
+set coors  = ( 0 0 0 )
+set USER_GAPORD = 0
+set gapord = ( 0 0 0 )
+set coor_type = "SET_IJK"        # default, can switch to SET_XYZ
+
+# for SET_PBAR_ALL
+set pbar_sign = "-"              # + is pos. only, - is both (switch for both)
+set ncolors   = "99"             # default number of colors
+set topval    = 1                # upper scale value in colorbar
+
+set com_pbar_str_dim = "dim=64x512H" # [PT: Oct 21, 2018] default size+orient
+set com_pbar_str = "DO_NOTHING"  # [PT: Oct 21, 2018] so we can save cbar 
+set SAVE_PBAR    = 0             # [PT: Oct 21, 2018] flag for assorted stuff
+set pbar_comm  = ""            # [PT: May 8, 2019] pbar json output
+set vthr_comm  = ""            # [PT: May 8, 2019] pbar json output
+set gen_comm   = ""            # [PT: Feb 22, 2021] pbar json output
+set pbar_for   = ""
+set ulay_comm  = ""
+
+set func_resam = "NN"            # def. no resample; opt: {NN|Li|Cu|Bk}
+
+set acropx = ( 0 0 )             # [PT: May 29, 2018]  
+set acropy = ( 0 0 )             # can crop in axi, sag, cor; x- and y-axes
+set scropx = ( 0 0 )
+set scropy = ( 0 0 )
+set ccropx = ( 0 0 )
+set ccropy = ( 0 0 )
+
+set MODE_4D = 0
+set spre4d  = "sli4d"
+set opre4d  = ""
+set upre4d  = ""
+set all_reps = ( 1 )             # default:  for if we *don't* have -mode_4D
+# this order matches how stuff comes out in MODE_4D
+set ppord   = ( "sagittal" "coronal" "axial" )
+set pord    = ( "sag"      "cor"     "axi"   )
+
+set subbb   = ( -1 -1 -1 )
+set refbox  = ""
+set REFBOX_IS_DSET = -1          # -1=no refbox; 0=AMASK* ; 1=sep dset added
+
+set USE_ANY_OBLIQUITY = ''       # use obliquity info; has keywords
+set obl_resam_ulay    = wsinc5   # ulay: def resampling method for obl
+set obl_resam_olay    = wsinc5   # olay: def resampling method for obl
+set obl_resam_refbox  = wsinc5   # focus box: def resampling method for obl
+
+set DO_EDGEIFY_ULAY = 0           # can turn ulay into edges
+set EDGE_ENHANCE_FAC = ''         # for enhancing edges, by a factor, in ulay
+
+set umax     = ''
+set umin     = ''
+set umin_fac = ''
+
+# for SET_FUNC_ALPHA and SET_FUNC_BOXED
+set olay_alpha      = "No"         # 
+set olay_boxed      = "No"         # =1 -> SETENV AFNI_EDGIZE_OVERLAY NO
+#set alpha_floor  = ""             #  Gone now [Nov 5, 2018]
+
+set do_quit = "QUITT"            # quick-quit; not subject to change
+
+# tmp dir, in case under- and overlays are in separate dirs
+set tmp_code = `3dnewid -fun11`  # should be essentially unique hash
+set tmp_dir  = "__tmp_chauf_${tmp_code}"
+set DO_CLEAN = 1
+set my_clean = "-no_clean"
+set read_dir = ""
+set read_ulay = tmp_ulay.nii
+
+set USER_ULAY_RANGE = 0          # def: user doesn't enter ulay range
+set ulay_nz = ""                 # [PT: Jul 23, 2018] new ulay def: NOT non-0
+set olay_nz = "-non-zero"        # [PT: Jul 23, 2018] same olay def: non-0
+set com_ulay_str = "DO_NOTHING"  # [PT: Jul 23, 2018] so we can drive values 
+set umax_scale = 1
+set umax_magic = "98"
+
+set USER_CSCALE  = 0             # [PT: Apr 23, 2020] for AFNI_COLORSCALE_xx
+set cscale_idx   = ""
+set cscale_fname = ""
+
+set BIGNEG = -100000001
+@ BIGNEGp1 = $BIGNEG + 1
+
+set XXX_NPANE = ""               # [PT: May 14, 2019] -XXXnpane functionality
+
+set DO_AXI    = 1                # [PT: Sep 21, 2021] can control output slices
+set DO_SAG    = 1
+set DO_COR    = 1
+
+set clust_cmd  = ""               # [PT: Sep 22, 2021] clusterize with A/B
+set clust_wami = ""               # [PT: Sep 22, 2022] whereami on clusts
+
+# -------------------------------------------------------------------
+# ----------------------------- ugh ---------------------------------
+
+#### [PT: Oct 18, 2018]: this stuff now moved to separate prog
+#### "@djunct_template_focuser" because it will be needed more than
+#### once.
+# needed to deal with orientation permutability : AIL, LAI, PSR, etc.
+
+#set listori = ( 'R' 'L' 'A' 'P' 'I' 'S' )
+#set listind = (  1   1   2   2   3   3  )
+
+# -------------------------------------------------------------------
+# ------------------- process options, a la rr ----------------------
+
+if ( $#argv == 0 ) goto SHOW_HELP
+
+set ac = 1
+while ( $ac <= $#argv )
+    # terminal options
+    if ( ("$argv[$ac]" == "-h" ) || ("$argv[$ac]" == "-help" )) then
+        goto SHOW_HELP
+    endif
+    if ( "$argv[$ac]" == "-ver" ) then
+        goto SHOW_VERSION
+    endif
+
+    if ( "$argv[$ac]" == "-echo" ) then
+        set echo
+
+    # required
+    else if ( "$argv[$ac]" == "-ulay" ) then
+        if ( $ac >= $#argv ) goto FAIL_MISSING_ARG
+        @ ac += 1
+        set ulay = "$argv[$ac]"
+
+    else if ( "$argv[$ac]" == "-olay" ) then
+        if ( $ac >= $#argv ) goto FAIL_MISSING_ARG
+        @ ac += 1
+        set olay = "$argv[$ac]"
+
+    else if ( "$argv[$ac]" == "-olay_off" ) then
+        set see_olay = "-"
+
+    else if ( "$argv[$ac]" == "-no_cor" ) then
+        set DO_COR = 0
+
+    else if ( "$argv[$ac]" == "-no_axi" ) then
+        set DO_AXI = 0
+
+    else if ( "$argv[$ac]" == "-no_sag" ) then
+        set DO_SAG = 0
+
+    # [PT: July 11, 2018] Do some reslicing of dsets and glue
+    # together; will require at least one of ulay and olay to be 4D
+    else if ( "$argv[$ac]" == "-mode_4D" ) then
+        set MODE_4D = 1
+
+    # [PT: Sep 04, 2017] Change behavior to get output dir from just
+    # the prefix.  Duh.
+    else if ( "$argv[$ac]" == "-prefix" ) then
+        if ( $ac >= $#argv ) goto FAIL_MISSING_ARG
+        @ ac += 1
+        #set impref = "$argv[$ac]"
+        set impref = `basename "$argv[$ac]"`
+        set odir   = `dirname  "$argv[$ac]"`
+        
+    else if ( "$argv[$ac]" == "-cbar" ) then
+        if ( $ac >= $#argv ) goto FAIL_MISSING_ARG
+        @ ac += 1
+        set my_cbar = "$argv[$ac]"
+
+    else if ( "$argv[$ac]" == "-blowup" ) then
+        if ( $ac >= $#argv ) goto FAIL_MISSING_ARG
+        @ ac += 1
+        set bufac = "$argv[$ac]"
+        
+    else if ( "$argv[$ac]" == "-button_press" ) then
+        if ( $ac >= $#argv ) goto FAIL_MISSING_ARG
+        @ ac += 1
+        # convert to array immediately, because the argv[] here can be
+        # a space-separated string of button presses (Norm Swap Colr)
+        # that will be put together
+        set in_press = ( $argv[$ac] )
+        foreach ii ( `seq 1 1 ${#in_press}` )
+            set bbb = ${in_press[$ii]}
+            if ( "${bbb}" == "${all_butpress[1]}" || \
+                 "${bbb}" == "${all_butpress[2]}" || \
+                 "${bbb}" == "${all_butpress[3]}" ) then 
+                set butpress = "${butpress} butpress=${bbb}"
+            else
+                echo "** ERROR: invalid button press keyword: ${bbb}"
+                echo "   Must be one of the following: ${all_butpress}"
+                goto BAD_EXIT
+            endif
+        end
+
+    else if ( "$argv[$ac]" == "-set_xhairs" ) then
+        if ( $ac >= $#argv ) goto FAIL_MISSING_ARG
+        @ ac += 1
+        set crossh = "$argv[$ac]"
+
+    else if ( "$argv[$ac]" == "-set_xhair_gap" ) then
+        if ( $ac >= $#argv ) goto FAIL_MISSING_ARG
+        @ ac += 1
+        set xh_gap = "$argv[$ac]"
+        
+    else if ( "$argv[$ac]" == "-opacity" ) then
+        if ( $ac >= $#argv ) goto FAIL_MISSING_ARG
+        @ ac += 1
+        set opac = "$argv[$ac]"
+        
+    else if ( "$argv[$ac]" == "-delta_slices" ) then
+        if ( $ac >= $#argv ) goto FAIL_MISSING_ARG
+        @ ac += 1
+        @ gapord[1] = "$argv[$ac]"
+        @ ac += 1
+        @ gapord[2] = "$argv[$ac]"
+        @ ac += 1
+        @ gapord[3] = "$argv[$ac]"
+        set USER_GAPORD = 1
+
+    else if ( "$argv[$ac]" == "-clusterize" ) then
+        if ( $ac >= $#argv ) goto FAIL_MISSING_ARG
+        @ ac += 1
+        set clust_cmd = "$argv[$ac]"
+
+    else if ( "$argv[$ac]" == "-clusterize_wami" ) then
+        if ( $ac >= $#argv ) goto FAIL_MISSING_ARG
+        @ ac += 1
+        set clust_wami = "$argv[$ac]"
+
+    else if ( "$argv[$ac]" == "-thr_olay" ) then
+        if ( $ac >= $#argv ) goto FAIL_MISSING_ARG
+        @ ac += 1
+        set thrnew = "$argv[$ac]"
+
+    # [PT: Feb 21, 2018] 
+    else if ( "$argv[$ac]" == "-thr_olay_p2stat" ) then
+        if ( $ac >= $#argv ) goto FAIL_MISSING_ARG
+        @ ac += 1
+        set p_thr_val = "$argv[$ac]"
+
+    # [PT: July 13, 2018] anything allowed by p2dsetstat
+    else if ( "$argv[$ac]" == "-thr_olay_pside" ) then
+        if ( $ac >= $#argv ) goto FAIL_MISSING_ARG
+        @ ac += 1
+        set p_thr_side = "$argv[$ac]"
+
+    else if ( "$argv[$ac]" == "-thrflag" ) then
+        if ( $ac >= $#argv ) goto FAIL_MISSING_ARG
+        @ ac += 1
+        set thrflag = "$argv[$ac]"
+
+    # [PT: June 20, 2017]:  SET_SUBBRICKS i j k
+    else if ( "$argv[$ac]" == "-set_subbricks" ) then
+        if ( $ac >= $#argv ) goto FAIL_MISSING_ARG
+        @ ac += 1
+        set subbb[1] = "$argv[$ac]"
+        @ ac += 1
+        set subbb[2] = "$argv[$ac]"
+        @ ac += 1
+        set subbb[3] = "$argv[$ac]"
+
+    # refers to olay
+    else if ( "$argv[$ac]" == "-func_range" ) then
+        if ( $ac >= $#argv ) goto FAIL_MISSING_ARG
+        @ ac += 1
+        set frange = "$argv[$ac]"
+        set USER_FRANGE = 1
+        
+    #  SET_FUNC_RESAM [c.]{NN|Li|Cu|Bk}[.{NN|Li|Cu|Bk}]
+    else if ( "$argv[$ac]" == "-func_resam" ) then
+        if ( $ac >= $#argv ) goto FAIL_MISSING_ARG
+        @ ac += 1
+        set func_resam = "$argv[$ac]"
+        if ( ( "$func_resam" != "NN" ) || \
+             ( "$func_resam" != "Li" ) || \
+             ( "$func_resam" != "Cu" ) || \
+             ( "$func_resam" != "Bk" ) ) then
+            echo "** ERROR: '-func_resam ...' input"
+            echo "   needs to be one of {NN|Li|Cu|Bk}."
+            goto BAD_EXIT
+        endif
+
+    # refers to olay
+    else if ( "$argv[$ac]" == "-func_range_perc" ) then
+        if ( $ac >= $#argv ) goto FAIL_MISSING_ARG
+        @ ac += 1
+        set frange_perc = "$argv[$ac]"
+        set olay_nz = ""  
+        set USER_FRANGE = 2
+
+    # refers to olay
+    else if ( "$argv[$ac]" == "-func_range_perc_nz" ) then
+        if ( $ac >= $#argv ) goto FAIL_MISSING_ARG
+        @ ac += 1
+        set frange_perc = "$argv[$ac]"
+        set olay_nz = "-non-zero"  
+        set USER_FRANGE = 2
+
+    # refers to olay; for automasking in 3dBrickStat call
+    else if ( "$argv[$ac]" == "-func_range_perc_am" ) then
+        if ( $ac >= $#argv ) goto FAIL_MISSING_ARG
+        @ ac += 1
+        set frange_perc = "$argv[$ac]"
+        set olay_nz = "-automask"  
+        set USER_FRANGE = 2
+
+    else if ( "$argv[$ac]" == "-pbar_posonly" ) then
+        set pbar_sign = "+"
+        
+    else if ( "$argv[$ac]" == "-cbar_ncolors" ) then
+        if ( $ac >= $#argv ) goto FAIL_MISSING_ARG
+        @ ac += 1
+        set ncolors = "$argv[$ac]"
+        
+    else if ( "$argv[$ac]" == "-cbar_topval" ) then
+        if ( $ac >= $#argv ) goto FAIL_MISSING_ARG
+        @ ac += 1
+
+        if ( "$argv[$ac]" == "EMPTY" ) then
+            set topval = ""
+        else
+            set topval = "$argv[$ac]"
+        endif
+        
+    # [PT: Apr 23, 2020] enable AFNI_COLORSCALE_xx env var behavior.
+    # NB: this will *require* 2 args: index in range [01,99], and filename
+    else if ( "$argv[$ac]" == "-colorscale_idx_file" ) then
+        if ( $ac >= $#argv ) goto FAIL_MISSING_ARG
+        @ ac += 1
+        set cscale_idx   = "$argv[$ac]"
+        @ ac += 1
+        set cscale_fname = "$argv[$ac]"
+        set USER_CSCALE  = 1
+
+    # SAVE_ALLJPEG [c].imagewindowname filename
+    # SAVE_ALLPNG  [c].imagewindowname filename
+    # SAVE_MPEG    [c].imagewindowname filename
+    # SAVE_AGIF    [c].imagewindowname filename
+    # SAVE_JPEG [c.]windowname filename
+    # SAVE_PNG [c.]windowname filename
+    else if ( "$argv[$ac]" == "-save_ftype" ) then
+        if ( $ac >= $#argv ) goto FAIL_MISSING_ARG
+        @ ac += 1
+        set ftype = "$argv[$ac]"
+
+    # takes 3 numbers
+    else if ( "$argv[$ac]" == "-set_ijk" ) then
+        if ( $ac >= $#argv ) goto FAIL_MISSING_ARG
+        @ ac += 1
+        set coors[1] = "$argv[$ac]"
+        @ ac += 1
+        set coors[2] = "$argv[$ac]"
+        @ ac += 1
+        set coors[3] = "$argv[$ac]"
+        set USER_COORS = 1
+
+    # [PT: Aug 17, 2017] takes 3 numbers
+    else if ( "$argv[$ac]" == "-set_dicom_xyz" ) then
+        if ( $ac >= $#argv ) goto FAIL_MISSING_ARG
+        @ ac += 1
+        set coor_type = "SET_DICOM_XYZ"
+        set coors[1] = "$argv[$ac]"
+        @ ac += 1
+        set coors[2] = "$argv[$ac]"
+        @ ac += 1
+        set coors[3] = "$argv[$ac]"
+        set USER_COORS = 1
+
+    # [PT: Oct 18, 2018] takes a reference dataset to box
+    # in order to find new center and new # of slices.
+    # only applies in 3D case.
+    else if ( "$argv[$ac]" == "-box_focus_slices" ) then
+        if ( $ac >= $#argv ) goto FAIL_MISSING_ARG
+        @ ac += 1
+        set refbox     = "$argv[$ac]"      # ref dset for box
+        set coor_type  = "SET_IJK"
+        set USER_COORS = 2
+
+    else if ( "$argv[$ac]" == "-montx" ) then
+        if ( $ac >= $#argv ) goto FAIL_MISSING_ARG
+        @ ac += 1
+        set mx = "$argv[$ac]"
+        
+    else if ( "$argv[$ac]" == "-monty" ) then
+        if ( $ac >= $#argv ) goto FAIL_MISSING_ARG
+        @ ac += 1
+        set my = "$argv[$ac]"
+       
+    # [PT: Jan 30, 2019] extra montage feature: gap
+    else if ( "$argv[$ac]" == "-montgap" ) then
+        if ( $ac >= $#argv ) goto FAIL_MISSING_ARG
+        @ ac += 1
+        set mgap = "$argv[$ac]"
+
+    # [PT: Jan 30, 2019] extra montage feature: gap color
+    else if ( "$argv[$ac]" == "-montcolor" ) then
+        if ( $ac >= $#argv ) goto FAIL_MISSING_ARG
+        @ ac += 1
+        set mcolor = "$argv[$ac]"
+
+    else if ( "$argv[$ac]" == "-crop_axi_x" ) then
+        if ( $ac >= $#argv ) goto FAIL_MISSING_ARG
+        @ ac += 1
+        set acropx[1] = "$argv[$ac]"
+        @ ac += 1
+        set acropx[2] = "$argv[$ac]"
+
+    else if ( "$argv[$ac]" == "-crop_axi_y" ) then
+        if ( $ac >= $#argv ) goto FAIL_MISSING_ARG
+        @ ac += 1
+        set acropy[1] = "$argv[$ac]"
+        @ ac += 1
+        set acropy[2] = "$argv[$ac]"
+
+    else if ( "$argv[$ac]" == "-crop_sag_x" ) then
+        if ( $ac >= $#argv ) goto FAIL_MISSING_ARG
+        @ ac += 1
+        set scropx[1] = "$argv[$ac]"
+        @ ac += 1
+        set scropx[2] = "$argv[$ac]"
+
+    else if ( "$argv[$ac]" == "-crop_sag_y" ) then
+        if ( $ac >= $#argv ) goto FAIL_MISSING_ARG
+        @ ac += 1
+        set scropy[1] = "$argv[$ac]"
+        @ ac += 1
+        set scropy[2] = "$argv[$ac]"
+
+    else if ( "$argv[$ac]" == "-crop_cor_x" ) then
+        if ( $ac >= $#argv ) goto FAIL_MISSING_ARG
+        @ ac += 1
+        set ccropx[1] = "$argv[$ac]"
+        @ ac += 1
+        set ccropx[2] = "$argv[$ac]"
+
+    else if ( "$argv[$ac]" == "-crop_cor_y" ) then
+        if ( $ac >= $#argv ) goto FAIL_MISSING_ARG
+        @ ac += 1
+        set ccropy[1] = "$argv[$ac]"
+        @ ac += 1
+        set ccropy[2] = "$argv[$ac]"
+
+    else if ( "$argv[$ac]" == "-olay_alpha" ) then
+        if ( $ac >= $#argv ) goto FAIL_MISSING_ARG
+        @ ac += 1
+        set olay_alpha = "$argv[$ac]"
+
+        # [PT: June 28, 2021] Added to utilize Return of the
+        # AlphaJedi---can specify fadability.  Thanks go to The Bob.
+        if ( ( "$olay_alpha" == "Yes" ) || \
+             ( "$olay_alpha" == "No" ) || \
+             ( "$olay_alpha" == "Quadratic" ) || \
+             ( "$olay_alpha" == "Linear") ) then
+            echo "++ olay_alpha has known value: $olay_alpha"
+        else
+            echo "** ERROR: unknown olay_alpha value: $olay_alpha"
+            goto BAD_EXIT
+        endif
+        
+    else if ( "$argv[$ac]" == "-olay_boxed" ) then
+        if ( $ac >= $#argv ) goto FAIL_MISSING_ARG
+        @ ac += 1
+        set olay_boxed = "$argv[$ac]"
+
+    else if ( "$argv[$ac]" == "-image_zoom_nn_no" ) then
+        setenv AFNI_IMAGE_ZOOM_NN NO
+        
+    else if ( "$argv[$ac]" == "-agif_delay" ) then
+        if ( $ac >= $#argv ) goto FAIL_MISSING_ARG
+        @ ac += 1
+        setenv AFNI_AGIF_DELAY "$argv[$ac]"
+
+    else if ( "$argv[$ac]" == "-left_is_left" ) then
+        if ( $ac >= $#argv ) goto FAIL_MISSING_ARG
+        @ ac += 1
+        setenv AFNI_LEFT_IS_LEFT "$argv[$ac]"
+
+    else if ( "$argv[$ac]" == "-left_is_posterior" ) then
+        if ( $ac >= $#argv ) goto FAIL_MISSING_ARG
+        @ ac += 1
+        setenv AFNI_LEFT_IS_POSTERIOR "$argv[$ac]"
+
+    else if ( "$argv[$ac]" == "-zerocolor" ) then
+        if ( $ac >= $#argv ) goto FAIL_MISSING_ARG
+        @ ac += 1
+        setenv AFNI_IMAGE_ZEROCOLOR  "$argv[$ac]"
+
+    # [PT: Oct 21, 2018] save colorbar (and range to text file)
+    else if ( "$argv[$ac]" == "-pbar_saveim" ) then
+        if ( $ac >= $#argv ) goto FAIL_MISSING_ARG
+        @ ac += 1
+        set pbar_fname = "$argv[$ac]"
+        
+        # control only valid extensions, so we 1) know it's valid, and
+        # 2) can use it later in JSON-ish file.
+        set pbext = "${pbar_fname:e}"
+        if ( ( "$pbext" == "png" ) || \
+             ( "$pbext" == "jpg" ) || \
+             ( "$pbext" == "ppm" ) ) then
+            echo "++ pbar name has known extension: $pbext"
+        else
+            echo "*+ Setting pbar file extension: jpg"
+            set pbar_fname = "${pbar_fname}.jpg"
+        endif
+
+        set com_pbar_str = "PBAR_SAVEIM $pbar_fname"
+        set SAVE_PBAR = 1
+
+    # [PT: Oct 21, 2018] save colorbar (and range to text file)
+    else if ( "$argv[$ac]" == "-pbar_dim" ) then
+        if ( $ac >= $#argv ) goto FAIL_MISSING_ARG
+        @ ac += 1
+        set com_pbar_str_dim = "dim=$argv[$ac]"
+
+    # [PT: May 8, 2019] save reason for cbar olay range
+    else if ( "$argv[$ac]" == "-pbar_comm_range" ) then
+        if ( $ac >= $#argv ) goto FAIL_MISSING_ARG
+        @ ac += 1
+        set pbar_comm = "$argv[$ac]"
+
+    # [PT: July 1, 2019] silly extra option, basically for: when are
+    # using the grayscale colorbar for an overlay that really just
+    # looks like a plain underlay, and so we want the HTML text to
+    # refer to a "dset" or "ulay", instead of "olay" for the pbar
+    # range.  Cool.
+    else if ( "$argv[$ac]" == "-pbar_for" ) then
+        if ( $ac >= $#argv ) goto FAIL_MISSING_ARG
+        @ ac += 1
+        set pbar_for = "pbar_for     :: $argv[$ac]"
+
+    # [PT: May 8, 2019] save reason for cbar thr val
+    else if ( "$argv[$ac]" == "-pbar_comm_thr" ) then
+        if ( $ac >= $#argv ) goto FAIL_MISSING_ARG
+        @ ac += 1
+        set vthr_comm = "$argv[$ac]"
+
+    # [PT: Feb 22, 2021] save other info to display
+    else if ( "$argv[$ac]" == "-pbar_comm_gen" ) then
+        if ( $ac >= $#argv ) goto FAIL_MISSING_ARG
+        @ ac += 1
+        set gen_comm = "$argv[$ac]"
+
+    # [PT: Aug 26, 2019] save reason for ulay range
+    else if ( "$argv[$ac]" == "-ulay_comm" ) then
+        if ( $ac >= $#argv ) goto FAIL_MISSING_ARG
+        @ ac += 1
+        set ulay_comm = "$argv[$ac]"
+
+    # AFNI_IMAGE_LABEL_MODE    = 1     // draw labels in UL of Image windows
+    # AFNI_IMAGE_LABEL_SIZE    = 3     // size of labels in Image windows
+    # AFNI_IMAGE_LABEL_COLOR   = white // color of labels in Image windows
+    # AFNI_IMAGE_LABEL_SETBACK = 0.01  // distance from edges for labels
+    else if ( "$argv[$ac]" == "-label_mode" ) then
+        if ( $ac >= $#argv ) goto FAIL_MISSING_ARG
+        @ ac += 1
+        setenv AFNI_IMAGE_LABEL_MODE  "$argv[$ac]"
+
+    else if ( "$argv[$ac]" == "-label_size" ) then
+        if ( $ac >= $#argv ) goto FAIL_MISSING_ARG
+        @ ac += 1
+        setenv AFNI_IMAGE_LABEL_SIZE  "$argv[$ac]"
+
+    else if ( "$argv[$ac]" == "-label_color" ) then
+        if ( $ac >= $#argv ) goto FAIL_MISSING_ARG
+        @ ac += 1
+        setenv AFNI_IMAGE_LABEL_COLOR  "$argv[$ac]"
+
+    else if ( "$argv[$ac]" == "-label_setback" ) then
+        if ( $ac >= $#argv ) goto FAIL_MISSING_ARG
+        @ ac += 1
+        setenv AFNI_IMAGE_LABEL_SETBACK  "$argv[$ac]"
+
+    # [PT: Aug 17, 2017] probably need quotes...
+    else if ( "$argv[$ac]" == "-label_string" ) then
+        if ( $ac >= $#argv ) goto FAIL_MISSING_ARG
+        @ ac += 1
+        setenv AFNI_IMAGE_LABEL_STRING  "$argv[$ac]"
+
+    # Feb, 2017: useful when each slice is a from a sep vol, i.e., for
+    # @djunct*imager
+    else if ( "$argv[$ac]" == "-image_label_ijk" ) then
+        setenv AFNI_IMAGE_LABEL_IJK YES
+
+    # default = VOLUME
+    else if ( "$argv[$ac]" == "-globalrange" ) then
+        if ( $ac >= $#argv ) goto FAIL_MISSING_ARG
+        @ ac += 1
+        setenv AFNI_IMAGE_GLOBALRANGE  "$argv[$ac]"
+        set USER_ULAY_RANGE = 1  # also use this here
+
+    # [PT: May 14, 2019] direct opt from 'afni'
+    else if ( "$argv[$ac]" == "-XXXnpane" ) then
+        if ( $ac >= $#argv ) goto FAIL_MISSING_ARG
+        @ ac += 1
+        set XXX_NPANE = "-XXXnpane $argv[$ac]"
+
+    else if ( "$argv[$ac]" == "-ulay_range" ) then
+        if ( $ac >= $#argv ) goto FAIL_MISSING_ARG
+        @ ac += 1
+        set umin = "$argv[$ac]"
+        @ ac += 1
+        set umax = "$argv[$ac]"
+        set USER_ULAY_RANGE = 1
+
+    else if ( "$argv[$ac]" == "-ulay_range_nz" ) then
+        if ( $ac >= $#argv ) goto FAIL_MISSING_ARG
+        @ ac += 1
+        set umin = "$argv[$ac]"
+        @ ac += 1
+        set umax = "$argv[$ac]"
+        set ulay_nz = "-non-zero"
+        set USER_ULAY_RANGE = 1
+
+    # for automasking during 3dBrickStat call
+    else if ( "$argv[$ac]" == "-ulay_range_am" ) then
+        if ( $ac >= $#argv ) goto FAIL_MISSING_ARG
+        @ ac += 1
+        set umin = "$argv[$ac]"
+        @ ac += 1
+        set umax = "$argv[$ac]"
+        set ulay_nz = "-automask"
+        set USER_ULAY_RANGE = 1
+
+    # supplement to push the lower boundary a bit; only works if user
+    # entered the range
+    else if ( "$argv[$ac]" == "-ulay_min_fac" ) then
+        if ( $ac >= $#argv ) goto FAIL_MISSING_ARG
+        @ ac += 1
+        set umin_fac = "$argv[$ac]"
+
+    else if ( "$argv[$ac]" == "-edgy_ulay" ) then
+        set DO_EDGEIFY_ULAY = 1
+
+    else if ( "$argv[$ac]" == "-edge_enhance_ulay" ) then
+        if ( $ac >= $#argv ) goto FAIL_MISSING_ARG
+        @ ac += 1
+        set DO_EDGEIFY_ULAY  = 1
+        set EDGE_ENHANCE_FAC = "$argv[$ac]"
+
+    # [PT: Aug 29, 2019] use any obliquity info, in one of a few
+    # possible ways: apply obl of ulay and olay (both to scanner
+    # coords);  send the ulay to olay;  send olay to ulay.
+    else if ( "$argv[$ac]" == "-obliquify" ) then
+        if ( $ac >= $#argv ) goto FAIL_MISSING_ARG
+        @ ac += 1
+        set USE_ANY_OBLIQUITY = "$argv[$ac]"
+        if ( "${USE_ANY_OBLIQUITY}" != "ALL"  && \
+             "${USE_ANY_OBLIQUITY}" != "o2u"  && \
+             "${USE_ANY_OBLIQUITY}" != "ob2u" && \
+             "${USE_ANY_OBLIQUITY}" != "u2o"  && \
+             "${USE_ANY_OBLIQUITY}" != "ub2o" ) then
+             echo "** ERROR: bad keyword after -obliquify: ${USE_ANY_OBLIQUITY}"
+             echo "   Must be one of: ALL, o2u, ob2u, u2o, ub2o"
+            goto BAD_EXIT
+         endif
+
+    # [PT: Sep 4, 2019] control resampling of obl transforms
+    else if ( "$argv[$ac]" == "-obl_resam_ulay" ) then
+        if ( $ac >= $#argv ) goto FAIL_MISSING_ARG
+        @ ac += 1
+        set obl_resam_ulay = "$argv[$ac]"
+
+    # [PT: Sep 4, 2019] control resampling of obl transforms
+    else if ( "$argv[$ac]" == "-obl_resam_olay" ) then
+        if ( $ac >= $#argv ) goto FAIL_MISSING_ARG
+        @ ac += 1
+        set obl_resam_olay = "$argv[$ac]"
+
+    # [PT: Sep 4, 2019] control resampling of obl transforms
+    else if ( "$argv[$ac]" == "-obl_resam_box" ) then
+        if ( $ac >= $#argv ) goto FAIL_MISSING_ARG
+        @ ac += 1
+        set obl_resam_refbox = "$argv[$ac]"
+
+    else if ( "$argv[$ac]" == "-do_clean" ) then
+        set DO_CLEAN = 1
+        set my_clean = "-pass" # for @djunct_4d_slices*
+
+    else if ( "$argv[$ac]" == "-no_clean" ) then
+        set DO_CLEAN = 0
+        set my_clean = "-no_clean" # for @djunct_4d_slices*
+
+    # [PT: Oct 18, 2018] this is to get around having "null args"
+    # entered, because some opts need to be wrapped in quotes because
+    # they might contain subbrickselectors
+    else if ( "$argv[$ac]" == "-pass" ) then
+        echo ""
+
+    else
+        echo "** unexpected option #$ac = '$argv[$ac]'"
+        exit 2
+
+    endif
+    @ ac += 1
+end    ### end of main option loop
+
+# -------------------------------------------------------------------
+
+# similar defaults to AFNI GUI, though GUI is slicewise, not
+# volumewise
+if ( $USER_ULAY_RANGE != 1 ) then
+    set umin = "0%"
+    set umax = "98%"
+    set ulay_nz = ""
+    set USER_ULAY_RANGE = 1
+endif
+
+# -------------------------------------------------------------------
+
+echo "++ My command:"
+echo "   @chauffeur_afni $argv"
+echo ""
+echo "++ Using AFNI ver : `afni -vnum`"
+echo "++ chauffeur ver  : ${version}"
+
+
+# -------------------------------------------------------------------
+# ------------------ check about auxiliary progs --------------------
+
+# from Bob's @snapshot* progs
+
+set nerr = 0
+set errm = "** ERROR:"
+
+# (Ubuntu hassle ->) not using: pamcomp
+#set plist = ( Xvfb djpeg cjpeg pnmcat pbmtext  \
+#                pamstretch pbmtopgm )
+# [PT: Dec 5, 2018] just need this dependency, at the moment
+set plist = ( Xvfb  )
+foreach pppp ( $plist )
+  set wwww = `which $pppp`
+  if ( $status != 0 ) then
+    @ nerr++
+    set errm = "$errm $pppp"
+  endif
+end
+if ( $nerr > 0 ) then
+  echo "$errm -- not found in path -- program fails"
+  goto BAD_EXIT
+endif
+
+# -------------------------------------------------------------------
+# -------------------------- check INPUTS ---------------------------
+
+echo "\n------------------ start of optionizing ------------------\n" 
+
+if ( ${DO_AXI} == 0 && ${DO_COR} == 0 && ${DO_SAG} == 0 ) then
+    echo "** ERROR: need to output at least ONE view plane choice."
+    echo "   Can't turn off all of axi, cor and sag views."
+    goto BAD_EXIT
+endif 
+
+# need more cowbell
+if ( "$ulay" == "" ) then
+    echo "** ERROR: need to have an underlay, at least"
+    goto BAD_EXIT
+else
+    set check = `3dinfo -prefix "$ulay"`
+    if ( "$check" == "NO-DSET" ) then
+        echo "** ERROR: can't find input file:  $ulay"
+        goto BAD_EXIT
+    else
+        echo "++ Found input file:   $ulay"
+    endif
+endif
+
+# need more cowbell, but will proceed anyways
+if (( "$olay" == "" ) && ( "$see_olay" == "+" )) then
+    echo "+* Noting: you did NOT provide an overlay, and yet"
+    echo "           you did NOT turn off the overlay with '-olay_off'"
+    echo "       --> so I assume you just want to view the underlay." 
+    set see_olay = "-"
+endif
+
+# if olay is called for, make sure it can be found OK; it is not used,
+# then make sure there aren't other options trying to call for its use
+if ( "$olay" != "" ) then
+    set check = `3dinfo -prefix "$olay"`
+    if ( "$check" == "NO-DSET" ) then
+        echo "** ERROR: can't find input file:  $olay"
+        goto BAD_EXIT
+    else
+        echo "++ Found input file:   $olay"
+    endif
+else
+    # [PT: Jan 28, 2019] check about impossibility of option request: make
+    # refbox with olay when no olay is given.
+    if ( "$refbox" == "AMASK_FOCUS_OLAY" ) then
+        echo "** ERROR: No 'olay', but you want a refbox 'AMASK_FOCUS_OLAY'?"
+        echo "   ---> that's impossible-- did you want 'AMASK_FOCUS_ULAY'?\n\n"
+        goto BAD_EXIT
+    endif
+endif
+
+if ( "$refbox" != "" ) then
+    if ( ("$refbox" != "AMASK_FOCUS_ULAY") && \
+         ("$refbox" != "AMASK_FOCUS_OLAY") ) then
+        # in this scenario, the user must have entered in some dset
+        # from which to make the refbox: check it exists.
+
+        set REFBOX_IS_DSET = 1    # actual sep dset entered
+
+        set check = `3dinfo -prefix "$refbox"`
+        if ( "$check" == "NO-DSET" ) then
+            echo "** ERROR: can't find focus refbox file:  ${refbox}"
+            goto BAD_EXIT
+        else
+            echo "++ Found focus refbox file:   ${refbox}"
+        endif
+
+        # [PT: Feb 2, 2019] if the refvol has >1 subbrick, such as the
+        # *SSW* ones, then we will pick out the [0]th
+        set ref_nv = `3dinfo -nt "${refbox}"`
+        if ( ${ref_nv} > 1 ) then
+            echo "+* NB: focus box vol has >1 slice, so we select [0]th."
+            set refbox = "${refbox}[0]"
+        endif
+    else
+        set REFBOX_IS_DSET = 0    # no sep dset entered; use ulay|olay
+    endif
+endif
+
+# [PT: Aug 23, 2019] Set this here, because we miiiight edgeify the
+# ulay; and just in case we do, we want the original ulay to be used
+# for refbox-ing; if neither of those situations is happening, this
+# should have no affect-- fine
+# ---> will have to be updated if applying obliquity
+set ulay_refbox = "${ulay}"
+
+# check blowup factor
+set check_list = ( `seq 1 1 8` )
+set innit = 0
+foreach i ( $check_list )
+    if ( $bufac == ${check_list[${i}]} ) then
+        echo "++ Using blowup factor: $bufac"
+        set innit = 1
+        break
+    endif
+end
+if ( $innit == 0 ) then
+    echo "** ERROR: bad blowup factor:  $bufac"
+    echo "   ---> needs to be (exactly) one of:  $check_list\n\n"
+    goto BAD_EXIT
+endif
+
+# check opacity
+set check_list = ( `seq 1 1 9` )
+set innit = 0
+foreach i ( $check_list )
+    if ( $opac == ${check_list[${i}]} ) then
+        echo "++ Using opacity:  $opac"
+        set innit = 1
+        break
+    endif
+end
+if ( $innit == 0 ) then
+    echo "** ERROR: bad opacity:  $opac"
+    echo "   ---> needs to be (exactly) one of:  $check_list\n\n"
+    goto BAD_EXIT
+endif
+
+# [PT: Apr 23, 2020] 
+if ( ${USER_CSCALE} ) then
+    echo "++ Using user-specified colorscale:"
+    if ( "${cscale_fname}" == "" ) then
+        echo "** ERROR: need colorscale file name"
+        goto BAD_EXIT
+    else if ( ! -f "${cscale_fname}" ) then
+        echo "** ERROR: cannot find colorscale with file name: ${cscale_fname}"
+        goto BAD_EXIT
+    endif
+
+    if ( "${cscale_idx}" == "" ) then
+        echo "** ERROR: need colorscale index."
+        goto BAD_EXIT
+    endif
+
+    echo "   colorscale index : ${cscale_idx}"
+    echo "   colorscale fname : ${cscale_fname}"
+
+    setenv AFNI_COLORSCALE_${cscale_idx}  "${cscale_fname}"
+
+    # get new cbar name from top line of file
+    set my_cbar = `head -n 1 "${cscale_fname}"`
+endif
+
+if ( "${ftype}" != "MPEG" ) then
+    setenv AFNI_IMSAVE_WARNINGS NO
+endif
+
+# -------------------- make temp working dir
+
+# [PT: Sept 12, 2019] if output dir doesn't exist, make it
+\mkdir -p "${odir}"
+
+# in so many cases we need a tmp working directory
+set read_dir = "$odir/$tmp_dir"
+if ( ! -e $read_dir ) then
+    echo "++ Making temporary work directory to copy vis files: $read_dir"
+    \mkdir -p $read_dir
+endif
+
+# [PT: Aug 29, 2019] Can apply obliquity info
+if ( "${USE_ANY_OBLIQUITY}" == "ALL" ) then
+    # apply all obliquities of input --> send to scanner coords
+    echo "++ Apply obliquity to: ALL"
+    3dWarp \
+        -deoblique                        \
+        -${obl_resam_ulay}                \
+        -prefix ${read_dir}/ulay_deob.nii \
+        "${ulay}"
+    set ulay =  ${read_dir}/ulay_deob.nii 
+
+    if ( "${olay}" != "" ) then
+        3dWarp \
+            -deoblique                        \
+            -${obl_resam_olay}                \
+            -prefix ${read_dir}/olay_deob.nii \
+            "${olay}"
+        set olay =  ${read_dir}/olay_deob.nii 
+    endif
+
+    if ( "${REFBOX_IS_DSET}" == 1 ) then
+        # in case sep refbox is entered
+        echo "++ and apply obliquity to box_focus"
+        3dWarp \
+            -deoblique                            \
+            -${obl_resam_refbox}                  \
+            -prefix ${read_dir}/focusbox_deob.nii \
+            "${refbox}"
+        set refbox =  ${read_dir}/focusbox_deob.nii 
+    endif
+
+else if ( "${USE_ANY_OBLIQUITY}" == "u2o"  || \
+          "${USE_ANY_OBLIQUITY}" == "ub2o"  ) then
+    # send ulay to olay oblique coords
+    echo "++ Apply obliquity to: send ulay to olay"
+
+    if ( "${olay}" == "" ) then
+        echo "** ERROR: can't obliquify ulay to olay, bc there is no olay."
+        goto BAD_EXIT
+    endif
+
+    3dWarp                                 \
+        -card2oblique "${olay}"            \
+        -${obl_resam_ulay}                 \
+        -prefix ${read_dir}/ulay_obl2o.nii \
+        "${ulay}"
+    set ulay =  ${read_dir}/ulay_obl2o.nii 
+
+    if ( "${REFBOX_IS_DSET}" == 1 ) then
+        # in case sep refbox is entered
+        echo "++ and apply obliquity to send box_focus to olay"
+        3dWarp \
+            -card2oblique "${olay}"                \
+            -${obl_resam_olay}                     \
+            -prefix ${read_dir}/focusbox_obl2o.nii \
+            "${refbox}"
+        set refbox =  ${read_dir}/focusbox_obl2o.nii 
+    endif
+
+else if ( "${USE_ANY_OBLIQUITY}" == "o2u" || \
+          "${USE_ANY_OBLIQUITY}" == "ob2u"  ) then
+    # send olay to ulay oblique coords
+    echo "++ Apply obliquity to: send olay to ulay"
+
+    if ( "${olay}" == "" ) then
+        echo "** ERROR: can't obliquify olay to ulay, bc there is no olay."
+        goto BAD_EXIT
+    endif
+
+    3dWarp                                 \
+        -card2oblique "${ulay}"            \
+        -${obl_resam_olay}                 \
+        -prefix ${read_dir}/olay_obl2u.nii \
+        "${olay}"
+    set olay =  ${read_dir}/olay_obl2u.nii 
+
+    if ( "${REFBOX_IS_DSET}" == 1 ) then
+        # in case sep refbox is entered
+        echo "++ and apply obliquity to send box_focus to ulay"
+        3dWarp \
+            -card2oblique "${ulay}"                 \
+            -${obl_resam_refbox}                    \
+            -prefix ${read_dir}/focusbox_obl2u.nii  \
+            "${refbox}"
+        set refbox =  ${read_dir}/focusbox_obl2u.nii 
+    endif
+
+endif
+
+
+# [PT: Aug 23, 2019] If the user wants to edge-ify the ulay, they can
+# do this here: basically, the input ulay gets turned into edges at
+# nearly the first step, and the newly created dset becomes 'the ulay'
+# for all intents and purposes (%values, etc.).  The only place where
+# it would matter to still use the original ulay (that I can see at
+# this moment), is with the AMASK*ULAY-- so we *do* remember its name
+# for that purpose.
+# [PT: Aug 30, 2019] Now, a more Glenian bit of functionality has been
+# added, too: one can enhance edges in the ulay: multiple locations there
+# by a factor to make them stick out when viewing (*enhancing* the edges).
+if ( ${DO_EDGEIFY_ULAY} ) then
+    echo "++ Edgeifying"
+    3dedge3 \
+        -prefix ${read_dir}/ulay_edge.nii \
+        -input  ${ulay}
+
+    if ( "${EDGE_ENHANCE_FAC}" != "" ) then
+        echo "++ Enhancing ulay edges"
+        3dcalc \
+            -a "${ulay}"                              \
+            -b ${read_dir}/ulay_edge.nii              \
+            -expr "a*(1+step(b)*${EDGE_ENHANCE_FAC})" \
+            -prefix ${read_dir}/ulay_edge_enh.nii
+        set ulay  = ${read_dir}/ulay_edge_enh.nii
+    else
+        set ulay  = ${read_dir}/ulay_edge.nii 
+    endif
+
+endif
+
+# ------------------- cbar saving stuff
+if ( $SAVE_PBAR == 1 ) then
+    if ( "$see_olay" == "-" ) then
+        echo "*+ WARNING: You asked to save the color pbar, but didn't input"
+        echo "   an olay, so, I'm not savin' one."
+        set com_pbar_str = "DO_NOTHING"
+        set SAVE_PBAR = 0   # unset this so we don't output text file of ranges
+    else
+        set com_pbar_str = "$com_pbar_str $com_pbar_str_dim"
+    endif
+endif
+
+# -------------------- 4D mode reslicing+assembling if necessary
+
+if ( $MODE_4D == 1 ) then
+
+    set upre4d = "$read_dir/${spre4d}_u" # full one also has "_{1,2,3}"
+
+    # -------- deal with having/not having olay
+    set opre4d   = ""
+    set m4d_olay = ( "-pass" "-pass" )
+    if ( "$olay" != "" ) then
+        set m4d_olay = ( -olay "$olay" )
+        set opre4d = "$read_dir/${spre4d}_o" # full one also has "_{1,2,3}"
+    endif
+
+    # ------------- translate what coor: need to reset values in other
+    # ------------- part below....
+    set m4d_loc = ( "-pass" "-pass" "-pass" "-pass" )
+    if ( $USER_COORS == 1 ) then
+        if ( "$coor_type" == "SET_IJK" ) then
+            echo "++ Will have user's chosen: $coor_type $coors"
+            set m4d_loc = ( -set_ijk $coors )
+        else if ( "$coor_type" == "SET_DICOM_XYZ" ) then
+            echo "++ Will have user's chosen: $coor_type $coors"
+            set m4d_loc = ( -set_dicom_xyz $coors )
+        else
+            echo "** ERROR: unknown coor_type somehow?: $coor_type"
+            goto BAD_EXIT
+        endif
+    else
+        echo "+* Warning: No coordinates selected (?)."
+        echo "   Will then just be something near central in vols."
+    endif
+
+    # the program will add '_u' and '_o' to the output names for the
+    # ulay and olay, respectively
+    echo "++ Start slicing ..."
+    @djunct_4d_slices_to_3d_vol                        \
+        -ulay "$ulay"                                  \
+        "$m4d_olay[1]" "$m4d_olay[2]"                  \
+        -prefix "$read_dir/$spre4d"                    \
+        "$my_clean"                                    \
+        "$m4d_loc[1]" "$m4d_loc[2]"                    \
+        "$m4d_loc[3]" "$m4d_loc[4]"
+    echo "++ ... End slicing."
+        
+    # SAGITTAL is the first item in $ppord and $pord, so is always
+    # done in MODE_4D.  Check and see if user has turned off cor and
+    # axi.  The numbers here for each view come FROM $ppord and $pord
+    if ( ${DO_COR} ) then
+        set all_reps = ( ${all_reps} 2 )
+    endif
+    if ( ${DO_AXI} ) then
+        set all_reps = ( ${all_reps} 3 )
+    endif
+
+else
+
+    # p-to-stat calc *cannot* be done for MODE_4D, because the
+    # conversion might not be constant across slices
+
+    # --------------------- p-to-stat thr capability -----------------
+
+    set statthr = "0"
+
+    if ( "${p_thr_val}" != "" && "${p_thr_side}" == "" ) then
+        echo "** ERROR:"
+        echo "   You specified a p-value to convert, but not the sidedness."
+        echo "   Select the sidedness and enter it with '-thr_olay_pside ..'"
+        goto BAD_EXIT
+    endif
+
+    # -------------------- check if subbrick selectors are indices --------
+
+    # [PT: Apr 30, 2019] allow for -set_subbrick indices to be
+    # string/label selectors.  Here, we basically just convert any of
+    # those to numbers/indices now.
+
+    # index for $ulay
+    set USED_SUBBRICK_LABS = 0
+    set ii = 1
+    if ( `adjunct_is_label.py "${subbb[$ii]}"` ) then
+        echo "++ Searching for label ${subbb[$ii]}..."
+        set ind1 = `3dinfo -label2index "${subbb[$ii]}" "${ulay}"`
+        if ( "$ind1" != "" ) then
+            echo "++ Found label ${subbb[$ii]} in $ulay, index [$ind1]"
+            set subbb[$ii] = $ind1
+            @ USED_SUBBRICK_LABS += 1
+        else
+            echo "** ERROR: Could *not* find label ${subbb[$ii]} in $ulay"
+            goto BAD_EXIT
+        endif
+    endif
+
+    # indices (thr and olay) for $olay
+    foreach ii ( `seq 2 1 3` )
+        if ( `adjunct_is_label.py "${subbb[$ii]}"` ) then
+            echo "++ Searching for label ${subbb[$ii]}..."
+            set ind1 = `3dinfo -label2index "${subbb[$ii]}" "${olay}"`
+            if ( "$ind1" != "" ) then
+                echo "++ Found label ${subbb[$ii]} in $olay, index [$ind1]"
+                set subbb[$ii] = $ind1
+                @ USED_SUBBRICK_LABS += 1
+            else
+                echo "** ERROR: Could *not* find label ${subbb[$ii]} in $olay"
+                goto BAD_EXIT
+            endif
+        endif
+    end
+
+    echo "++ Converted $USED_SUBBRICK_LABS to labels"
+    echo "++ Final subbrick indices: $subbb"
+
+    # -------------------
+
+    # Get info stored in header about: what kind of stat is stored,
+    # what params are known about it (e.g., degrees of freedom), and
+    # use that to calculate a value corresponding to user's selected
+    # p-value.  This involves "reading attributes" from the header
+    # with 3dAttribute. To learn more about these numbers, see:
+    # https://afni.nimh.nih.gov/pub/dist/doc/program_help/README.attributes.html
+    # Need 3 conditions here: a pval entered, **a type of sidedness**,
+    # and a subbrick index for the thr dset specified
+    # [PT: July 27, 2018] More proper check on $subbb[3]
+    if ( "${p_thr_val}" != "" && "${p_thr_side}" != "" \
+         && `echo " $subbb[3] >= 0 " | bc ` ) then
+
+        echo "++ Will calc threshold based on stat in [${subbb[3]}] brick"
+
+        set thrnew = `p2dsetstat                       \
+                        -inset   "$olay""[$subbb[3]]"  \
+                        -pval    "${p_thr_val}"        \
+                        -"${p_thr_side}"               \
+                        -quiet`
+
+        echo "++ Converted p=${p_thr_val} with ${p_thr_side} testing"
+        echo "   to stat value: ${thrnew}"
+    endif
+
+endif
+
+# ------------------- clusterizing olay
+# idat and ithr come from "-set_subbricks .."
+# the thresholding must come from the 3dClusterize info
+# QUESTION: don't allow clusterizing with 4D_mode??
+# QUESTION: if obliquity stuff is done, has the header/label/stats info been passed along?
+if ( "${clust_cmd}" != "" ) then
+    # translate chauffeur's sidedness + thr value to 3dClusterize format
+    if ( "${p_thr_side}" == "bisided" || "${p_thr_side}" == "2sided" ) then
+        set clust_thr_args = ( -${p_thr_side} -${thrnew} ${thrnew} )
+    else if ( "${p_thr_side}" == "1sided" ) then
+        if ( "${pbar_sign}" == "-" ) then
+            echo "++ 1sided clusterizing: turning on '-pbar_posonly'"
+            set pbar_sign = "+"
+        endif
+        set clust_thr_args = ( -${p_thr_side} RIGHT ${thrnew} )
+    else if ( "${p_thr_side}" == "within_range" ) then
+        echo "** ERROR: Sorry, '-within_range' can't be used here."
+        goto BAD_EXIT
+    else if ( "${p_thr_side}" == "" )
+        echo "** ERROR: Need to include 3dClusterize sidedness specification."
+        echo "   Use '-thr_olay_pside ..' with one of: 1sided, 2sided or bisided"
+        goto BAD_EXIT
+    else 
+        echo "** ERROR: Bad 3dClusterize sidedness specification: ${p_thr_side}"
+        goto BAD_EXIT
+    endif
+
+# store the command (don't indent)
+cat <<EOF > ${odir}/${impref}_clust_cmd.txt
+3dClusterize                                  \
+    ${clust_cmd}                              \
+    -idat ${subbb[2]}                         \
+    -ithr ${subbb[3]}                         \
+    ${clust_thr_args}                         \
+    -pref_map ${read_dir}/olay_clust.nii      \
+    -inset  ${olay}
+EOF
+
+    3dClusterize                                  \
+        ${clust_cmd}                              \
+        -idat ${subbb[2]}                         \
+        -ithr ${subbb[3]}                         \
+        ${clust_thr_args}                         \
+        -pref_map ${read_dir}/olay_clust.nii      \
+        -inset  ${olay}                           \
+        > ${odir}/${impref}_clust_rep.txt
+
+    if ( $status ) then
+        echo "** ERROR: 3dClusterize failed for some reason (see above)."
+        goto BAD_EXIT
+    endif
+
+    # [PT: Sept 22, 2022] use basic reporting on clusters
+    if ( "${clust_wami}" != "" ) then
+        echo "++ Run whereami on the cluster output, for atlas: ${clust_wami}"
+        whereami                                                             \
+            -omask       ${read_dir}/olay_clust.nii                          \
+            -atlas       "${clust_wami}"                                     \
+            > ${odir}/${impref}_clust_whereami.txt
+
+        if ( $status ) then
+            echo "** WARNING: bad whereami; check atlas: ${clust_wami}"
+            echo "** WARNING: bad whereami; check atlas: ${clust_wami}" \
+                >> ${odir}/${impref}_clust_whereami.txt
+        endif
+    endif
+
+    # this value is 99% of actual threshold value
+    set thr_just_below = `echo "scale=8; ${thrnew}/1.010101" | bc`
+    echo "++ Thresh below, for cluster viewing: ${thr_just_below}"
+
+    # ithr: anything outside clusters will go just BELOW threshold, so
+    # that: alpha~1 but it isn't boxed.
+    # (and don't forget about negative values...
+    3dcalc                                                          \
+        -a      "${olay}[${subbb[3]}"                               \
+        -b      ${read_dir}/olay_clust.nii                          \
+        -expr   "not(b)*maxbelow(${thr_just_below},abs(a))*(-1)**(1+ispositive(a))+bool(b)*a" \
+        -prefix ${read_dir}/olay_clust_reset_thr.nii                \
+        -float
+
+    # idat: unchanged
+    3dcalc                                                          \
+        -a      "${olay}[${subbb[2]}"                               \
+        -expr   "a"                                                 \
+        -prefix ${read_dir}/olay_clust_reset_dat.nii                \
+        -float
+
+    # concat idat and ithr, which becomes new OLAY
+    3dTcat                                                        \
+        -prefix ${read_dir}/olay_clust_reset_CAT.nii              \
+        ${read_dir}/olay_clust_reset_dat.nii                      \
+        ${read_dir}/olay_clust_reset_thr.nii 
+
+    # reset the subbrick selectors appropriately, too
+    set olay = ${read_dir}/olay_clust_reset_CAT.nii
+    set subbb = ( $subbb[1] 0 1 )
+
+endif
+
+
+# ================== now get serious ============================
+
+# will have 3 loops if in MODE_4D; otherwise, just one
+foreach rrr ( ${all_reps} )  ### the BIG loop starts
+
+    if ( $MODE_4D ) then
+
+        set ulay = ${upre4d}_${rrr}.nii.gz
+        if ( "$opre4d" != "" ) then
+            set olay = ${opre4d}_${rrr}.nii.gz
+        endif
+
+        # this calc pad was calc'ed earlier and passed along with each
+        # input dset, using adjunct_calc_mont_dims.py
+        set calc_pad = "${upre4d}_${rrr}.dat"
+        set padpars  = `grep -v "#" $calc_pad`
+        set Nsli     = $padpars[1]
+        set Npad     = $padpars[2]
+        set Ncol     = $padpars[3]
+        set Nrow     = $padpars[4]
+
+        # override settings user might set, for specific 4D case
+        if ( ( "$ftype" == "AGIF" ) || ( "$ftype" == "MPEG" ) ) then
+            set mx = 1
+            set my = 1
+            set coors  = ( 0 0 0 )
+        else
+            set mx = $Ncol
+            set my = $Nrow
+            set coors  = ( 0 0 0 )
+            set mrow   = `echo " ( $Nrow / 2 ) " | bc` 
+            set mcol   = `echo " ( $Ncol / 2 ) " | bc` 
+            set midsli = `echo " ( $Ncol * $mrow ) + $mcol " | bc` 
+            set coors[$rrr] = $midsli
+        endif
+
+        set gapord = ( 1 1 1 )
+        set USER_COORS = 1
+        set coor_type = "SET_IJK"
+
+    endif
+
+    # ----------------------------------------------------------------
+
+    # for scaling ulay uniformly with reasonable values when brightness
+    # range is the same across the volume
+    #####set urange = `echo $AFNI_IMAGE_GLOBALRANGE`
+    # [PT: Nov 6, 2018] Updated because of 4D mode,
+    # $AFNI_IMAGE_GLOBALRANGE might get unset after an iteration
+    # This should at least set on the first pass through; even if
+    # $AFNI_IMAGE_GLOBALRANGE gets unsetenv'ed in the loop, the value
+    # of urange is set.
+    if ( $?AFNI_IMAGE_GLOBALRANGE ) then
+        set urange = `echo $AFNI_IMAGE_GLOBALRANGE`
+    endif
+
+    if ( ( $urange == "VOLUME" ) || ( $urange == "DSET" )  \
+        || ( $urange == "YES" ) ) then
+
+        if ( $USER_ULAY_RANGE ) then
+            echo "++ Copy ulay to visualize (volumetric) within user's range:"
+
+            # will be 0 if no percent; otherwise, >0 if percent
+            set is_umin_perc = `echo ${umin} | awk '{print index ( $0,"%" ) }'`
+            set is_umax_perc = `echo ${umax} | awk '{print index ( $0,"%" ) }'`
+
+            if ( ($is_umin_perc > 0) && ($is_umax_perc > 0) ) then
+                # percentages
+
+                set pmin  = "$umin"
+
+                # this silliness allows for percentiles > 100, which
+                # means that a valid ${umax_magic}%ile value is scaled
+                # up.
+                set pmax_orig  = "$umax"
+                # remove "%"
+                set umax = `echo "$umax" | \
+                                awk '{print substr($0,1,length($0)-1)}'`
+                if ( `echo " $umax > 100 " | bc` ) then
+                    set umax_scale = `echo "scale=5; \
+                                        $umax / ${umax_magic} " | bc`
+                    set umax = "$umax_magic"
+                    echo "++ Ulay range calc for >100%ile ulay max:"
+                    echo "   calculating ${umax}%ile value, and then"
+                    echo "   multiplying it by a scale factor = $umax_scale,"
+                    echo "   in order to produce the ${umax}%ile value"
+                endif
+
+                set pmax  = "$umax"
+
+                if ( $MODE_4D ) then
+                    # utilized perc val is max of the 3 sep volumes at
+                    # that perc
+                    set amax = "$BIGNEG"
+                    foreach jjj ( `seq 1 1 3` ) 
+                        set vvv = `3dBrickStat  $olay_nz          \
+                                    -percentile ${pmax} 1 ${pmax} \
+                                    "${upre4d}_${jjj}.nii.gz"`
+                        if ( `echo " $vvv[2] > $amax " | bc` ) then
+                            set amax = "$vvv[2]"
+                        endif
+                    end
+                    # and check
+                    if ( `echo " $BIGNEGp1 > $amax " | bc` ) then
+                        echo "** ERROR: Badness in make 4D percentile table."
+                        echo "   Does ulay have very large, negative values?"
+                        goto BAD_EXIT
+                    endif
+
+                    # same for min
+                    set amin = $amax
+                    foreach jjj ( `seq 1 1 3` ) 
+                        set vvv = `3dBrickStat  $olay_nz          \
+                                    -percentile ${pmin} 1 ${pmin} \
+                                    "${upre4d}_${jjj}.nii.gz"`
+                        if ( `echo " $vvv[2] < $amin " | bc` ) then
+                            set amin = "$vvv[2]"
+                        endif
+                    end
+                    # and check
+                    if ( `echo " $amin > $amax " | bc` ) then
+                        echo "** ERROR: Badness in make 4D percentile table."
+                        echo "   ulay min > ulay max??"
+                        goto BAD_EXIT
+                    endif
+                    
+                    set umin = $amin
+                    set umax = `echo " $amax * $umax_scale " | bc`
+                else
+                    # [PT: July 27, 2018] need to use subbb[1] brick
+                    # selector for olay percentile if user has entered
+                    # it
+                    if ( `echo " ${subbb[1]} > -1 " | bc` ) then
+                        set amin  = `3dBrickStat $ulay_nz \
+                                        -percentile ${pmin} 1 ${pmin} \
+                                        "${ulay}[${subbb[1]}]"`
+                        set amax  = `3dBrickStat $ulay_nz \
+                                        -percentile ${pmax} 1 ${pmax} \
+                                        "${ulay}[${subbb[1]}]"`
+                    else
+                        set amin  = `3dBrickStat $ulay_nz \
+                                        -percentile ${pmin} 1 ${pmin} \
+                                        "$ulay"`
+                        set amax  = `3dBrickStat $ulay_nz \
+                                        -percentile ${pmax} 1 ${pmax} \
+                                        "$ulay"`
+                    endif
+                    set umin = $amin[2]
+                    set umax = `echo " $amax[2] * $umax_scale " | bc`
+                endif
+
+                set umin_fac_text = ""
+                if ( "${umin_fac}" != "" ) then
+                    if ( `echo "${umin_fac} <= 0" | bc` || \
+                         `echo "${umin_fac} > 1" | bc` ) then
+                        echo "+* WARN: ignoring ulay_min_fac: ${umin_fac}"
+                        echo "   Supposed to be in interval (0, 1]"
+                    else
+                        echo "++ Use umin factor     : ${umin_fac}"
+                        echo "   Init. umin and umax : ${umin}, ${umax}"
+                        set umin_new = `echo "scale=5; ${umin} - ${umin_fac} * (${umax} -${umin})/1.0" | bc`
+                        if ( `echo "${umin_new} > 0" | bc` ) then
+                            set umin = "${umin_new}"
+                        else 
+                            set umin = 0
+                        endif
+                        set umin_fac_text = " (adjusted by umin_fac)"
+                    endif
+                endif
+
+                echo "++ Ulay to be visualized within user range${umin_fac_text}:"
+                echo "  [${pmin}, ${pmax_orig}] -> [${umin}, ${umax}]"
+
+            else
+                echo "++ Ulay to be visualized within user range:"
+                echo "   [${umin}, ${umax}]"
+            endif
+
+            # need to unset this variable for this drive command to be
+            # effective
+            unsetenv AFNI_IMAGE_GLOBALRANGE 
+            set com_ulay_str = "SET_ULAY_RANGE A.all $umin $umax"  
+        endif
+
+        # Special behavior if ulay max %ile is > 100; copy over
+        # *ceilinged* version to temporary read dir
+        if ( $umax_scale != 1 ) then
+            3dcalc                                        \
+                -overwrite                                \
+                -a "$ulay"                                \
+                -expr "a*within(a,${umin},${amax[2]})     \
+                        + ${umin}*step($umin-a)           \
+                        + ${amax[2]}*step(a-${amax[2]})"  \
+                -prefix $read_dir/$read_ulay
+        else
+
+            # copy over dset temporary read dir; with new SET_ULAY_RANGE,
+            # don't need to threshold artificially.
+            3dcalc                                        \
+                -overwrite                                \
+                -a "$ulay"                                \
+                -expr "a"                                 \
+                -prefix $read_dir/$read_ulay
+        endif
+
+    else
+        if ( `3dinfo -datum "$ulay"` == "rgb" ) then
+            # not sure why 3dcalc won't preserve rgb-ness...
+            3dcopy                                        \
+                -overwrite                                \
+                "$ulay" $read_dir/$read_ulay
+        else
+            echo "++ For ulay, AFNI_IMAGE_GLOBALRANGE is set to be: $urange"
+            # just copy over *original* version to temporary read dir
+            3dcalc                                        \
+                -overwrite                                \
+                -a "$ulay"                                \
+                -expr "a"                                 \
+                -prefix $read_dir/$read_ulay
+        endif
+    else 
+        echo "** ERROR: Var 'urange' not set somehow-- bad."
+        goto BAD_EXIT
+    endif
+
+    # always determine dim from ulay, because that's how montaging works
+    set Dim  = `3dinfo -n4 "$ulay"`
+
+    # IF we don't want to see the olay, then set it to be the ulay, for
+    # later simplicity with the automontaging
+    if ( "$see_olay" == "-" ) then
+        echo "++ No overlay viewing"
+        set olay = ""
+        # don't need to copy anything, just set this for scripty purposes,
+        # doesn't affect visualization.
+        set read_olay = $read_ulay
+        set Dim  = `3dinfo -n4 "$ulay"`
+    else
+        set read_olay = tmp_olay.nii
+
+        3dcalc                                    \
+            -a "$olay"                            \
+            -expr 'a'                             \
+            -prefix $read_dir/$read_olay          \
+            -overwrite
+
+        if ( $USER_FRANGE == 1 ) then
+            # just a number, no translation necessary even in MODE_4D case
+            echo "++ User-entered function range value value (${frange})"
+        else
+
+            # set frange, if user hasn't, based on data:
+            if ( $USER_FRANGE == 0 ) then
+                # match more with GUI behavior, if user enters nothing
+                set frange_perc = 100
+            else
+                # in this case, just check that the user-entered value
+                # is in an OK range
+                if ( ( `echo " $frange_perc < 0   " | bc` ) || \
+                     ( `echo " $frange_perc > 100 " | bc` ) ) then
+                    echo "** ERROR: bad olay percentile: $frange_perc."
+                    echo "   Must be [0, 100]."
+                    goto BAD_EXIT
+                endif
+            endif
+
+            if ( $MODE_4D ) then
+                # utilized perc val is max of the 3 sep volumes at
+                # that perc
+                set frange = "$BIGNEG"
+                foreach jjj ( `seq 1 1 3` ) 
+                    set vvv = `3dBrickStat  $olay_nz          \
+                               -percentile ${frange_perc} 1 ${frange_perc} \
+                                "${opre4d}_${jjj}.nii.gz"`
+                    if ( `echo " $vvv[2] > $frange " | bc` ) then
+                        set frange = "$vvv[2]"
+                    endif
+                end
+                # and check
+                if ( `echo " $BIGNEGp1 > $frange " | bc` ) then
+                    echo "** ERROR: Badness in make 4D percentile table."
+                    echo "   Does olay have very large, negative values?"
+                    goto BAD_EXIT
+                endif
+            else
+                # match more with GUI behavior, if user enters nothing
+
+                # [PT: July 27, 2018] need to use subbb[2] brick
+                # selector for olay percentile if user has entered
+                # it
+                if ( `echo " ${subbb[2]} > -1 " | bc` ) then
+                    set vvv = `3dBrickStat  $olay_nz          \
+                               -percentile ${frange_perc} 1 ${frange_perc} \
+                               "$read_dir/${read_olay}[${subbb[2]}]"`
+                else
+                    set vvv = `3dBrickStat  $olay_nz          \
+                               -percentile ${frange_perc} 1 ${frange_perc} \
+                               $read_dir/$read_olay`
+                endif
+                set frange  = "$vvv[2]"
+            endif
+
+            echo "++ For olay, the ${frange_perc}%ile value leads to"
+            echo "   --> upper range value: $frange"
+        endif
+    endif
+
+    # Calculate numbers of slices in each direction, if not given by user.
+    # Take number of mont wins plus a couple to calculate.
+    @  Nwin  = $mx * $my
+
+    # silly stuff to deal with orientation
+    set ori  = `3dinfo -orient "$ulay"`
+    set ori0 = `echo $ori | awk '{print substr($0,1,1)}'`
+    set ori1 = `echo $ori | awk '{print substr($0,2,1)}'`
+    set ori2 = `echo $ori | awk '{print substr($0,3,1)}'`
+    set all_ori = ( $ori0 $ori1 $ori2 )
+
+    #### [PT: Oct 18, 2018] this stuff now moved to separate prog
+    #### "@djunct_template_focuser" because it will be needed more
+    #### than once.
+
+    #set order  = ()
+    #foreach oo ( $all_ori )
+    #    foreach i ( `seq 1 1 ${#listori}` )
+    #        if ( $oo == "$listori[${i}]" ) then
+    #            set order  = ( $order ${listind[$i]} )
+    #            break
+    #        endif
+    #    end
+    #end
+    #echo "++ Cryptic info: $ori -> $all_ori -> $order"
+    #
+    #echo "++ Dimensions (xyzt): $Dim"
+    #
+    #foreach i ( `seq 1 1 3` )
+    #    if ( $gapord[$order[$i]] <= 0 ) then
+    #        @ gapord[$order[$i]] = $Dim[$i] / ( $Nwin )
+    #        if ( $gapord[$order[$i]] <= 0 ) then
+    #            @ gapord[$order[$i]] = 1
+    #        endif
+    #    endif
+    #end
+    ## -----------------------------------------------------------------
+
+    # [PT: Nov 6, 2018] we only want this set here for 3D; for 4D,
+    # this was set above to be 1 1 1
+    if ( $MODE_4D == 0 ) then
+
+        if ( $USER_GAPORD == 0 ) then
+            # + also, if "-box_focus_slices" is on, then this gets
+            #   recalculated just below, for the refbox dset
+            set gapord = `@djunct_slice_space -nwin $Nwin -inset "$ulay"`
+        endif
+    endif
+
+    echo "++ Dimensions (xyzt): $Dim"
+    echo "++ (initial) Slice spacing ordered (x,y,z) is:  $gapord"
+
+    # These need to reflect the order of the original.  Ugh, annoying
+    # conditions.
+    if ( $USER_COORS == 1 ) then
+        if ( "$coor_type" == "SET_IJK" ) then
+            echo "++ Will have user's chosen: $coor_type $coors"
+        else if ( "$coor_type" == "SET_DICOM_XYZ" ) then
+            echo "++ Will have user's chosen: $coor_type $coors"
+        else
+            echo "** ERROR: unknown coor_type somehow?: $coor_type"
+            goto BAD_EXIT
+        endif
+    else if ( $USER_COORS == 2 ) then
+
+        # [PT: Jan 28, 2019] special keywords, to flag using mask of
+        # ulay or olay as refbox
+        if ( "$refbox" == "AMASK_FOCUS_ULAY" ) then
+            # henceforth, the value of this variable is that of the
+            # newly made mask, and it behaves like normal refbox
+            # input; note that even if the ulay gets edge-ified, we
+            # still use the *original* input ulay here.
+            set refbox = "${read_dir}/AMASK_FOCUS_ULAY.nii"
+            3dAutomask                      \
+                -q                          \
+                -clfrac 0.2                 \
+                -prefix ${refbox}           \
+                "${ulay_refbox}"
+
+        else if ( "$refbox" == "AMASK_FOCUS_OLAY" ) then
+
+            # henceforth, the value of this variable is that of the
+            # newly made mask, and it behaves like normal refbox input
+            set refbox = "${read_dir}/AMASK_FOCUS_OLAY.nii"
+            3dAutomask                      \
+                -q                          \
+                -clfrac 0.2                 \
+                -prefix ${refbox}           \
+                "$olay"
+        endif
+
+        # [PT: Mar 15, 2019] if the grids of the refbox and ulay are
+        # different, then we need to resample the refbox to match with
+        # ulay for purposes of spacing slices.
+        set samegrid_ulay_refbox = `3dinfo -same_grid "$ulay" "$refbox"`
+        if ( "${samegrid_ulay_refbox[1]}" == "0" ) then
+            echo "++ Resample refbox to match ulay"
+            set refbox_res = "${read_dir}/refbox_res.nii"
+            3dresample                   \
+                -prefix "${refbox_res}"  \
+                -master "${ulay}"        \
+                -input  "${refbox}"      \
+                -rmode  NN
+            set refbox = "${refbox_res}"
+        endif
+
+        # [PT: Nov 20, 2018] Still make a box and get the coors from
+        # its center, but don't clusterize at all (in case vals are
+        # neg or something), and also don't get coordinates from
+        # here-- use the montage-considerate ones just below
+        set tfile = "${read_dir}/ulay_box_0.nii"
+        3dAutobox                 \
+            -prefix "$tfile"      \
+            -noclust              \
+            -input  "$refbox"
+
+        # ... also use the refbox to redefine gapord
+        set gapord = `@djunct_slice_space -nwin $Nwin -inset "$tfile"`
+
+        # [PT: Nov 20, 2018] Use refbox as smaller space within which
+        # to find coords value for montage crosshairs; to make info
+        # compatible with the possibly-different $ulay, have to use
+        # coor_type XYZ
+        set coors = `@djunct_montage_coordinator \
+                        -inset "$tfile"          \
+                        -montx $mx -monty $my    \
+                        -out_xyz`
+        set coor_type = "SET_DICOM_XYZ"
+
+        echo "++ How many coors? $#coors"
+        echo "++ Will have the ref box central coors : $coor_type $coors"
+        echo "++ Will have the ref box central gapord: $gapord"
+    else
+
+        set coors = `@djunct_montage_coordinator \
+                        -inset "$ulay"           \
+                        -montx $mx -monty $my    \
+                        -out_ijk`
+        set coor_type = "SET_IJK"
+        echo "++ Will have: $coor_type $coors"
+
+    endif
+
+    # [PT: Oct 21, 2018] output possible bar range (bot and top) and
+    # thr value
+    if ( $SAVE_PBAR == 1 ) then
+        set opbar_file = "${pbar_fname:r}.txt"
+
+        if ( "$pbar_sign" == "+" ) then
+            # Q: frange is never negative, itself??
+            set bot_frange = "0"
+        else
+            set bot_frange = "-$frange"
+        endif
+        
+        ## [PT: May 8, 2019] older pbar info format, byeeeeeee.
+        #echo "$bot_frange    $frange    $thrnew" > "${opbar_file}"
+
+# [PT: May 8, 2019] newer pbar info format, more info [will add ulay/gen info]
+cat << EOF >! "${opbar_file}"
+itemtype     :: CBAR
+cbar         :: "${my_cbar}"
+pbar_fname   :: "${pbar_fname:t}"
+pbar_bot     :: "${bot_frange}"
+pbar_top     :: "${frange}"
+pbar_comm    :: "${pbar_comm}"
+vthr         :: "${thrnew}"
+vthr_comm    :: "${vthr_comm}"
+gen_comm     :: "${gen_comm}"
+ulay_bot     :: "${umin}"
+ulay_top     :: "${umax}"
+ulay_globran :: "${urange}"
+ulay_comm    :: "${ulay_comm}"
+${pbar_for}
+EOF
+
+    endif
+
+    echo "\n------------------- end of optionizing -------------------\n" 
+
+    # -------------------------------------------------------------------
+    # ------------------------- Make virtual frame ----------------------
+
+    # start the X virtual frame buffer on display #xdisplay, a la bob
+
+    # allow user to set extra options, such as "-nolisten inet6", in
+    # case IPv6 is not configured; consider a test like:
+    #     if -d /proc/net && [insert exclamation point] -f /proc/net/if_inet6
+    #        then add: -nolisten inet6
+    #     or maybe if -d /proc/sys/net/ipv6
+    if ( $?AFNI_DRIVE_OPTS_XVFB ) then
+       set opts_xvfb = ( $AFNI_DRIVE_OPTS_XVFB )
+    else
+       set opts_xvfb = ( )
+    endif
+
+    if ( $rrr == 1 ) then ### only need to start once, i.e., if in MODE_4D
+        set ranval = `count -dig 1 1 999999 R1`
+
+        if ( $?xdisplay == 0 ) then
+          set killX     = 1
+          set ntry      = 1
+          set Xnotfound = 1
+          while( $Xnotfound )
+            set xdisplay = `count -dig 1 3 999 R1`
+            if ( -e /tmp/.X${xdisplay}-lock ) continue
+            echo " -- trying to start Xvfb :${xdisplay} $opts_xvfb"
+            Xvfb :${xdisplay} $opts_xvfb -screen 0 1024x768x24 &
+            sleep 1
+            jobs > zzerm.$ranval.txt
+            grep -q Xvfb zzerm.$ranval.txt
+            set Xnotfound = $status
+            \rm -f zzerm.$ranval.txt
+            if ( $Xnotfound == 0 ) break ;
+            @ ntry++
+            if ( $ntry > 99 ) then
+              echo "** ERROR: can't start Xvfb -- exiting"
+              goto BAD_EXIT
+            endif
+          end
+        endif
+
+        setenv DISPLAY :${xdisplay}
+        set OW = "OPEN_WINDOW"
+
+    endif
+
+    # -------------------------------------------------------------------
+    # ---------------- The actual, driven command ----------------------
+
+    if ( $MODE_4D ) then
+
+# commenting out for now
+if ( 0 ) then
+set oechocmd = chauffeur_echo_${rrr}.tcsh
+echo '#\!/bin/tcsh\n' > $oechocmd
+
+echo "# Define all variables used in AFNI drive command." >> $oechocmd
+echo "# NB: this is the [${rrr}]th image of the 4D viewer" >> $oechocmd
+
+echo "set rrr          = "\""${rrr}"\"""  >> $oechocmd
+echo "set read_ulay    = "\""${read_ulay}"\"""  >> $oechocmd
+echo "set read_olay    = "\""${read_olay}"\"""  >> $oechocmd
+echo "set see_olay     = "\""${see_olay}"\"""  >> $oechocmd
+echo "set pbar_sign    = "\""${pbar_sign}"\"""  >> $oechocmd
+echo "set ncolors      = "\""${ncolors}"\"""  >> $oechocmd
+echo "set topval       = "\""${topval}"\"""  >> $oechocmd
+echo "set my_cbar      = "\""${my_cbar}"\"""  >> $oechocmd
+echo "set XXX_NPANE    = "\""${XXX_NPANE}"\"""  >> $oechocmd
+echo "set com_pbar_str = "\""${com_pbar_str}"\"""  >> $oechocmd
+echo "set subbb        = ( ${subbb} )"  >> $oechocmd
+echo "set com_ulay_str = "\""${com_ulay_str}"\"""  >> $oechocmd
+echo "set frange       = "\""${frange}"\"""  >> $oechocmd
+echo "set thrnew       = "\""${thrnew}"\"""  >> $oechocmd
+echo "set thrflag      = "\""${thrflag}"\"""  >> $oechocmd
+echo "set olay_alpha   = "\""${olay_alpha}"\"""  >> $oechocmd
+echo "set olay_boxed   = "\""${olay_boxed}"\"""  >> $oechocmd
+echo "set func_resam   = "\""${func_resam}"\"""  >> $oechocmd
+echo "set crossh       = "\""${crossh}"\"""  >> $oechocmd
+echo "set xh_gap       = "\""${xh_gap}"\"""  >> $oechocmd
+echo "set OW           = "\""${OW}"\"""  >> $oechocmd
+echo "set opac         = "\""${opac}"\"""  >> $oechocmd
+echo "set butpress     = "\""${butpress}"\"""  >> $oechocmd
+echo "set mx           = "\""${mx}"\"""  >> $oechocmd
+echo "set my           = "\""${my}"\"""  >> $oechocmd
+echo "set mgap         = "\""${mgap}"\"""  >> $oechocmd
+echo "set mcolor       = "\""${mcolor}"\"""  >> $oechocmd
+echo "set gapord       = ( ${gapord} )"  >> $oechocmd
+echo "set ppord        = ( ${ppord} )"  >> $oechocmd
+echo "set pord         = ( ${pord} )"  >> $oechocmd
+echo "set acropx       = ( ${acropx} )"  >> $oechocmd
+echo "set acropy       = ( ${acropy} )"  >> $oechocmd
+echo "set coor_type    = "\""${coor_type}"\"""  >> $oechocmd
+echo "set coors        = ( ${coors} )"  >> $oechocmd
+echo "set ftype        = "\""${ftype}"\"""  >> $oechocmd
+echo "set odir         = "\""${odir}"\"""  >> $oechocmd
+echo "set impref       = "\""${impref}"\"""  >> $oechocmd
+echo "set bufac        = "\""${bufac}"\"""  >> $oechocmd
+echo "set do_quit      = "\""${do_quit}"\"""  >> $oechocmd
+echo "set read_dir     = "\""${read_dir}"\"""  >> $oechocmd
+
+# [PT: Aug 26, 2019] have OPEN_WINDOW be nearly the first thing done,
+# before values are calc'ed for ranges---thanks, RWC
+echo '# the afni drive command itself' >> $oechocmd
+echo '\
+afni -q -no1D ${XXX_NPANE} -noplugins -no_detach  -echo_edu           \\\
+     -com "SWITCH_UNDERLAY ${read_ulay}"                              \\\
+     -com "SWITCH_OVERLAY  ${read_olay}"                              \\\
+     -com "SEE_OVERLAY     ${see_olay}"                               \\\
+     -com "$OW ${ppord[$rrr]}image opacity=${opac} ${butpress}        \\\
+            mont=${mx}x${my}:${gapord[3]}:${mgap}:${mcolor}           \\\
+            crop=${acropx[1]}:${acropx[2]},${acropy[1]}:${acropy[2]}" \\\
+     -com "SET_PBAR_ALL    ${pbar_sign}${ncolors} $topval $my_cbar"   \\\
+     -com "$com_pbar_str"                                             \\\
+     -com "SET_SUBBRICKS   ${subbb}"                                  \\\
+     -com "$com_ulay_str"                                             \\\
+     -com "SET_FUNC_RANGE  ${frange}"                                 \\\
+     -com "SET_THRESHNEW   $thrnew $thrflag"                          \\\
+     -com "SET_FUNC_ALPHA  $olay_alpha"                               \\\
+     -com "SET_FUNC_BOXED  $olay_boxed"                               \\\
+     -com "SET_FUNC_RESAM  ${func_resam}.${func_resam}"               \\\
+     -com "SET_XHAIRS      ${crossh}"                                 \\\
+     -com "SET_XHAIR_GAP   ${xh_gap}"                                 \\\
+     -com "$coor_type $coors"                                         \\\
+     -com "SAVE_${ftype} ${ppord[$rrr]}image                          \\\
+            ${odir}/${impref}.${pord[$rrr]}                           \\\
+            blowup=${bufac}"                                          \\\
+     -com "${do_quit}"                                                \\\
+     "${read_dir}"' >> $oechocmd
+endif
+
+# the command run with xvfb; same as above but different spacing; at
+# some point just run via the command script with xvfb
+# [PT: Aug 26, 2019] have OPEN_WINDOW be nearly the first thing done,
+# before values are calc'ed for ranges---thanks, RWC
+        afni -q -no1D ${XXX_NPANE} -noplugins -no_detach  -echo_edu         \
+             -com "SWITCH_UNDERLAY ${read_ulay}"                            \
+             -com "SWITCH_OVERLAY  ${read_olay}"                            \
+             -com "SEE_OVERLAY     ${see_olay}"                             \
+             -com "$OW ${ppord[$rrr]}image opacity=${opac} ${butpress}      \
+                    mont=${mx}x${my}:${gapord[3]}:${mgap}:${mcolor}         \
+                    crop=${acropx[1]}:${acropx[2]},${acropy[1]}:${acropy[2]}" \
+             -com "SET_PBAR_ALL    ${pbar_sign}${ncolors} $topval $my_cbar" \
+             -com "$com_pbar_str"                                           \
+             -com "SET_SUBBRICKS   ${subbb}"                                \
+             -com "$com_ulay_str"                                           \
+             -com "SET_FUNC_RANGE  ${frange}"                               \
+             -com "SET_THRESHNEW   $thrnew $thrflag"                        \
+             -com "SET_FUNC_ALPHA  $olay_alpha"                             \
+             -com "SET_FUNC_BOXED  $olay_boxed"                             \
+             -com "SET_FUNC_RESAM  ${func_resam}.${func_resam}"             \
+             -com "SET_XHAIRS      ${crossh}"                               \
+             -com "SET_XHAIR_GAP   ${xh_gap}"                               \
+             -com "$coor_type $coors"                                       \
+             -com "SAVE_${ftype} ${ppord[$rrr]}image                        \
+                    ${odir}/${impref}.${pord[$rrr]}                         \
+                    blowup=${bufac}"                                        \
+             -com "${do_quit}"                                              \
+             "${read_dir}"
+    else
+
+    # [PT: Sep 21, 2021] By default, view all planes, but user can turn
+    # some off, too.  This will be useful for the APQC, to populate fewer
+    # images in the QC_${subj}/ output dirs
+    set view_planes = ( )
+    if ( ${DO_AXI} ) then
+        set view_planes = ( ${view_planes:q} -com "SAVE_${ftype} axialimage    ${odir}/${impref}.axi blowup=${bufac}" )
+    endif
+    if ( ${DO_SAG} ) then
+        set view_planes = ( ${view_planes:q} -com "SAVE_${ftype} sagittalimage ${odir}/${impref}.sag blowup=${bufac}" )
+    endif
+    if ( ${DO_COR} ) then
+        set view_planes = ( ${view_planes:q} -com "SAVE_${ftype} coronalimage  ${odir}/${impref}.cor blowup=${bufac}" )
+    endif
+
+# commenting out for now
+if ( 0 ) then
+set oechocmd = chauffeur_echo.tcsh
+echo '#\!/bin/tcsh\n' > $oechocmd
+
+echo "# define all variables used in AFNI drive command" >> $oechocmd
+
+echo "set read_ulay    = "\""${read_ulay}"\"""  >> $oechocmd
+echo "set read_olay    = "\""${read_olay}"\"""  >> $oechocmd
+echo "set see_olay     = "\""${see_olay}"\"""  >> $oechocmd
+echo "set pbar_sign    = "\""${pbar_sign}"\"""  >> $oechocmd
+echo "set ncolors      = "\""${ncolors}"\"""  >> $oechocmd
+echo "set topval       = "\""${topval}"\"""  >> $oechocmd
+echo "set my_cbar      = "\""${my_cbar}"\"""  >> $oechocmd
+echo "set XXX_NPANE    = "\""${XXX_NPANE}"\"""  >> $oechocmd
+echo "set com_pbar_str = "\""${com_pbar_str}"\"""  >> $oechocmd
+echo "set subbb        = ( ${subbb} )"  >> $oechocmd
+echo "set com_ulay_str = "\""${com_ulay_str}"\"""  >> $oechocmd
+echo "set frange       = "\""${frange}"\"""  >> $oechocmd
+echo "set thrnew       = "\""${thrnew}"\"""  >> $oechocmd
+echo "set thrflag      = "\""${thrflag}"\"""  >> $oechocmd
+echo "set olay_alpha   = "\""${olay_alpha}"\"""  >> $oechocmd
+echo "set olay_boxed   = "\""${olay_boxed}"\"""  >> $oechocmd
+echo "set func_resam   = "\""${func_resam}"\"""  >> $oechocmd
+echo "set crossh       = "\""${crossh}"\"""  >> $oechocmd
+echo "set xh_gap       = "\""${xh_gap}"\"""  >> $oechocmd
+echo "set OW           = "\""${OW}"\"""  >> $oechocmd
+echo "set opac         = "\""${opac}"\"""  >> $oechocmd
+echo "set butpress     = "\""${butpress}"\"""  >> $oechocmd
+echo "set mx           = "\""${mx}"\"""  >> $oechocmd
+echo "set my           = "\""${my}"\"""  >> $oechocmd
+echo "set mgap         = "\""${mgap}"\"""  >> $oechocmd
+echo "set mcolor       = "\""${mcolor}"\"""  >> $oechocmd
+echo "set gapord       = ( ${gapord} )"  >> $oechocmd
+echo "set scropx       = ( ${scropx} )"  >> $oechocmd
+echo "set scropy       = ( ${scropy} )"  >> $oechocmd
+echo "set ccropx       = ( ${ccropx} )"  >> $oechocmd
+echo "set ccropy       = ( ${ccropy} )"  >> $oechocmd
+echo "set acropx       = ( ${acropx} )"  >> $oechocmd
+echo "set acropy       = ( ${acropy} )"  >> $oechocmd
+echo "set coor_type    = "\""${coor_type}"\"""  >> $oechocmd
+echo "set coors        = ( ${coors} )"  >> $oechocmd
+echo "set ftype        = "\""${ftype}"\"""  >> $oechocmd
+echo "set odir         = "\""${odir}"\"""  >> $oechocmd
+echo "set impref       = "\""${impref}"\"""  >> $oechocmd
+echo "set bufac        = "\""${bufac}"\"""  >> $oechocmd
+echo "set do_quit      = "\""${do_quit}"\"""  >> $oechocmd
+echo "set read_dir     = "\""${read_dir}"\"""  >> $oechocmd
+
+cat <<EOF >> $oechocmd
+
+set view_planes = ( )
+if ( ${DO_AXI} ) then
+    set view_planes = ( \${view_planes:q} -com "SAVE_\${ftype} axialimage    \${odir}/\${impref}.axi blowup=\${bufac}" )
+endif
+if ( ${DO_SAG} ) then
+    set view_planes = ( \${view_planes:q} -com "SAVE_\${ftype} sagittalimage \${odir}/\${impref}.sag blowup=\${bufac}" )
+endif
+if ( ${DO_COR} ) then
+    set view_planes = ( \${view_planes:q} -com "SAVE_\${ftype} coronalimage  \${odir}/\${impref}.cor blowup=\${bufac}" )
+endif
+
+EOF
+
+
+# [PT: Aug 26, 2019] have OPEN_WINDOW be nearly the first thing done,
+# before values are calc'ed for ranges---thanks, RWC
+echo '# the afni drive command itself' >> $oechocmd
+echo '\
+afni -q -no1D ${XXX_NPANE} -noplugins -no_detach  -echo_edu          \\\
+    -com "SWITCH_UNDERLAY ${read_ulay}"                              \\\
+    -com "SWITCH_OVERLAY  ${read_olay}"                              \\\
+    -com "SEE_OVERLAY     ${see_olay}"                               \\\
+    -com "$OW sagittalimage opacity=${opac} ${butpress}              \\\
+           mont=${mx}x${my}:${gapord[1]}:${mgap}:${mcolor}           \\\
+           crop=${scropx[1]}:${scropx[2]},${scropy[1]}:${scropy[2]}" \\\
+    -com "$OW coronalimage  opacity=${opac} ${butpress}              \\\
+           mont=${mx}x${my}:${gapord[2]}:${mgap}:${mcolor}           \\\
+           crop=${ccropx[1]}:${ccropx[2]},${ccropy[1]}:${ccropy[2]}" \\\
+    -com "$OW axialimage    opacity=${opac} ${butpress}              \\\
+           mont=${mx}x${my}:${gapord[3]}:${mgap}:${mcolor}           \\\
+           crop=${acropx[1]}:${acropx[2]},${acropy[1]}:${acropy[2]}" \\\
+    -com "SET_PBAR_ALL    ${pbar_sign}${ncolors} $topval $my_cbar"   \\\
+    -com "$com_pbar_str"                                             \\\
+    -com "SET_SUBBRICKS   ${subbb}"                                  \\\
+    -com "$com_ulay_str"                                             \\\
+    -com "SET_FUNC_RANGE  ${frange}"                                 \\\
+    -com "SET_THRESHNEW   $thrnew $thrflag"                          \\\
+    -com "SET_FUNC_ALPHA  $olay_alpha"                               \\\
+    -com "SET_FUNC_BOXED  $olay_boxed"                               \\\
+    -com "SET_FUNC_RESAM  ${func_resam}.${func_resam}"               \\\
+    -com "SET_XHAIRS      ${crossh}"                                 \\\
+    -com "SET_XHAIR_GAP   ${xh_gap}"                                 \\\
+    -com "$coor_type $coors"                                         \\\
+    ${view_planes:q}                                                 \\\
+    -com "${do_quit}"                                                \\\
+    "${read_dir}"' >> $oechocmd
+endif
+
+# the command run with xvfb; same as above but different spacing; at
+# some point just run via the command script with xvfb
+# [PT: Aug 26, 2019] have OPEN_WINDOW be nearly the first thing done,
+# before values are calc'ed for ranges---thanks, RWC
+afni -q -no1D ${XXX_NPANE} -noplugins -no_detach  -echo_edu          \
+    -com "SWITCH_UNDERLAY ${read_ulay}"                              \
+    -com "SWITCH_OVERLAY  ${read_olay}"                              \
+    -com "SEE_OVERLAY     ${see_olay}"                               \
+    -com "$OW sagittalimage opacity=${opac} mont=${mx}x${my}:${gapord[1]}:${mgap}:${mcolor} crop=${scropx[1]}:${scropx[2]},${scropy[1]}:${scropy[2]} ${butpress}" \
+    -com "$OW coronalimage  opacity=${opac} mont=${mx}x${my}:${gapord[2]}:${mgap}:${mcolor} crop=${ccropx[1]}:${ccropx[2]},${ccropy[1]}:${ccropy[2]} ${butpress}" \
+    -com "$OW axialimage    opacity=${opac} mont=${mx}x${my}:${gapord[3]}:${mgap}:${mcolor} crop=${acropx[1]}:${acropx[2]},${acropy[1]}:${acropy[2]} ${butpress}" \
+    -com "SET_PBAR_ALL    ${pbar_sign}${ncolors} $topval $my_cbar"   \
+    -com "$com_pbar_str"                                             \
+    -com "SET_SUBBRICKS   ${subbb}"                                  \
+    -com "$com_ulay_str"                                             \
+    -com "SET_FUNC_RANGE  ${frange}"                                 \
+    -com "SET_THRESHNEW   $thrnew $thrflag"                          \
+    -com "SET_FUNC_ALPHA  $olay_alpha"                               \
+    -com "SET_FUNC_BOXED  $olay_boxed"                               \
+    -com "SET_FUNC_RESAM  ${func_resam}.${func_resam}"               \
+    -com "SET_XHAIRS      ${crossh}"                                 \
+    -com "SET_XHAIR_GAP   ${xh_gap}"                                 \
+    -com "$coor_type $coors"                                         \
+    ${view_planes:q}                                                 \
+    -com "${do_quit}"                                                \
+    "${read_dir}"
+
+    endif
+
+end ### ... of BIG loop
+
+# A la bob:  stop Xvfb if we started it ourselves
+if ( $?killX ) kill %1
+
+if ( $DO_CLEAN ) then
+    echo "\n+* Removing temporary image directory '$odir/$tmp_dir'.\n"
+    # AKA $read_dir, at present
+    \rm -rf $odir/$tmp_dir
+else
+    echo "\n++ NOT removing temporary directory '$odir/$tmp_dir'.\n"
+endif
+ 
+goto GOOD_EXIT
+
+# ===========================================================================
+
+# various GOOD/FAIL condition labels follow
+
+SHOW_VERSION:
+
+    echo "$version"
+
+    exit 0
+
+# ---------------------------------- 
+
+SHOW_HELP:
+
+cat <<EOF
+
+OVERVIEW ~1~
+
+This was originally a helper function in processing scripts, to take
+quality control (QC) snapshots automatically.  It wraps around a lot
+(but not all) of the veeery useful "driving AFNI" functionality.  You,
+dear user, can still accomplish all the same with those commands, but
+I just wanted to add in some other calculations, as well, to try to
+make the process of generating montages of images easier.
+
+The purpose of this function is to generate montage images easily and
+quickly while processing-- even if on a remote server (because it uses
+xvfb to make a virtual X11 environment)-- to be able to see what is
+happening in data processing at useful stages: for example, alignment
+of two sets without having to click any buttons in the AFNI GUI.  This
+makes it easier to review batch processing, discuss processing with
+one's boss, prepare for a presentation or publication, etc. For
+example, this program is used in most all of FATCAT's fat_proc_*
+scripts, and even TORTOISE includes calls to it for auto-QC imaging if
+the user has AFNI installed (and suuuurely they should??).
+
+Each call to this function will make a set of montages in the axial,
+coronal and sagittal planes, of user-specified dimensionality.
+
+This function can be used on both 3D and 4D data sets, but for the
+latter, probably @djunct_4d_imager would be much more simple to use.
+
+A lot of the help descriptions for command line options, below, will
+refer to the variables in the "AFNI Driver" doc:
+https://afni.nimh.nih.gov/pub/dist/doc/program_help/README.driver.html
+or variables in the "AFNI Environment" doc:
+https://afni.nimh.nih.gov/pub/dist/doc/program_help/README.environment.html
+References to these are sometimes noted explicitely with "see DR" or
+"see ENV", respectively, and potentially with the particular variable.
+For example, "(see ENV: SAVE_AGIF)".
+
+Added ~July 15, 2018: the capability to select a single slice across a
+4D data set and to view it with both underlay and overlay options
+(hitherto, @djunct_4d_imager had a subset of this capability but only
+for ulays).
+
+++ constructed by PA Taylor (NIMH, NIH, USA).
+
+# =========================================================================
+
+COMMAND OPTIONS ~1~
+
+-help, -h          :see helpfile (here, in fact)
+-hview             :popup help
+-ver               :see version number
+
+-ulay    UUU       :name of underlay dset (required); can be 3D or 4D
+                    set, depending on the circumstances.  For 4D, 
+                    though, strongly consider using "@djunct_4d_imager".
+
+-olay    OOO       :name of overlay dset (opt).
+
+-mode_4D           :for each viewing plane (sag, cor, axi) one slice
+                    is selected across all volumes in a 4D data set
+                    (e.g., using one of the "-set_* .." opts, below).
+                    A montage of those slices is made for any ulay UUU
+                    and olay OOO selected.  Note that with this
+                    option:
+                    + the user cannot thresold by statistic with the 
+                      "-thr_olay_p2stat .." opt (-> because different
+                      stats in a volume might have different conversions)
+                    + when using this opt, at least on of UUU and OOO 
+                      *must* have >1 volumes.
+                    + if one of the ulay/olay volumes has only one brick, 
+                      it will be viewed in the same way across the entire
+                      montage (i.e., as if it were a constant volume
+                      throughout 'time').
+
+-olay_off          :explicitly state you are not using olay (opt);
+                    if not used and no olay is given, then the user
+                    just gets prompted to be sure they haven't 
+                    forgotten the olay dset.
+
+-prefix  PPP       :prefix for output files (required).
+
+-ulay_range UMIN UMAX :specify min and max range values of ulay dset;
+                    if a "%" is on both numbers, then treat the
+                    numerical part of UMIN and UMAX as percentiles
+                    from which to calculate actual values; otherwise,
+                    treat UMIN and UMAX as values directly. (def:
+                    UMIN=0% and UMAX=98%). (See DR: SET_ULAY_RANGE)
+                    Also, see "Special Ulay Range" and "Combining %ile
+                    values..." in NOTES, below.
+
+-ulay_range_nz UMIN UMAX 
+                   :same as the preceding opt, but when "%" is on both
+                    numbers, here the percentiles are only calculated
+                    over the *non-zero* voxels.  The above one is more
+                    in line with the AFNI GUI default behavior for
+                    percentile calcs (though GUI by default works
+                    slicewise). If %ile values are not given, then
+                    both this and the above option produce identical
+                    results for the same UMIN and UMAX values.  (See
+                    DR: SET_ULAY_RANGE) "Special Ulay Range" and
+                    "Combining %ile values..." in NOTES, below.
+
+-ulay_range_am UMIN UMAX 
+                   :same as the preceding opt, but over just *automasked* 
+                    voxels
+
+-ulay_min_fac UMF  :a finesse-full option for further adjusting ulay
+                    grayscale mapping, when applying '-ulay_range_am
+                    ..'.  UMF must be a numerical value in range (0,
+                    1].  This value is used to lower the lower end of
+                    the ulay range (UMIN) by this fraction of the difference
+                    between the upper and lower bounds. Thus, if A and B are
+                    the min and max, respectively, for the ulay, then 
+                    A -> max(0, A-UMF*(B-A)).
+
+-edgy_ulay         :turn the ulay volume into edges (via 3dedge3).  All 
+                    other opt/values like the '-ulay_range*' will refer
+                    to this edge-ified version, *except* for the 
+                    '-box_focus_slices AMASK_FOCUS_ULAY' one, whereby
+                    the original ulay will still be automasked.
+                    If using this option, extensive testing has found
+                    that '-ulay_range_nz 0% 50%' or thereabouts might
+                    be a nice scale for the brightness.
+
+-edge_enhance_ulay EE
+                   :a related (but different) way to enhance edges of
+                    the ulay than '-edgy_ulay': first, calculate
+                    edges, yes, but then use those to scale up the
+                    values in the ulay set *at* edge locations.  The
+                    ulay set value at edges will be multiplied by
+                    '1+EE' (one plus the edge enhancement factor).  A
+                    good value to try using is probably EE=0.5 (and
+                    yes, you always need to provide that EE value).
+
+-globalrange  GR   :specify how lookup range for matching ulay values
+                    is done (def: VOLUME);
+                    (see ENV: AFNI_IMAGE_GLOBALRANGE)
+                    Ignored if '-ulay_range* ..' is set.
+                    Note for '-mode_4D': this setting applies to the
+                    resliced volume (i.e., the one made of one slice
+                    of each subbrick).  See "Combining %ile
+                    values..." in NOTES, below.
+
+-func_range FR     :specify upper value FR of the olay dset to be
+                    matched to top of colorbar (def: calc 98%ile non-zero
+                    value of dset and use that).
+
+-func_range_perc_nz FRP 
+                   :alternative to "-func_range ..."; specify a
+                    percentile value FRP to use to make the upper
+                    value of the olay dset to be matched to the top of
+                    the colorbar (def: calc 98%ile non-zero value of dset 
+                    and use that).  NB: this percentile range is always
+                    among *non-zero* voxel values with this option; see 
+                    below.
+
+-func_range_perc FRP :same as above option, but this is a percentile
+                   among *all* voxel values, not just those with
+                   non-zero values (def: 100).
+
+-func_range_perc_am FRP :same as above option, but this is a percentile
+                   among *automasked* voxel values.
+
+-obliquify  OBL    :the ulay and/or the olay may have been acquired
+                    with oblique coordinate axes; by default, the
+                    viewer shows these data sets in each of their
+                    oblique coordinates. You can choose to apply the
+                    obliquity information to show the data in
+                    different coords, though, via the value of OBL:
+                      "ALL" : apply the obliquity of all entered
+                              dsets (via '3dWarp -deoblique ...')
+                              to show each in scanner coords
+                      "o2u" : send the olay to the ulay's oblique
+                              coords
+                      "ob2u": send the olay and any box_focus to the 
+                              ulay's oblique coords
+                      "u2o" : send the ulay to the olay's oblique
+                              coords
+                      "ub2o": send the ulay and any box_focus to the 
+                              olay's oblique coords
+
+-obl_resam_ulay OIU :if using '-obliquity ..', then you might want to
+                    specify the method of resampling/interpolation for
+                    the dset being re-gridded; this option specifies
+                    that method for the ulay (see below for other
+                    dsets).  Any valid transform opt for 3dWarp is
+                    allowed: cubic, NN, etc.  (def: OIU = wsinc5)
+
+-obl_resam_olay OIO :same as for '-obl_interp_ulay ..', but for the
+                    olay dset (def: OIO = wsinc5)
+
+-obl_resam_box  OIB :same as for '-obl_interp_ulay ..', but for the
+                    '-box_focus_slices ..' dset (def: OIB = wsinc5)
+
+-func_resam  RES   :set the resampling mode for dsets; valid values
+                    are:   NN  Li  Cu  Bk
+                    (def: NN; hey, voxels are voxels). 
+                    (See DR: SET_FUNC_RESAM)
+
+-thr_olay THR      :threshold the olay dset at THR (def: 0, or
+                    unthreshold). If you are thresholding a statistic
+                    brick, then you should see the "-thr_olay_p2stat ..."
+                    option, below. (See DR: SET_THRESHNEW)
+-thrflag   'fff'   :further control of how the THR value is interpreted 
+                    (def: "*"). (See DR: SET_THRESHNEW)
+
+-thr_olay_p2stat PP :an alternative way to specify a voxelwise
+                    threshold (i.e., instead of "-thr_olay ..."), when
+                    thresholding based on a statistic; you can specify
+                    the p-value you want, and using internal header
+                    information, the appropriate value for whatever
+                    statistic is in the statistic brick will be
+                    calculated and applied; you likely need to use
+                    "-set_subbricks i j k" with this, where 'k' would
+                    be the index of the statistic brick (and likely
+                    'j' would be the index of the associated
+                    coefficient/beta brick; 'i' would be the brick of
+                    the underlay volume, and if there is only a single
+                    volume there, it could just be either '0' or
+                    '-1'). And see next option '-thr_olay_pside', below.
+
+-thr_olay_pside SS :(required if using '-thr_olay_p2stat ..') specify the
+                    sidedness of the testing for the conversion of 
+                    p-to-stat.  Valid values for SS at present include:
+                        bisided
+                        2sided 
+                        1sided
+
+-cbar    CCC       :specify a new colorbar, where CCC can be any of the
+                    cbars in the standard AFNI list (def: $my_cbar).
+
+-colorscale_idx_file CI CF 
+                   :another way to specify a colorbar, in this case
+                    one created by the user.  Two arguments must be
+                    input.  First, CI is a colorscale index, which
+                    must be in the (inclusive) range [01, 99], using
+                    two numbers.  (The user has to enter this, because
+                    they might have one/more of these specified
+                    already in their ~/.afnirc file, and hence avoid
+                    duplicating an index.)  Second, CF is the
+                    colorscale filename; the file contains the name of
+                    the colorbar in the first line, and then either 2
+                    columns (values and colors) or 1 column (just
+                    colors; will be evenly spaced).  An example CF is:
+                          Yellow-Lime-Red-Blue
+                            1.0 #ffff00
+                            0.7 limegreen
+                            0.5 #ff0000
+                            0.3 #aa00aa
+                            0.0 #0000ff
+                    Note the types of AFNI-allowed colornames used here
+                    (hex and specific colorname). 
+                    (see ENV: AFNI_COLORSCALE_xx)
+
+-pbar_posonly      :for color range specification, default is to use
+                    both positive and negative values; enter this flag
+                    to use only the positive range. (See DR:
+                    SET_PBAR_ALL)
+
+-pbar_saveim PBS   :if an olay is used, then you can save the color pbar
+                    (=colorbar) that is used in plotting.  PBS is the
+                    name of the file (including path), with allowed
+                    extensions jpg, png, or ppm (def: jpg).  
+                    When this option is used, a text file of the same
+                    name as PBS but with extension 'txt' will also be
+                    saved, which is now (>May 8, 2019) a
+                    dictionary-like file of relevant information:
+                    min/max range, threshold value (0, if no thr is
+                    specified), as well as the ability to store
+                    comments on what those values mean (see
+                    -pbar_comm_* options, below).  See also '-pbar_dim
+                    ..'  for relation pbar optioning.  (See DR:
+                    PBAR_SAVEIM)
+
+-pbar_comm_range PBR :if using '-pbar_saveim ..', one can save a
+                    text/string comment on why the pbar range was
+                    chosen.  For example, '99%ile in mask'.  This will
+                    be output in the PBS.txt file (the value of the
+                    key 'pbar_comm').  Use quotes around on command
+                    line.
+
+-ulay_comm  UC     :if using '-pbar_saveim ..', one can save a
+                    text/string comment on why the ulay range was 
+                    chosen.  For example, '0-25% in volume'. This will
+                    be output in the PBS.txt file (the value of the
+                    key 'ulay_comm').  Use quotes around on command
+                    line.
+
+-pbar_comm_thr PBT :similar to '-pbar_comm_range ..', but for storing a
+                    comment about the selected threshold value. It
+                    will also be stored in the PBS.txt file (the value
+                    of the key 'vthr_comm').
+
+-pbar_comm_gen PBG :similar to '-pbar_comm_range ..', but for storing a
+                    general comment about the pbar or plot or color range. 
+                    It will also be stored in the PBS.txt file (the value
+                    of the key 'gen_comm').
+
+-pbar_for  PF      :tiny option, mainly for APQC purposes.  In the output
+                    txt file of info for the pbar, can state if the pbar
+                    refers to something other than the 'olay' (such as the
+                    'ulay' or 'dset').  (def: olay)
+
+-pbar_dim PBD      :if '-pbar_saveim ..' is used to save the color pbar
+                    of the olay, then this option can specify the
+                    orientation of the colorbar image and its pixel
+                    dimensions. This is done by specifying the
+                    'dimstring' part of the PBAR_SAVEIM input (see DR:
+                    PBAR_SAVEIM).  The default value is '64x512H',
+                    which means to have a vertical cbar that is 64
+                    pixels wide and 512 pixels tall which is then
+                    tipped horizontally on its side; to leave it vertical
+                    just don't put an 'H' at the end. 
+
+-XXXnpane P        :same option as in 'afni', for colorbar control: 
+                    << set the number of 'panes' in the continuous
+                    colorscale to the value 'P', where P is an even
+                    integer between 256 and 2048 (inclusive).
+                    Probably will work best if P is an integral
+                    multiple of 256 (e.g., 256, 512, 1024, 2048).
+                    [This option is for the mysterious Dr ZXu.] >>
+                    One use of this option: for ROI atlases with integer
+                    values >255.
+
+-cbar_ncolors NC   :set colorscale mode (def: 99) (See DR:
+                    SET_PBAR_ALL, the 2nd usage case, description
+                    about '99').
+
+-cbar_topval  TOPV :set colorscale mode (def: 1) (See DR:
+                    SET_PBAR_ALL, the 2nd usage case, description
+                    about 'topval').
+                    Now, the value of TOPV could also be a special
+                    keyword, 'EMPTY' (yes, written in all caps), which
+                    gives the same behavior as making TOPV the empty
+                    "", but makes scripting easier (not needing to
+                    pass double quotes in shell variables...).  This
+                    is probably only useful if defining a discrete
+                    colorbar (see Examples).
+
+-opacity   OO      :enter an "opacity factor" for the olay, where OO is 
+                    an integer in the interval [0, 9], with the 9 being
+                    opaque (see DR).
+
+-blowup  BB        :enter a "blowup factor", where BB is an integer 
+                    in the interval [1, 8].  Increases spatial resolution
+                    in the output by a factor of BB (see DR; def: 2).
+
+-set_xhairs XX     :specify type and/or existence of crosshairs in the
+                    image (see DR: SET_XHAIRS).
+
+-set_xhair_gap GG  :specify gap in the crosshairs to the specified number
+                    of pixels GG (see DR: SET_XHAIR_GAP).
+
+-delta_slices DS DC DA :when montaging, (DS, DC, DA) is the integer
+                     number of slices to use as spacing between views
+                     along the (sag, cor, axi) axes, respectively
+                     (def: automatically calculate to ~evenly fit the
+                     number of selected montage slices along this
+                     axis).  (See DR: "mont=PxQ:R"; basically, each D?
+                     is the 'R' value along the given axis).  Users
+                     can specify a delta_slice value along *some* axis
+                     and leave other(s) to be chosen automatically, by
+                     specifying a D? value >0 for their own value, and
+                     given any other D? value -1.  For example:
+                      -delta_slices 40 -1 -1
+                     would specify every 40th slice along the sag axis, 
+                     while the cor and axi spacing would be automatically 
+                     calculated.
+
+-set_subbricks i j k :for 3D image viewing, specify subbricks being
+                    viewed in the ulay, olay and threshold dsets (def:
+                    "-1 -1 -1", which means ignore these values).
+                    This is the way to specify different overlay and
+                    threshold subbricks for displaying, such as using
+                    the "beta" or "coefficient" for color and the
+                    "statistic" as the threshold level.  (See DR:
+                    SET_SUBBRICKS)
+
+-save_ftype  FTYPE :type of file as which to save images; key types are
+                    listed in the Driver description (def: PNG) (See
+                    DR: SAVE_ALLJPEG, SAVE_ALLPNG, SAVE_MPEG,
+                    SAVE_AGIF, SAVE_JPEG, SAVE_PNG; for which the user
+                    would enter just the non-"SAVE_" part, just as
+                    "PNG", "MPEG", etc.)
+
+-set_ijk  II JJ KK :Set the controller coordinates to the given
+                    triple, which are integer index selectors along
+                    the three spatial axes.  This essentially
+                    specifies the middle image in the montage (def:
+                    for each coordinate, choose middle slice along
+                    axis).
+-set_dicom_xyz XX YY ZZ :Set the controller coordinates to the given
+                    triple, which are the (x, y, z) coordinates in
+                    AFNI's favorite RAI DICOM notation.  (def: for
+                    each coordinate, choose middle slice along axis).
+
+-box_focus_slices REF :Use a dset REF to define a narrow range of
+                    where slices cover. This is done by autoboxing the
+                    REF dset (with '3dAutobox -noclust', so if it
+                    hasn't been masked already, it's not useful), and
+                    using the midpoint of the box's FOV as the new
+                    center; also, the montage slices are chosen to be
+                    evenly spread within the box FOV, though they
+                    *still* show the unboxed dataset.  This is
+                    different than cropping (see '-crop*' below for
+                    that); this is only to try to avoid showing empty
+                    slices and such. If the ulay is a template dset,
+                    you might make REF that template.  Just for '3D'
+                    dset viewing
+                    NEW: enter a keyword for the argument REF,
+                    instructing the program to make a focus box from
+                    the ulay or olay: AMASK_FOCUS_ULAY or
+                    AMASK_FOCUS_OLAY, respectively.  Mask is just made
+                    using default 3dAutomask (with '-clfrac 0.2', to
+                    err on the side of inclusivity)-- may not be
+                    perfect, but provide some useful focus while
+                    hopefully not cutting off regions that should
+                    still be included.
+                    NB: if your olay dset is a mask and you want to use
+                    it for this box-focusing, then make REF be the name
+                    of the file itself, not AMASK_FOCUS_OLAY, because
+                    automasking a mask does weird things.
+
+-clusterize "-opt0 v0 -opt1 v1 ..."  
+                   :input a set of options "-opt0 v0 -opt1 v1 ..." for
+                    3dClusterize to use internally, so that the
+                    overlay dataset is clusterized.  Can be combined
+                    with Alpha+Boxed.  See the "Clusterize
+                    capabilities" description in the NOTES below for
+                    what options go where when clusterizing.  Examples
+                    are also included below.
+
+-clust_wami CW     :if using '-clusterize ..', then this option can be used
+                    to run AFNI's whereami program on the results.  The user
+                    provides the name of an allowed atlas for reference
+                    (see the top of whereami's help), and a text file
+                    reporting the relative overlap of each ROI will be 
+                    produced in the outputs.  
+
+-montx  MX         :in creating a montage, the number of image panels in
+                    a row, i.e., the number of columns (def: 3); the
+                    total number of panels per axis is: MX*MY (see
+                    below "-monty ...").  (See DR: "mont=PxQ:R";
+                    basically, MX is the 'P' value).
+
+-monty  MY         :in creating a montage, the number of image panels in
+                    a column, i.e., the number of rows (def: 3); the
+                    total number of panels per axis is: MX*MY (see
+                    above "-montx ...").  (See DR: "mont=PxQ:R";
+                    basically, MY is the 'Q' value).
+
+-montgap  MG       :in creating a montage, one can put a border (or "gap")
+                    between the image panels.  This is specified as a
+                    number of pixels with which to insert between images
+                    (def: 0).  (See DR: "mont=PxQ:R" additional option 
+                    ":G:C";  basically, MG is the 'G' value).
+
+-montcolor  MC     :in creating a montage, one can put a border (or "gap")
+                    between the image panels (see "-montgap", above);
+                    one can also specify a color for this gap, using
+                    the present option (def: 'black').  (See DR:
+                    "mont=PxQ:R" additional option ":G:C"; basically,
+                    MC is the 'C' value).
+
+-button_press BP   :simulate a button press for one of the following
+                    buttons in an image viewer window:
+                       ${all_butpress}
+                    You can enter more than one of these button presses here
+                    *if* you put all of them within a single pair of quotes, 
+                    such as:  -button_press "Colr Swap".  Note that the order
+                    of the button presses matters.
+                    (See DR: "butpress=name")
+
+-no_cor            :no coronal slice views output (def: this view is shown)
+-no_axi            :no axial slice views output (def: this view is shown)
+-no_sag            :no sagittal slice views output (def: this view is shown)
+                    NB: when '-mode_4D' is on, the sagittal view will ALWAYS
+                    shown; effectively, this opt is then disabled.
+
+-olay_alpha {No|Yes|Linear|Quadratic} 
+                   :In addition to representing olay values as colors
+                    with a threshold, one also apply opacity
+                    information to 'soften' the effect of
+                    thresholding; see DR: SET_FUNC_ALPHA for a
+                    description of this behavior (def: "No", which is
+                    just standard thresholding stuff).
+                    Prodigal functionality returned: one can now
+                    specify whether fading is "Quadratic" (= "Yes",
+                    too, since this is default fading) or "Linear":
+                    that is, how quickly opacity drops off, with the
+                    former being much faster.  At present, a possible
+                    rule of thumb: try Quadratic for individual
+                    results and Linear for group results.
+
+-olay_boxed {No|Yes} :a partner parameter for the fancy alpha-based olay
+                    viewing; put a box around supra-threshold
+                    voxels/clusters. Default value is "No".  (see DR:
+                    SET_FUNC_BOXED)
+
+-image_zoom_nn_no  :the default zoom is set to NN mode, so no smoothing
+                    occurs (see ENV: AFNI_IMAGE_ZOOM_NN).  This option
+                    changes behavior internally to set this variable
+                    to have the value "NO".
+
+-agif_delay AD     :when using "-save_ftype AGIF", this option can be used
+                    to specify the time delay between frames.  Units are
+                    "centi-seconds" = 100ths of seconds (def: 30).
+                    (see ENV: AFNI_AGIF_DELAY)
+
+-left_is_left LIL  :specify explicitly whether image left is dataset left
+                    (LIL -> YES) or image left is dataset right (LIL -> NO)
+                    (def: no value given).
+                    (see ENV: AFNI_LEFT_IS_LEFT)
+
+-left_is_posterior LIP  :specify explicitly whether image left is dataset 
+                    posterior (LIP -> YES) or image left is dataset anterior 
+                    (LIP -> NO) (def: no value given).
+                    (see ENV: AFNI_LEFT_IS_POSTERIOR)
+
+-crop_axi_x CAX1 CAX2,
+-crop_axi_y CAY1 CAY2 :crop axial image(s) to be between voxels CAX1 and
+                    CAX2 along the x-axis (inclusive) and CAY1 and CAY2 
+                    along the y-axis. These values are integer row and 
+                    column numbers.
+                    (See DR: "crop=x1:x2,y1:y2"; CAX1 is x1, etc.;
+                    def: no cropping -- CAX1=0, CAX2=0, etc.)
+-crop_sag_x CSX1 CSX2,
+-crop_sag_y CSY1 CSY2 :same as other '-crop_*' above, but for sagittal
+                    images.
+-crop_cor_x CCX1 CCX2,
+-crop_cor_y CCY1 CCY2 :same as other '-crop_*' above, but for coronal
+                    images.
+
+-zerocolor ZC      :Change the default 'background' ulay color of zero
+                    values (def: "Black"); ZC can be set to any allowed
+                    AFNI value (see ENV: AFNI_IMAGE_ZEROCOLOR).  This 
+                    option is mainly for G. Chen, who flaunts convention
+                    whenever possible.
+
+-label_mode    LM  :control labels, ON/OFF and location (def: 1);
+                    (see ENV: AFNI_IMAGE_LABEL_MODE)
+-label_size    LS  :control labels, size (def: 3);
+                    (see ENV: AFNI_IMAGE_LABEL_SIZE)
+-label_color   LC  :control labels, color (def: white);
+                    (see ENV: AFNI_IMAGE_LABEL_COLOR)
+-label_setback LB  :control labels, offset from edge (def: 0.01);
+                    (see ENV: AFNI_IMAGE_LABEL_SETBACK)
+-label_string LSTR :control labels, string automatically appended
+                    to the slice (def: "");
+                    (see ENV: AFNI_IMAGE_LABEL_STRING)
+
+-image_label_ijk   :If this option is used, then the image label will
+                    be based on the slice index rather than the
+                    spatial (mm) coordinate; thanks, Bob.
+                    (see ENV: AFNI_IMAGE_LABEL_IJK)
+
+-pass              :does nothing (no, really).
+
+-no_clean          :by default, the temporary directory of copying
+                    files and such is now (as of July 8, 2018)
+                    removed; using this option means that that working
+                    directory should *not* be removed.
+
+-do_clean          :Use this option to remove the temporary directory
+                    of copied/intermediate files. (As of July 8, 2019,
+                    this is the new default behavior.  Thus, this opt
+                    is only here for backwards compatability).
+
+-echo              :run script verbosely (with 'set echo' executed)
+
+# ========================================================================
+
+NOTES ~1~
+
+Description of "4D mode" ~2~
+
+    In this case the assumption/requirement is that you have at least
+    one 4D data set to look at; for each viewing plane, one slice is
+    selected across time for viewing.  For each viewing plane, the
+    slices across time are spatially concatenated to form a single,
+    temporary 3D dset (a "planar" or "slicewise" volume), which is
+    what is actually put into AFNI to generate images in that relevant
+    plane.  How percentile values are calculated is discussed in the
+    next "NOTE", below.
+
+    When both an overlay and underlay are used, the usual resampling
+    rules of the AFNI GUI apply (and user can specify the resampling
+    option with "-func_resam .."). 
+
+    If one volume is 4D and one is 3D (e.g., for checking alignment
+    across time), then the relevant single slice of the 3D volume is
+    basically just repeated in a given plane.
+
+
+Combining %ile values "-mode_4D" for olay and/or ulay ~2~
+
+    When using a percentile to set a range in 4D mode for either ulay
+    (e.g., "-ulay_range* ..") or olay (e.g., "-func_range_perc_nz*
+    .."), that percentile is calculated for each of the three "planar"
+    or "slicewise" volumes, and then the *max* of those three numbers
+    is applied with the colorbar.
+
+    If one of your ulay or olay in 4D mode is just a 3D volume and you
+    want a percentile related to the whole thing, you can calculate
+    any of those values beforehand using "3dBrickStat -percentile ..",
+    and then apply those.
+
+
+Special Ulay Range ~2~
+
+    If UMAX is a percentile >100%, then what happens is this:
+        the ${umax_magic}%ile value in the dset is calculated, and the
+        result is multiplied by (UMAX/${umax_magic}); the ulay dataset
+        is 'ceilinged' at the ${umax_magic}%ile value, and its upper
+        range is set to UMAX/${umax_magic}.
+
+    The purpose of this madness?  To give a nice, controllably darkened
+    ulay (esp. when that is an anatomical).  My suspicion is that
+    having a darker-than-usual ulay is nice to allow the overlay colors
+    to show up better.  I am currently of the opinion that a UMAX of
+    around ~150-190% is a nice value (and UMIN can be set to 0%)
+
+Clusterize capabilities (with alpha+boxed) ~2~
+
+It is now possible to include both Clusterizing and the Alpha+Boxed
+functionality from the GUI in @chauffeur_afni.  A few rules for using
+this:
+
+    + There is a new '-clusterize ..' option, where users would put
+      3dClusterize options for the clustering (e.g., '-NN ..' and
+      '-clust_nvox ..').  But not *everything goes here; in fact, most
+      other cluster-necessary information is provided through existing
+      @chauffeur_afni options, listed below.
+
+      - Put the utilized Clusterize options in quotes, so it will be
+        read in as a single opt.
+
+    + The Olay and Thr volumes (for visualizing and thresholding,
+      respectively) are specified with the '-set_subbricks ..'
+      (instead of including '-idat ..' and '-ithr ..' via '-clusterize ..').
+
+    + The threshold value is specified with either '-thr_olay ..' or
+      '-thr_olay_pside ..' (instead of including it after sidedness
+      via '-clusterize ..').  3dClusterize's 'within_range'
+      functionality cannot be used here.
+
+      - 1sided thresholding is only to the right side.
+
+      - If the user selects "1sided" thresholding, then '-pbar_posonly' 
+        will automatically be switched on.
+
+    + Sidedness must *always* be included, using '-thr_olay_pside ..', 
+      even if not converting a p-value. 
+
+    + The Clusterize report is output in the same place as the final
+      images, as PREFIX_clust_rep.txt.
+
+The ability to run 'whereami' on the output clusters is also now
+included, via the '-clusterize_wami ..' option.  This leads to a
+report of the overlap of each cluster in the cluster map with the
+specified atlas.  The output text file of information is then:
+PREFIX_clust_whereami.txt.
+
+There are a couple examples of using this functionality, below, in
+EXAMPLES.
+
+# ========================================================================
+
+TROUBLESHOOTING ~1~
+
+1) Sometimes, people running this program (or others that use it)
+   might see an error involving "/tmp/.X11-unix", such as:
+
+     -- trying to start Xvfb :570
+     [1] 53344
+     _XSERVTransmkdir: ERROR: euid != 0,directory /tmp/.X11-unix will not be created.
+     _XSERVTransSocketUNIXCreateListener: mkdir(/tmp/.X11-unix) failed, errno = 2
+     _XSERVTransMakeAllCOTSServerListeners: failed to create listener for local
+     (EE)
+     Fatal server error:
+     (EE) Cannot establish any listening sockets - Make sure an X server isn't already running(EE)
+
+   The following has appears to be a good solution (NB: it does
+   require having administrative or sudo privileges):
+
+     mkdir /tmp/.X11-unix
+     sudo chmod 1777 /tmp/.X11-unix
+     sudo chown root /tmp/.X11-unix/
+
+   This is described more here:
+     https://afni.nimh.nih.gov/pub/dist/doc/htmldoc/tutorials/auto_image/auto_%40chauffeur_afni.html#troubleshooting
+
+# ========================================================================
+
+EXAMPLES ~1~
+
+ A) Basic vanilla: make a 3x5 montage of just a ulay; there will
+    be 15 slices shown, evenly spaced along each axis, with some
+    labels on the corners.
+
+    @chauffeur_afni                     \
+        -ulay    MY_ULAY.nii.gz         \
+        -prefix  PRETTY_PICTURE         \
+        -montx 5 -monty 3               \
+        -set_xhairs OFF                 \
+        -label_mode 1 -label_size 4     \
+        -do_clean  
+
+
+ B) Make a 3x5 montage of an overlayed data set that has an ROI
+    map, so we want it to be colored-by-integer.  Put the images
+    into a pre-existing directory, SUBDIR/.
+
+    @chauffeur_afni                       \
+        -ulay  MY_ULAY.nii.gz             \
+        -olay  MY_OLAY.nii.gz             \
+        -pbar_posonly                     \
+        -cbar "ROI_i256"                  \
+        -func_range 256                   \
+        -opacity 4                        \
+        -prefix   SUBDIR/PRETTY_PICTURE2  \
+        -montx 5 -monty 3                 \
+        -set_xhairs OFF                   \
+        -label_mode 1 -label_size 4       \
+        -do_clean 
+
+
+ C) Make a 3x5 montage of an overlayed data set that shows the
+    beta coefficients stored in brick [1] while thresholding the
+    associated statistic stored in brick [2] at voxelwise p=0.001, 
+    overlayed on the anatomical volume.
+
+    @chauffeur_afni                       \
+        -ulay  anat.nii.gz                \
+        -olay  stats.nii.gz               \
+        -cbar Plasma                      \
+        -func_range 3                     \
+        -thr_olay_p2stat 0.001            \
+        -thr_olay_pside  bisided          \
+        -set_subbricks -1 1 2             \
+        -opacity 4                        \
+        -prefix   STAT_MAP                \
+        -montx 5 -monty 3                 \
+        -set_xhairs OFF                   \
+        -label_mode 1 -label_size 4       \
+        -do_clean 
+
+  D) Fun way to enter a colorbar-- note all the '-cbar*' options
+     working together here, and the way they are used to make a
+     discrete cbar.  (You might also enjoy the '-colorscale_idx_file ..' 
+     option, as another way to enter your own colorbar; colors
+     entered there are *not* discrete regions, but get blended
+     together.)
+     NB 1: now you can replace the "" with the keyword EMPTY, to make
+           scripting easier (needing to keep quotes around can be a pain).
+     NB 2: the string following cbar probably can*not* be split into
+           multiple lines with continuation-of-line chars.  Mi dispiace.
+
+    @chauffeur_afni                       \
+        -ulay FT_anat+orig.               \
+        -olay FT_anat+orig.               \
+        -func_range_perc 95               \
+        -prefix AAA                       \
+        -pbar_saveim BBB.jpg              \
+        -pbar_posonly                     \
+        -cbar_ncolors 6                   \
+        -cbar_topval ""                   \
+        -cbar "1000=yellow 800=cyan 600=rbgyr20_10 400=rbgyr20_08 200=rbgyr20_05 100=rbgyr20_03 0=none"
+
+  E) Included Clusterizing, with Alpha+Boxed on. Also select the Olay
+     (idat) and Thr (ithr) volumes descriptively, with subbrick labels.
+
+    @chauffeur_afni                                                 \
+        -ulay               anat.nii.gz                             \
+        -olay               stats.nii.gz                            \
+        -cbar               Reds_and_Blues_Inv                      \
+        -clusterize         "-NN 1 -clust_nvox 157"                 \
+        -func_range         3                                       \
+        -set_subbricks      -1 "vis#0_Coef"  "vis#0_Tstat"          \
+        -thr_olay_p2stat    0.001                                   \
+        -thr_olay_pside     bisided                                 \
+        -olay_alpha         Yes                                     \
+        -olay_boxed         Yes                                     \
+        -opacity            7                                       \
+        -prefix             img_e                                   \
+        -montx 3 -monty 3                                           \
+        -set_xhairs OFF                                             \
+        -label_mode 1 -label_size 4                                 \
+        -no_clean
+
+  F) Included Clusterizing, with Alpha+Boxed on, similar to above, but
+     1sided example, and using 'whereami' functionality:
+
+    @chauffeur_afni                                                 \
+        -pbar_posonly                                               \
+        -ulay               anat.nii.gz                             \
+        -olay               stats.nii.gz                            \
+        -cbar               "Spectrum:yellow_to_red"                \
+        -clusterize         "-NN 1 -clust_nvox 157"                 \
+        -clusterize_wami    "MNI_Glasser_HCP_v1.0"                  \
+        -func_range 3                                               \
+        -set_subbricks      -1 1 2                                  \
+        -thr_olay           3.314300                                \
+        -thr_olay_pside     1sided                                  \
+        -olay_alpha         Yes                                     \
+        -olay_boxed         Yes                                     \
+        -opacity            7                                       \
+        -prefix             img_f                                   \
+        -montx 3 -monty 3                                           \
+        -set_xhairs OFF                                             \
+        -label_mode 1 -label_size 4                                 \
+        -no_clean
+
+
+# -------------------------------------------------------------------
+
+EOF
+
+    exit 0
+
+# ---------------------------------- 
+
+FAIL_MISSING_ARG:
+   echo "** missing parameter for option $argv[$ac]"
+   goto BAD_EXIT
+
+# ---------------------------------- 
+
+BAD_EXIT:
+    echo ""
+    echo "++ DONE (bad exit): check for errors"
+    echo ""
+    exit 1
+
+# ---------------------------------- 
+
+GOOD_EXIT:
+    echo ""
+    echo "++ DONE (good exit)"
+    echo "   see: ${odir}/${impref}*"
+    echo ""
+    exit 0

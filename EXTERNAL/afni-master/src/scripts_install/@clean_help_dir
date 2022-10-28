@@ -1,0 +1,254 @@
+#!/bin/tcsh -f
+
+set stat = 0
+set sdir = "$PWD"
+set hdir = `apsearch -afni_help_dir`
+set fout = "/tmp/CHD_`3dnewid -fun`"
+
+if ( ! -d "$hdir") then
+   #Try one more shot
+   cd 
+   set hdir = "$PWD/.afni/help"
+   cd -
+endif
+set pname = `basename $0`
+
+goto PARSE
+RET_PARSE:
+
+cd "$hdir"
+
+\ls -1  | sed -n '/.*help$/p' | \
+   sed 's/\.20[0-9][0-9]_[0-9][0-9]_[0-3][0-9]-[0-9][0-9]_[0-9][0-9]_[0-9][0-9]\.help//g'       | \
+   sort | uniq > $fout
+
+
+# compare each current help output with previous versions
+set nprogs = `wc -l $fout`
+set nprogs = $nprogs[1]
+set ffo = (__new __old)
+set n = 1
+set N_change = 0
+while ($n <= $nprogs)
+   set pname = `sed -n ${n}p $fout`
+   set lcands = `\ls -t ${pname}.*-*.help`
+   if ($#lcands == 0) then
+      echo "Found nothing for $pname"
+   else if ($#lcands > 1) then
+      foreach ii (1 2)
+         sed '/Compile *date/d' $lcands[$ii] | \
+            sed '/.*version.*/d' |  \
+            sed '/.*run-id.*/d' |   \
+            sed '/^ *[A-Z][a-z][a-z] [0-9][0-9] 20[0-9][0-9] *$/d' | \
+            sed '/^ *[Ccompiled.*[A-Z][a-z][a-z] [0-9][0-9] 20[0-9][0-9].*/d' \
+            > $ffo[$ii]
+      end
+      diff $ffo[1] $ffo[2] >& /dev/null
+      if ($status == 0) then
+         if ($quiet != 1) echo "Remove $lcands[2], newer version is the same"
+         @ N_change ++
+         \rm -f $lcands[2]
+      else
+         if ($quiet != 1) echo "$lcands[1] and $lcands[2] differ enough to be kept"
+      endif
+      \rm -f $ffo
+   endif
+   
+   @ n ++ 
+end
+   
+
+# combine command completion files into all_progs.COMP*
+
+set nleft = `ls -1 "$hdir/" | wc -l`
+echo "$N_change redundant help files deleted, $nleft help files left."
+
+# ------------------------------------------------------------
+# combine completion files (and note any failures)
+echo "Combining all command completions into all_progs.COMP(.bash/.zsh)"
+set catstat = 0
+
+cat *.complete > all_progs.COMP
+if ( $status ) @ catstat += 1
+
+cat *.complete.bash > all_progs.COMP.bash
+if ( $status ) @ catstat += 2
+
+# do this for zsh, if the files exist
+if ( -f afni.complete.zsh ) then
+   cat *.complete.zsh > all_progs.COMP.zsh
+   if ( $status ) @ catstat += 4
+endif
+
+# and whine on error
+if ( $catstat ) then
+   echo ""
+   echo "** cat/redirect failure: $catstat"
+   echo "   - this seems to be a macos/Rosetta shell problem, please panic"
+   echo "   - AFNI command option tab completion will probably not work"
+   echo "   - but there are probably larger consequences to worry about"
+   echo ""
+endif
+
+# ------------------------------------------------------------
+# suggest to the user how to apply this, based on $SHELL
+#Get the user's shell type
+if ($shh == '') then
+   set shh = $SHELL:t   
+endif
+if ("$shh" == 'csh' || "$shh" == 'tcsh') then
+   \grep all_progs.COMP ~/.cshrc > & /dev/null
+   set is_set = $status
+   if ($is_set != 0) then
+      echo ""
+      echo "Add the following lines to your ~/.cshrc"
+      echo ''
+      echo ''
+      echo 'set ahdir = `apsearch -afni_help_dir`'
+      echo 'if ( -f $ahdir/all_progs.COMP ) then'
+      echo '   source $ahdir/all_progs.COMP'
+      echo 'endif'
+      echo ''
+      echo ''
+      echo 'Then run from this shell: source ~/.cshrc'
+      echo 'or just open a new shell'
+      echo ''
+   else
+      echo ""
+      echo "For the updates to take effect in this shell, run:"
+      echo "source ~/.cshrc"
+      echo "Otherwise just open a new shell."
+      echo ""
+   endif
+else if ("$shh" == 'bash') then
+   echo "Combining all command completions into all_progs.COMP.bash"
+   \grep all_progs.COMP.bash ~/.bashrc > & /dev/null
+   set is_set = $status
+   if ($is_set != 0) then
+      #http://www.joshstaiger.org/archives/2005/07/bash_profile_vs.html
+      #Have to decide whether to go bashrc/bashprofile...
+      echo ""
+      echo "Add the following lines to your ~/.bashrc"
+      echo ''
+      echo ''
+      echo 'ahdir=`apsearch -afni_help_dir`'
+      echo 'if [ -f "$ahdir/all_progs.COMP.bash" ]'
+      echo 'then'
+      echo '   . $ahdir/all_progs.COMP.bash'
+      echo 'fi'
+      echo ''
+      echo 'Then run from this shell: . ~/.bashrc'
+      echo 'or just open a new shell'
+      echo ''
+   else
+      echo ""
+      echo "For the updates to take effect in this shell, run:"
+      echo ". ~/.bashrc"
+      echo "Otherwise just open a new shell."
+      echo ""
+   endif
+else if ("$shh" == 'zsh') then
+   echo "Combining all command completions into all_progs.COMP.zsh"
+   \grep all_progs.COMP.zsh ~/.zshrc > & /dev/null
+   set is_set = $status
+   if ($is_set != 0) then
+      echo ""
+      echo "Add the following lines to your ~/.zshrc"
+      echo ''
+      echo ''
+      echo 'ahdir=`apsearch -afni_help_dir`'
+      echo 'if [ -f "$ahdir/all_progs.COMP.zsh" ]'
+      echo 'then'
+      echo '   . $ahdir/all_progs.COMP.zsh'
+      echo 'fi'
+      echo ''
+      echo 'Then run from this shell: . ~/.zshrc'
+      echo 'or just open a new shell'
+      echo ''
+   else
+      echo ""
+      echo "For the updates to take effect in this shell, run:"
+      echo ". ~/.zshrc"
+      echo "Otherwise just open a new shell."
+      echo ""
+   endif
+else
+   echo "Not ready to setup completion for shell $shh."
+   echo "Complain to AFNI folks."
+endif
+
+# finished, return and return
+cd "$sdir"
+goto END
+
+# "subroutines", such as option parsing and help output
+
+PARSE:
+   
+   set Narg = $#
+   set quiet = 1
+   set uhdir = ''
+   set shh = ''
+   set cnt = 1
+   while ($cnt <= $Narg)
+      set donext = 1;
+      if ($donext && "$argv[$cnt]" == "-echo") then
+         set echo
+         set donext = 0; goto NEXT     
+      endif
+
+      if ($donext && "$argv[$cnt]" == "-quiet") then
+         set quiet = 1
+         set donext = 0; goto NEXT     
+      endif
+
+      if ($donext && "$argv[$cnt]" == "-verb") then
+         set quiet = 0
+         set donext = 0; goto NEXT     
+      endif
+      
+      if ($donext && ("$argv[$cnt]" == "-h" || "$argv[$cnt]" == "-help")) then
+         goto HELP
+         set donext = 0;    goto NEXT  
+      endif
+      
+      if ($donext == 1) then
+         echo "Error: Option or parameter '$argv[$cnt]' not understood"
+         goto END
+      endif
+      
+      NEXT:
+      @ cnt ++
+   end
+   
+   if ("$uhdir" != '') then
+      set hdir = "$uhdir"
+   endif
+      
+   if ( ! -d "$hdir" ) then
+      echo "Could not find home directory $hdir"
+      goto BEND
+   endif
+   
+goto RET_PARSE
+
+HELP:
+   echo ""
+   echo "$pname is a script to cleanup your $hdir directory."
+   echo "It deletes older help files that differ little from the latest version."
+   echo ""
+   echo "Ziad S. Saad   saadz@mail.nih.gov"
+   echo ""
+   goto END
+
+BEND:
+   echo "Failed"
+   set stat = 1
+   goto END
+   
+END:
+   if ( -f $fout) \rm -f /tmp/CHD_*
+   cd "$sdir"
+   exit $stat
+
+

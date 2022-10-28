@@ -74,11 +74,11 @@ elseif isfield(cfg,'hme_wrk') && cfg.hme_wrk == 2
 elseif isfield(cfg,'fsr_dir') && ~isempty(cfg.fsr_dir)
     lhs_surf_brain.surf_brain =  fs_read_surf([cfg.fsr_dir '/' 'surf' '/' cfg.lhs_nme  '.' cfg.srf_typ]);
     lhs_surf_brain.surf_brain.coords = lhs_surf_brain.surf_brain.vertices;
-    lhs_srf_lbl = fs_read_label([cfg.fsr_dir '/' 'label' '/' cfg.lhs_nme  '.cortex.label']);
+    try lhs_srf_lbl = fs_read_label([cfg.fsr_dir '/' 'label' '/' cfg.lhs_nme  '.cortex.label']); catch; end
     
     rhs_surf_brain.surf_brain =  fs_read_surf([cfg.fsr_dir '/' 'surf' '/' cfg.rhs_nme '.' cfg.srf_typ]);
     rhs_surf_brain.surf_brain.coords = rhs_surf_brain.surf_brain.vertices;
-    rhs_srf_lbl = fs_read_label([ cfg.fsr_dir '/' 'label' '/' cfg.rhs_nme '.cortex.label']);
+    try rhs_srf_lbl = fs_read_label([ cfg.fsr_dir '/' 'label' '/' cfg.rhs_nme '.cortex.label']); catch; end
 else
     lhs_surf_brain.surf_brain =  fs_read_surf(['/home/mmilmcd/data/FSRECONS/fsaverage/' '/' 'surf' '/' cfg.lhs_nme '.' cfg.srf_typ]);
     lhs_surf_brain.surf_brain.coords = lhs_surf_brain.surf_brain.vertices;
@@ -92,8 +92,10 @@ end
 brn_srf{1} = lhs_surf_brain;
 brn_srf{2} = rhs_surf_brain;
 
+if exist('lhs_srf_lbl','var')
 brn_ctx{1} = lhs_srf_lbl;
 brn_ctx{2} = rhs_srf_lbl;
+end
 
 %% Make Colormap
 cfg.fmr_col_map = cellfun(@rgb ,cfg.fmr_col_map,'uni',0);

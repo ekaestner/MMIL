@@ -1,0 +1,56 @@
+#!/bin/tcsh -f
+set noglob
+
+if ("$1" == '' || "$1" == '-h' || "$1" == '-help') then
+	goto USAGE
+endif
+
+#remove path
+set Name = $1:t
+set ext = $Name:e
+if ($ext == "gz" || $ext == "bz2" || $ext == "Z") then 
+   set Name2 = $Name:r
+   set ext = $Name2:e
+endif
+if ("$ext" == "nii") then
+   echo ''
+   goto ENDALL
+endif 
+
+#look for +orig or whatever it is
+echo $Name | grep '+orig' >& /dev/null
+if ($status == 0) then 
+	echo '+orig'
+	goto ENDALL
+endif
+echo $Name | grep '+acpc' >& /dev/null
+if ($status == 0) then 
+	echo '+acpc'
+	goto ENDALL
+endif
+echo $Name | grep '+tlrc' >& /dev/null
+if ($status == 0) then 
+	echo '+tlrc'
+	goto ENDALL
+endif
+
+
+
+goto ENDALL
+
+USAGE:
+	echo "Usage: `basename $0` <Name> ....."
+	echo "example: `basename $0` /Data/stuff/Hello+orig.HEAD"
+	echo "returns the afni view of Name (+orig)" 
+	echo "Wildcards are treated as regular characters:"
+	echo "example: `basename $0` 'AAzst1r*+orig'"
+	echo "returns : +orig"
+	echo ""
+   echo "See also 3dinfo -space"
+   echo ""
+	echo "Ziad Saad (saadz@mail.nih.gov)\012LBC/NIMH/ National Institutes of Health, Bethesda Maryland\012"
+   echo ""
+   goto ENDALL
+
+ENDALL:
+unset noglob

@@ -1,0 +1,933 @@
+       =====================================================
+      *** Driving AFNI from a Plugout or a Startup Script ***
+       =====================================================
+An external program (i.e., a "plugout") can control some aspects of AFNI.
+This functionality is invoked by passing a command line of the form
+
+  DRIVE_AFNI command arguments ...
+
+to AFNI (once the plugout connection is open, of course).  The commands
+available are described below.
+
+The sample plugout plugout_drive.c can be used to test how things work
+(highly recommended before you start writing your own code).  For some
+scripting purposes, the plugout_drive program (compiled with the usual
+AFNI binaries) will be all you need.
+
+It is also possible to drive AFNI from Matlab with the TellAfni.m function,
+which uses plugout_drive to do the actual work.
+
+A startup Script (file ".afni.startup_script") can also give a sequence
+of commands to be run immediately after AFNI starts up.  The file consists
+of a sequence of command lines (without the "DRIVE_AFNI" prefix).  It is
+also possible to read in a Script file using the "Datamode->Misc->Run Script"
+button from the AFNI controller.  Some of the current state of AFNI can
+be saved to ".afni.startup_script" using the "Datamode->Misc->Save Layout"
+button (by giving a blank as the filename -- or any filename containing the
+string "script" -- other filenames produce a 'layout' description which
+is intended to be included in your .afnirc file).
+
+You can also give commands to AFNI on the 'afni' command line, using the
+'-com' option.  For example:
+
+  afni -com 'OPEN_WINDOW A.axialimage'       \
+       -com 'SWITCH_UNDERLAY anat'           \
+       -com 'SAVE_JPEG A.axialimage sss.jpg' \
+       -com 'QUIT'                           \
+       somedirectory
+
+could be used to create an image file 'sss.jpg' automatically.  The AFNI GUI
+would open up (and so X11 must be running), but no user interaction would
+actually occur -- the image opens and gets saved, and then AFNI just ends.
+
+N.B.: If the 'QUIT' command weren't included above, AFNI would remain open,
+ready for user interaction after the image file was saved.
+
+N.B.: If you are adroit, you could use the virtual X11 server program Xvfb
+to create images as indicated above with no need for an actual X11 display.
+A sample script is given later -- search forward to find the string 'Xvfb'.
+Also see the script @snapshot_volreg for a practical example.
+
+N.B.: The 'Render Dataset' plugin can be partially controlled by a script,
+but not by the Driver functionality described here. Instead, see the
+README.render_scripts file and the Help button in that plugin for more
+information.
+
+==============================================================================
+Advanced AFNI Programming: Extending the AFNI Driver Functionality
+------------------------------------------------------------------
+A programmer of a plugin can register a command string and a callback function
+to be called when that command string is 'driven' to AFNI.  For example:
+
+  static int junkfun( char *cmd )
+  {
+    fprintf(stderr,"junkfun('%s')\n",cmd) ; return 0 ;
+  }
+
+  AFNI_driver_register( "JUNK" , junkfun ) ;
+
+If the callback function return value is negative, a warning message will be
+printed to stderr; otherwise, the return value is ignored.  The string that
+is passed to the callback function is everything AFTER the initial command
+and the blank(s) that follows; in the above example, if "JUNK elvis lives"
+were the driver command, then junkfun is called with the string "elvis lives".
+
+In a plugin, the logical place to put the call to AFNI_driver_register() is
+in the PLUGIN_init() function.
+
+If you call AFNI_driver_register() with a new command name that duplicates
+an existing one, then an error message is printed to stderr and this call
+will be ignored.  For this reason, you may want to prefix your commands
+with some identifier; for example, a hypothetical diffusion tensor analysis
+plugin could give command names starting with "DTI_".  Or perhaps use your
+institution's name or your initials as a prefix, as in "NIMH_" or "RWC_".
+
+For the most part, driving AFNI is implemented in source code file
+afni_driver.c, if you want to see how it works. (So far, no one outside
+the AFNI team has looked at this, as far as I know.)
+
+=============================================================================
+AFNI DRIVING COMMANDS (in no coherent order)
+--------------------------------------------
+
+DO_NOTHING
+  This command does ... NOTHING :) -- it can be used as a placeholder
+  in a script, for example.
+
+ADD_OVERLAY_COLOR colordef colorlab
+  Adds the color defined by the string "colordef" to the list of overlay
+  colors.  It will appear in the menus with the label "colordef".  Example:
+    ADD_OVERLAY_COLOR #ff5599 pinkish
+
+SET_THRESHOLD [c.]val [dec]
+  Sets the threshold slider for controller index 'c' (default='A') to level
+  ".val" (a number between .0000 and .9999, inclusive).  If the optional
+  'dec' parameter is set, this is a number between 0 and 4 (inclusive) setting
+  the power-of-ten factor for the slider.  Example:
+    SET_THRESHOLD A.3000 2
+  will set the '**' (decimal) level of the slider to 2 and the slider value to
+  30 (=0.3000*100).
+  ++ You can also use "SET_FUNC_THRESH" for the command name.
+  ++ The newer SET_THRESHNEW command is probably better for your needs;
+     this older command is left here for historical compatibility reasons.
+
+SET_THRESHNEW [c] val [flags]
+  Sets the threshold slider for controller index 'c' (default='A') to the
+  numerical value 'val', which must be in the range [0..9999].  If the
+  optional 'flags' string contains the character '*', then the slider decimal
+  offset (i.e., the '**' setting) will be changed to match the size of 'val'.
+  If 'flags' contains the character 'p', then 'val will be interepreted as
+  a p-value (and so must be between 0.0 and 1.0).  Examples:
+    SET_THRESHNEW A 9.2731
+    SET_THRESHNEW B 0.3971 *p
+
+SET_PBAR_NUMBER [c.]num
+  Sets the number of panes in the color pbar to 'num' (currently must be between
+  2 and 20, inclusive).  Example:
+    SET_PBAR_NUMBER A.10
+
+SET_PBAR_SIGN [c.]+ or [c.]-
+  Sets the color pbar to be positive-only (+) or signed (-).  Example:
+    SET_PBAR_SIGN A.+
+
+SET_PBAR_ALL [c.]{+|-}num val=color val=color ...
+  Sets all color pbar parameters at once;
+  The initial string specifies the controller ('A', 'B', etc.), the sign
+  condition of the pbar ('+' or '-') and the number of panes to setup.
+  'num' equations of the form 'val=color' follow the initial string;
+  these set up the top levels and colors of each pane.  Example:
+    SET_PBAR_ALL A.+5 2.0=yellow 1.5=green 1.0=blue 0.5=red 0.2=none
+  The top pane runs from 2.0-1.5 and is yellow; the second pane runs from
+  1.5-1.0 and is blue, etc.  The 'color' values must be legal color labels.
+
+SET_PBAR_ALL [c.]{+|-}99 topval colorscale_name [options]
+  Sets the color pbar for controller #c to be in "continuous" colorscale
+  mode.  Again, '+' or '-' is used to specify if the colorscale should
+  be positive-only or signed.  The special value of 99 panes is used
+  to indicate colorscale mode.  The number 'topval' tells the scale
+  value to go at the top of the colorscale.  The string 'colorscale_name'
+  tells which colorscale to use.  For example:
+    SET_PBAR_ALL A.+99 1.0 Color_circle_AJJ
+  Please note that the '+' or '-' betfor the 99 is NOT optional -- you must
+  put one of these signs in before the number!
+
+  The 'options' available at this time only apply when in this "continuous"
+  colorscale case.  They are
+    ROTA=n => after loading the colorscale, rotate it by 'n' steps
+    FLIP   => after loading the colorscale, flip it upside down
+  These options are part of how the AFNI_PBAR_LOCK function works, and
+  probably aren't relevant for manual use.
+
+PBAR_ROTATE [c.]{+|-}
+  Rotates the color pbar in the positive ('+') or negative ('-') direction:
+    PBAR_ROTATE A.+
+  ++ You could use this to make fun movies, but otherwise it is hard to
+     see what value this command has.
+
+PBAR_SAVEIM [c] filename [dim=dimstring]
+  Saves the current color pbar image into 'filename', which can end in
+  '.png', '.jpg', or '.ppm' for those 3 different formats. If you wish
+  to change the default size of the image (64 pixels wide, 512 tall),
+  you can add a 'dim=dimstring' value after the filename:
+  ++ This dimension changing string starts with 'dim='
+  ++ The 'dimstring' is of the format 'AxB', where
+       'A' is the number of pixels across the pbar
+       'B' is the number of pixels down the pbar
+     The default is '64x512'.
+  ++ If you append 'H' to the 'dimstring', then the image will be
+     flipped to be horizontal, so that the color scale runs from
+     left-to-right rather than bottom-to-top.
+  ++ To get the default 64x512 image but flipped to horizontal, you
+     can just use 'dim=H'.
+  ++ NOTE: once you change 'dimstring', that becomes the default for
+     future 'PBAR_SAVEIM' commands in the same AFNI run; in other words,
+     setting 'dimstring' once will affect any future pbar saves the
+     same way unless a new 'dimstring' is provided.
+
+DEFINE_COLORSCALE name number=color number=color ...
+ or
+DEFINE_COLORSCALE name color color color
+  Defines a new colorscale with the given name.  The format of the following
+  arguments is either like "1.0=#ffff00" or like "#ff00ff" (all must be in the
+  same format).  See https://afni.nimh.nih.gov/afni/afni_colorscale.html for
+  more information about the format of color names and about how the colorscale
+  definition works.
+  ++ You can also use "DEFINE_COLOR_SCALE" for the command name.
+
+SET_FUNC_AUTORANGE [c.]{+|-}
+  Sets the function "autoRange" toggle to be on ('+') or off ('-'):
+    SET_FUNC_AUTORANGE A.+
+
+SET_FUNC_PERCENTILE [c.]{+|-}
+  Sets the function "%" toggle to be on ('+') or off ('-'):
+    SET_FUNC_PERCENTILE A.+
+
+SET_FUNC_RANGE [c.]value
+  Sets the functional range to 'value'.  If value is 0, this turns autoRange
+  on; if value is positive, this turns autoRange off:
+    SET_FUNC_RANGE A.0.3333
+
+SET_FUNC_VISIBLE [c.]{+|-}
+  Turns the "See Overlay" toggle on or off:
+    SET_FUNC_VISIBLE A.+
+  You can also use SEE_OVERLAY for this, which is closer to the label on
+  the GUI button.
+
+SEE_OVERLAY
+   Same as SET_FUNC_VISIBLE
+
+SET_FUNC_RESAM [c.]{NN|Li|Cu|Bk}[.{NN|Li|Cu|Bk}]
+  Sets the functional resampling mode:
+    SET_FUNC_RESAM A.Li.Li
+  sets the func and threshold resampling modes both to Linear interpolation.
+
+SET_FUNC_ALPHA [c.]{Off|On|No|Yes}
+  Set the functional overlay Alpha mode, to Off (or No), or On (or Yes).
+  For example
+    SET_FUNC_ALPHA A.Yes
+  This command is equivalent to controlling Alpha with the 'A' button
+  on top of the threshold slider. You can also set the initial status
+  of Alpha by setting environment variable AFNI_FUNC_ALPHA to Yes or No.
+  [28 Jun 2021]
+  You can now do
+    SET_FUNC_ALPHA A.Linear
+    SET_FUNC_ALPHA A.Quadratic
+  to turn Alpha fading on and at the same time choose linear or quadratic
+  fading style -- this is the same as choosing the style from the right-
+  click popup menu attached to the 'Thr' label (left of 'A' button).
+  The default style is Quadratic.
+
+SET_FUNC_BOXED [c.]{Off|On|No|Yes}
+  Set the functional overlay Boxed mode, to Off (or No), or On (or Yes).
+  For example
+    SET_FUNC_BOXED A.Yes
+  This command is equivalent to controlling Boxed with the 'B' button
+  on top of the threshold slider. You can also set the initial status
+  of Boxed by setting environment variable AFNI_FUNC_BOXED to Yes or No.
+
+OPEN_PANEL [c.]Panel_Name
+  Opens the specified controller panel, where 'Panel_Name' is one of
+  'Define_Overlay', 'Define_Datamode', 'Define_Markers', or 'Etc'.
+  (Panel name is not case-sensitive.)
+
+CLOSE_PANEL [c.]Panel_Name
+  Closes the specified controller panel, where 'Panel_Name' is one of
+  'Define_Overlay', 'Define_Datamode', 'Define_Markers', or 'Etc'.
+  (Panel name is not case-sensitive.)
+
+SYSTEM command string
+  Executes "command string" using the system() library function; for
+  example, "SYSTEM mkdir aaa".
+
+CHDIR newdirectory
+  Changes the current directory; for example, "CHDIR aaa".  This is the
+  directory into which saved files (e.g., images) will be written.
+
+RESCAN_THIS [c]
+  rescans the current session directory for controller 'c', where 'c'
+  is one of 'A', 'B', 'C', 'D', or 'E'.  If 'c' is absent, the 'A'
+  controller's current session is scanned.
+
+SET_SESSION [c.]directoryname
+  Switches controller 'c' to be looking at the named directory.  The
+  match on directory names is done by a sub-string match - that is,
+  directoryname = "fred" will match an AFNI session directory named
+  "wilhelm/frederick/von/guttenstein".
+  ++ You can also use "SWITCH_SESSION" or "SWITCH_DIRECTORY" for the command.
+
+SET_VIEW [c.]view
+  Switches controller 'c' to the named "view", which can be one of
+  'orig', 'acpc' or 'tlrc'.  The underlay dataset must have an
+  appropriate transformation, or appropriate version.
+
+SET_ANATOMY [c.]prefix [i]
+  Switches controller 'c' to be looking at the anatomical dataset with
+  the given prefix.  The prefix must be a perfect match - this is NOT
+  a sub-string match.
+  ++ If an optional integer is given (separated by a space) after the
+     prefix, this is the sub-brick index to view.
+  ++ You can also use "SWITCH_ANATOMY" or "SWITCH_UNDERLAY" for the command.
+  ++ The 'prefix' can also be the dataset IDcode string, if you insist.
+  ++ The 'prefix' does NOT include the directory name; if you try to do
+     that, the driving operation will fail.
+
+SET_FUNCTION [c.]prefix [j [k]]
+  Same, but for the functional dataset in controller 'c'.
+  ++ If an optional integer is given (separated by a space) after the
+     prefix, this is the sub-brick index to view as the 'OLay'; if a second
+     integer is given, this is the sub-brick index to use as the 'Thr'.
+  ++ You can also use "SWITCH_FUNCTION" or "SWITCH_OVERLAY" for the command.
+
+SET_SUBBRICKS [c] i j k
+  Without switching underlay or overlay datasets, change the sub-bricks
+  being viewed in the viewer specified by the initial letter.
+    Index i = underlay sub-brick           (grayscale)
+    Index j = overlay sub-brick for 'Olay' (color)
+    Index k = overlay sub-brick for 'Thr'  (threshold)
+  For example, "SET_SUBBRICKS B 33 -1 44" will set the underlay sub-brick
+  to 33, the threshold sub-brick to 44, and will not change the color
+  sub-brick (since -1 is not a legal value).
+ ++ You can also use "SET_SUB_BRICKS" for the command name.
+
+OPEN_WINDOW [c.]windowname [options]
+  Opens a window from controller 'c'. The window name can be one of
+    axialimage sagittalimage coronalimage
+    axialgraph sagittalgraph coronalgraph
+  A very special case is to give the command 'OPEN_WINDOW allimage'.
+  This will open all 3 image viewer windows (axial, sagittal, coronal),
+  and then return immediately. None of the other options described
+  below will be carried out on those 3 viewers. If you wish to place
+  those windows in particular screen location with option 'geom=',
+  you'll have to use separate OPEN_WINDOW commands for each viewer.
+
+  If the specified AFNI controller ('A', 'B', ...) is not yet
+  opened, it will be opened first (like pressing the 'New' button).
+  If the command is of the form "OPEN_WINDOW c", then only the controller
+  itself will be opened.
+
+  When opening an individual window of either type (graph and image),
+  one allowed option is:
+    geom=PxQ+R+S  or  geom=PxQ  or  geom=+R+S
+    to make the window be PxQ pixels in size and located at screen
+    coordinates (R,S).
+  Another option for both graph and image windows is
+    keypress=c       -> where 'c' is a single character to send as if
+                        the user pressed that key in the specified window
+                        ++ multiple keypress= options can be used, but
+                           each one can only send one keystroke;
+                           example: "keypress=Z keypress=Z"
+                           to zoom in twice in an image viewer.
+
+  For image windows, other options available are:
+    ifrac=number     -> set image fraction in window to number (<= 1.0);
+                        setting this to exactly 1 will turn off the
+                        image viewer 'widgets' in the same way that
+                        the 'Image display' GUI menu item does
+    mont=PxQ:R       -> montage P across, Q down, every R'th slice;
+                        * optionally, after the 'R' you can add
+                          :G:C where G=gap between sub-images in pixels,
+                               and C=color name to fill the gaps;
+                          Example: mont=5x3:7:2:hotpink
+    opacity=X        -> where X is from 0..9 (larger makes overlay more opaque)
+    crop=x1:x2,y1:y2 -> crop images from voxels x1 to x2, and y1 to y2
+                        (inclusive) -- mostly for use in .afni.startup_script;
+                        use x1=x2=0 and y1=y2=0 to turn cropping off.
+    zoom=Z           -> set the zoom factor for this image window to Z,
+                        which must be an integer from 1-4 (inclusive);
+                        note that zooming and montaging do NOT work together!
+
+    overlay_label="some string"
+                     -> This option sets the "Label Append String";
+                        you can use 'single' or "double" quotes.
+                        This string will be shown only if the overlay
+                        label is turned on, which is done from the
+                        image window intensity bar popup, or via
+                        the AFNI_IMAGE_LABEL_MODE environment variable.
+                      * If you wish to include a newline character,
+                        encode it as '\newline' -- this is one of
+                        TeX-like escapes described in README.texlike.
+                        For example:
+        ALTER_WINDOW A.axialimage overlay_label="\newline\small   Bob^{\red 3}"
+                      * You can also set this string via environment
+                        variable AFNI_IMAGE_LABEL_STRING.
+
+    butpress=name    -> This option lets you simulate a button press
+                        for one of the following buttons in an image
+                        viewer window:  Colr  Swap  Norm
+                        Button presses (and key presses) are executed
+                        in the order given on the command line; for
+                        example,
+                           butpress=Colr butpress=Swap
+                        and
+                           butpress=Swap butpress=Colr
+                        will have different results.
+
+  For graph windows, other options available are:
+    matrix=number     -> use 'number' sub-graphs (<= 21)
+    pinnum=number     -> pin the graph length to 'number' time points
+    pinbot=a pintop=b -> pin the graph time window to run from 'a..b'
+
+  You can also open plugin windows with a windowname like so:
+    A.plugin.buttonlabel
+  where buttonlabel is the plugin's button label with blanks replaced
+  by underscores or hyphens (e.g., Render_Dataset).  You can also use
+  the geom=+R+S option with this type of window opening, to position
+  the plugin interface window.  There is no way to control any other
+  settings in the plugin interface (e.g., pre-set some fields).
+  If the specified image or graph window is already open, you can still
+  use this command to alter some of its properties.
+
+  ++ You can also use "ALTER_WINDOW" for the command name, which makes
+     more sense if you are using this to apply some change to an already
+     open viewer window.
+
+SET_ULAY_RANGE [c.]windowname bot top
+  This command sets the grayscale range for the given image viewer window
+  to be from 'bot' to 'top'. Examples:
+    SET_ULAY_RANGE A.axialimage 0 200
+    SET_ULAY_RANGE A.all        20 150
+  The second example shows that you can use 'all' to change all the open
+  image viewers (for a given controller) in one operation.
+  NOTE: Since the grayscale range for the underlay images is set separately
+        in each image viewer (unlike the overlay color range SET_FUNC_RANGE),
+        this command only applies to windows that are already open. If you
+        give SET_ULAY_RANGE and then OPEN_WINDOW in that order, the newly
+        opened window won't know anything about the underlay range you
+        set previously. If this is confusing -- I'm sorry.
+
+CLOSE_WINDOW [c.]windowname
+  Closes a window from controller 'c'.  You can only close graph and image
+  viewer windows this way, not plugin windows.
+
+DATASET#N dataset ...
+  Drives the Dataset#N plugin for graph viewer windows. Each 'dataset'
+  is a dataset prefix name (without directory!). You can also add a
+  color name label (taken from the color menus) separated by '::'.
+  For example, to put 2 extra graphs on top of the underlay graph:
+    DATASET#N Fred.nii::red Elvis::blue
+  This driver command was added at the request of AFNI bootcamp students
+  in Guangzhou (Dec 2017).
+  ++ See the note about resizing the window with 'geom=PxQ' in the SAVE_JPEG
+     command, described below. It seems to be necessary to save the image
+     of a graph viewer separately from the resizing command, probably because
+     the timing of these two operations can end of happening out of order.
+  ++ Also, note that driving the plugin will NOT change the visible controls
+     if you open the plugin controller. The chosen datasets (and colors) are
+     saved, but these choices will not show up in the graphical interface for
+     this plugin.
+  ++ At this time [Dec 2017], this command is the only one that can drive the
+     internal operation of an AFNI plugin.
+
+SAVE_JPEG [c.]windowname filename
+  Save a JPEG dump of the given window to 'filename' (using the cjpeg filter,
+  which must be in the path).  The windowname can be one of 'axialimage',
+  'sagittalimage', 'coronalimage', 'axialgraph', 'sagittalgraph', or
+  'coronalgraph'.  If the filename does not end in the string ".jpg" or
+  ".JPG", then ".jpg" will be appended.
+  ++ Saving is done via the cjpeg program, which must be in the path,
+     and is included in the standard AFNI source and binary collections.
+  ++ If the dataset has non-square voxels, then the default method of
+     saving images will produce non-square pixels (as extracted from
+     the dataset) -- this will make the images look peculiar when
+     you open them later.  To avoid this peculiarity, set environment
+     variable AFNI_IMAGE_SAVESQUARE to YES (cf. SETENV below).
+     This comment applies to all image SAVE_* commands below, except
+     for SAVE_RAW* (where AFNI_IMAGE_SAVESQUARE has no effect).
+  ++ For reasons I do not understand, if you OPEN (or ALTER) a window's
+     size with 'geom=PxQ', then do SAVE_JPEG on the window, using the
+     '-com' option on the AFNI command line, the image will still be
+     saved at the window's original size. The workaround for this
+     is to force the save with plugout_drive instead, after AFNI starts.
+     A sample script is below:
+       afni -com 'SWITCH_UNDERLAY run1_time'                      \
+            -com 'DATASET#N run2_time::blue run3_time::red'       \
+            -com 'OPEN_WINDOW axialgraph keypress=I geom=900x600' \
+            -yesplugouts
+       sleep 1
+       plugout_drive -quit -com 'SAVE_JPEG axialgraph ag.jpg' -com 'QUITT'
+
+SAVE_PNG [c.]windowname filename
+  Like SAVE_JPEG, but saves to the lossless PNG format.
+  ++ Saving is done via the pnmtopng filter, which must be in the path.
+     Unlike cjpeg, this program is NOT part of the AFNI collection, but
+     must be installed separately (usually by getting the NETPBM package).
+
+SAVE_FILTERED  [c.]windowname filtercommand
+  Like SAVE_JPEG or SAVE_PNG, but instead of a filename, you
+  give a Unix filter that processes a PPM file. For example
+    SAVE_FILTERED axialimage 'pnmcut 10 20 120 240 | pnmtopng > zork.png'
+  will crop the image and save it into a PNG file.  You'll need to become
+  familiar with the NETPBM package if you want to use this command.
+  ++ As indicated in the example, you'll need to put filtercommand
+     in quotes if it contains blanks, which it almost surely will.
+  Other filter examples:
+     Save to a PPM file:  'cat > zork.ppm'
+     Save to a TIFF file: 'ppm2tiff -c none > zork.tif'
+
+SAVE_ALLJPEG [c].imagewindowname filename
+SAVE_ALLPNG  [c].imagewindowname filename
+SAVE_MPEG    [c].imagewindowname filename
+SAVE_AGIF    [c].imagewindowname filename
+  Save ALL the images in the given image sequence viewer (either as a
+  series of JPEG/PNG files, or as one animation file).  The windowname can
+  be one of 'axialimage', 'sagittalimage', or 'coronalimage'.  Do NOT
+  put a suffix like '.jpg' or '.mpg' on the filename -- it will be added.
+  ++ Unlike 'SAVE_JPEG', these commands do not work with graph windows.
+
+  *** The above SAVE_xxx commands also take an optional string of ***
+  *** the form 'blowup=4', indicating that the image(s) should be ***
+  *** blown up by the given factor before being saved.  The legal ***
+  *** values of this factor = 1..8 (integral,inclusive). Example: ***
+  ***   SAVE_JPEG axialimage FredAxial blowup=4                   ***
+  *** Exceptions to the use of 'blowup=':                         ***
+  ***   Image view montages are not blown up                      ***
+  ***   Graph windows are not blown up                            ***
+  ***   RAW images (cf. below) are not blown up                   ***
+
+SAVE_RAW [c.]imagewindowname filename
+  Saves the raw data from the given image viewer to a file.  This data
+  is the slice data extracted from the dataset, not further processed
+  in any way (unlike the other SAVE_* image options, which convert the
+  slice data to grayscale or colors).  This output file contains only
+  the data, with no header of any sort indicating the dimensions of the
+  image or the actual type of data stored therein.
+
+SAVE_RAWMONT [c.]imagewindowname filename
+  Saves the raw data from the given image viewer to a file, AS MONTAGED.
+    (The montage gap is ignored.)  Same as 'SAVE_RAW' if the montage
+    isn't on.
+
+SAVE_UNDERLAY  [c] prefix
+WRITE_UNDERLAY [c] prefix
+  These synonomous commands write a copy of the current underlay dataset for
+  the given image viewer to disk, using the given prefix.
+
+SAVE_OVERLAY  [c] prefix
+WRITE_OVERLAY [c] prefix
+  These synonomous commands write a copy of the current overlay dataset for
+  the given image viewer to disk, using the given prefix.
+     ** Note that these WRITE_ commands will over-write existing **
+     ** datasets with the same name, so you must use care here!  **
+
+SNAP_CONT image.jpg
+  Take a snapshot of the main AFNI controller and save it into image.jpg.
+
+SNAP_VIEWER [c].windowname imagename
+  Take a snapshot of a graph or image viewer, including the buttons (etc.)
+  and save it into an image file. For example:
+    SNAP_VIEWER axialimage   Frodo.png
+    SNAP_VIEWER B.axialgraph Samwise.jpg
+  The snapshot does not include any windowing system additions, such as
+  the titlebar, resizing controls, etc. The main purpose of this command
+  is to help make documentation.
+  NOTE: This command requires the NETPBM package be installed, otherwise
+        the image saving won't work (except for .jpg files).
+
+SET_DICOM_XYZ [c] x y z
+SET_SPM_XYZ   [c] x y z
+SET_IJK       [c] i j k
+SET_INDEX     [c] ijk
+  Set the controller coordinates to the given triple, or singleton for SET_INDEX;
+  DICOM_XYZ has the coordinates in DICOM (RAI) order, SPM_XYZ has the coordinates
+  in SPM (LPI) order, and IJK has voxel indexes instead of spatial coordinates.
+  ijk is the array index corresponding to a triplet of voxel indices. It is the
+  same as 'index' displayed in the top left corner of AFNI's controller when
+  Datamode-->Misc-->Voxel Coords is turned on.
+
+Get different kinds of information from the AFNI GUI
+GET_DICOM_XYZ [c]
+GET_IJK       [c]
+  Have AFNI print the controller current coordinates (to stdout by default -
+   see SET_OUTPLUG).
+GET_OLAY_VAL  [c]
+GET_THR_VAL   [c]
+GET_ULAY_VAL  [c]
+  Have AFNI print the controller value for underlay, overlay or threshold sub-bricks
+  at current coordinates (to stdout by default - see SET_OUTPLUG).
+GET_ULAY_NAME [c]
+GET_OLAY_NAME [c]
+  Have AFNI print the prefix of the dataset name for underlay or overlay
+  (to stdout by default - see SET_OUTPLUG).
+
+SET_OUTPLUG fname
+  Set plugout drive commands like GET_DICOM_XYZ,GET_IJK,GETENV to append output
+  to a selected text file. The default output is to stdout of the afni GUI rather
+  than the plugout_drive's program. The string 'stdout' resets the output to
+  stdout. The default output file can also be set by the AFNI environment variable,
+  AFNI_OUTPLUG.Note the output is always appended, so if you need this to be a
+  new file, you will have to delete or rename the old copy first.
+
+SET_XHAIRS [c.]code
+  Set the crosshairs ('Xhairs') control to the specified value, where
+  'code' is one of the following strings:
+       OFF  SINGLE  MULTI   LR_AP   LR_IS  AP_IS  LR  AP  IS
+  which correspond to the menu items on the Xhairs button.
+
+SET_XHAIR_GAP [c.]val
+  Set the crosshairs ('Xhairs') gap to the specified number of pixels 
+  between -1  and 19
+
+READ_NIML_FILE fname
+  Reads the NIML-formatted file 'fname' from disk and processes it as if
+  the data in the file had been sent to AFNI through a TCP/IP socket.
+
+INSTACORR [c] order
+  This command is to drive the InstaCorr functionality in AFNI.  As in other
+  commands, the optional '[c]' is a single letter specifying to which AFNI
+  controller the 'order' that follows applies.  If this single letter code
+  is NOT present, the default controller is 'A'.
+
+  The first INSTACORR 'order' that is implemented [20 Oct 2010] is
+     SET
+  which sets the InstaCorr seed (in controller 'c', default A) to the current
+  crosshair location and recomputes the correlation map, or
+     SET x y z
+  which sets the InstaCorr seed to the given DICOM coordinates.  For this
+  second form, with 'x y z', if you place the character J after the z value,
+  the crosshairs will also Jump to that new seed location.  Note that SET
+  can be used with individual or group InstaCorr.
+
+  You can use the WRITE_OVERLAY command to save the computed correlation
+  dataset to disk.
+
+  The second INSTACORR 'order' that is implemented [Apr 2013] pertains to
+  the new 3dGroupInCorr '-Apair' option.  This order sets the 'Apair' seed:
+     APSET x y z
+  By itself, this order does nothing until the next 'SET' order happens.
+  At present, there is no order to turn on automatic Apair mirroring.
+  Instead, you'll have to send two (2) orders to have the same effect:
+     APSET -x y z
+       SET  x y z
+  Since 3dGroupInCorr can only be attached to the A controller, APSET can
+  only apply to this controller.  APSET will be ignored for other controllers
+  or if single-subject InstaCorr is being run instead of 3dGroupInCorr.
+
+  The third INSTACORR 'order' that is implemented [22 Jun 2011] is
+     INIT name=value name=value ...
+  which will initialize the individual InstaCorr setup for controller 'c'.
+  The 'name=value' pairs that follow take the following forms:
+     DSET=prefix        ==> specifies the time series dataset
+     IGNORE=number      ==> how many time points to ignore           [default=0]
+     STARTEND=num,num   ==> start and stop indexes for analysis      [default=all]
+     STARTEND=num+num   ==> start index, number of time points
+                            (note that IGNORE=x is the same as STARTEND=x)
+     STARTEND=start@len,num,step ==> setup multiple section analyses
+     BLUR=number        ==> blurring radius for data                 [default=0]
+     AUTOMASK=yes/no    ==> whether to use Automask                  [yes]
+     DESPIKE=yes/no     ==> whether to use Despike                   [no]
+     BANDPASS=fbot,ftop ==> bottom,top frequencies (comma separated) [0.01,0.10]
+     SEEDRAD=number     ==> extra blurring seed radius               [0]
+     POLORT=number      ==> polort order, from -1..2                 [2]
+     METHOD=code        ==> codes: S=Spearman, P=Pearson, etc.       [P]
+     COUNT=number       ==> Iteration Count (from 1..6 inclusive)    [1]
+     THRESH=number      ==> Iteration Thresh (non-negative)          [0.01]
+  The 'name' string can be upper or lower case.  The '=' sign must immediately
+  follow the 'name' with no spaces, and then the 'value' must come right after
+  the '=', again with no spaces.  The 'value' is interpreted as described
+  in the table above.  At a minimum, the 'DSET' must be specified -- or what
+  would be computed?  The rest of the specifications are optional and have
+  default values [shown above].  Once you set a value, then another INIT order
+  (to the same controller) will default to leaving that value the same;
+  for a silly example,
+     SET_THRESHNEW 0
+     INSTACORR INIT DSET=fred ignore=3 blur=4 method=P
+     INSTACORR SET 20 30 40 J
+     INSTACORR INIT method=S
+     INSTACORR SET
+  The second INIT order leaves the dataset, ignore, and blur values at 'fred',
+  '3', and '4' (respectively), and only changes the correlation method for
+  the second SET order.
+  At this time, none of the other InstaCorr options (e.g., a separate mask
+  dataset, or a global orts 1D file) can be controlled in this way.  Also,
+  note that setting things up this way will NOT set up the interface control
+  widgets in the AFNI GUI, so that if you try to control InstaCorr at the same
+  time via the GUI interface and a plugout, very confusing things will probably
+  happen.  And then a jumbo-sized elephant will sit on your computer.
+
+PURGE_MEMORY [dataset_prefix]
+  If no prefix is given, the sub-bricks of all datasets will be purged from
+  memory, and when re-used, AFNI will re-read them from disk.  If a prefix
+  is given, only that dataset (in all coordinate views) will be purged.
+  ++ "Locked" datasets will not be purged -- a dataset will be locked
+     into memory if it can't easily be re-read from disk (e.g., is from SUMA;
+     is being drawn upon, nudged, or acquired in realtime; is loaded from
+     a '3dcalc()' command line call; or is fetched across the Web).
+
+QUIT
+  AFNI will exit immediately.  Communication with the dead being difficult
+  (with existing technology), this action forestalls all further attempts
+  to send commands to AFNI.
+
+QUITT
+  AFNI will exit even more immediately!  That is, none of the usual
+  things at the end (e.g., 'goodbye' messages) will be done, and the
+  program just stops.
+
+SETENV name value
+  Set the environment variable "name" to "value" in AFNI; for example
+    SETENV AFNI_CROSSHAIR_LINES YES
+    SETENV AFNI_IMAGE_SAVESQUARE YES
+  Most of the time, when you set an environment variable inside AFNI,
+  just changing the variable won't have any immediate visible effect.
+  Only when you instigate something that this variable controls will
+  anything change in AFNI.  Thus, you may want to 'REDISPLAY' afterwards.
+
+GETENV name
+  Get the value of environment variable "name", and print to the terminal.
+  For example:
+    GETENV AFNI_PLUGINPATH
+  would show the directory that plugins were loaded from, if set:
+    AFNI_PLUGINPATH = /home/elvis/abin
+  If a variable is not set, the output says as much:
+    AFNI_PLUGINPATH = <UNSET>
+
+REDISPLAY
+  Forces all images and graphs to be redrawn.
+
+SLEEP ms
+  Causes AFNI to sleep for "ms" milliseconds.  The main use would be in
+  a script file to provide a pause between some effects.
+
+QUIET_PLUGOUTS
+  Turns off normal plugout communications messages
+
+NOISY_PLUGOUTS
+  Turns on normal plugout communication messages
+
+TRACE {YES | NO}
+  Turns debug tracing on or off.  Mostly for AFNI developers.
+
+WRITE_CONT_SPX_HELP filename
+   Write the help for the main controller GUI in SPHINX form to filename
+
+==============================================================================
+Sample Script Using Xvfb
+------------------------
+This script uses the output files in a set of directories created by
+afni_proc.py.  It overlays the registered EPI with the structural image,
+and saves an image snapshot from each directory.  The goal is to give
+the user a quick way of looking for grossly bad registrations.
+
+You probably cannot use the script exactly as it is shown here. You will have
+to modify the filenames to meet your needs, at least. This script relies on
+the NetPBM package being installed on your system.
+
+#!/bin/tcsh
+#
+# start the X Virtual Frame Buffer program (on screen 9)
+#
+ Xvfb :9 -screen 0 1024x768x24 &
+#
+# set some environment variables
+#
+ setenv AFNI_NOSPLASH    YES
+ setenv AFNI_SPLASH_MELT NO
+ setenv DISPLAY          :9
+#
+# make directory for output images
+#
+ mkdir -p snapshots
+#
+# loop over the afni_proc.py results directories
+#
+ foreach ddd ( *.results )
+    set sub  = `basename $ddd .results`
+    set epi  = pb02.${sub}.r01.volreg+tlrc
+    set anat = anat_final.${sub}+tlrc
+# max value in EPI brick
+    set mval = `3dBrickStat -max $ddd/$epi'[0]'`
+# clip level for EPI brick
+    set cval = `3dClipLevel $ddd/$epi'[0]'`
+# threshold value to use for EPI brick overlay
+    set tval = `ccalc "min($cval,$mval/4)"`
+# upper limit for EPI brick overlay
+    set uval = `ccalc "max(3*$cval,0.666*$mval)"`
+# name for output image file
+    set jnam = $sub
+# drive AFNI to get the images we want
+    afni -noplugins -no_detach                               \
+         -com "OPEN_WINDOW sagittalimage opacity=6"          \
+         -com "OPEN_WINDOW axialimage opacity=6"             \
+         -com "OPEN_WINDOW coronalimage opacity=6"           \
+         -com "SET_PBAR_ALL +99 1 gray_scale"                \
+         -com "SET_FUNC_RANGE $uval"                         \
+         -com "SET_THRESHNEW $tval *"                        \
+         -com "SWITCH_OVERLAY $epi                           \
+         -com "SEE_OVERLAY +"                                \
+         -com "SAVE_JPEG sagittalimage sag.jpg blowup=2"     \
+         -com "SAVE_JPEG coronalimage  cor.jpg blowup=2"     \
+         -com "SAVE_JPEG axialimage    axi.jpg blowup=2"     \
+         -com "QUITT"                                        \
+       $ddd/$anat $ddd/$epi'[0]'
+#
+# convert the JPEG outputs to PNM for NetPBM manipulations
+#
+    djpeg sag.jpg > sag.pnm
+    djpeg cor.jpg > cor.pnm
+    djpeg axi.jpg > axi.pnm
+#
+# the commands below make a labeled composite image, and require NetPBM
+#
+# glue the images together
+    pnmcat -lr -jcenter -black sag.pnm axi.pnm cor.pnm > qqq.pnm
+# make a text overlay
+    pbmtext $jnam                                      > qqq.pbm
+# overlay the text image on the composite, convert to JPEG
+    pamcomp -xoff=1 -yoff=1 qqq.pbm qqq.pnm | cjpeg -quality 95 > snapshots/$jnam.jpg
+# throw away the trash
+    \rm sag.* axi.* cor.* qqq.*
+ end
+#
+# done: kill the Xvfb process, then vamoose
+#
+ killall Xvfb
+ exit 0
+
+
+==============================================================================
+** GRAPHS **
+============
+The following commands are used to open graph windows and manipulate them.
+These commands don't actually interact with the rest of AFNI - they are
+really just using AFNI as a graph display server.  [This functionality
+was added per the request of Jerzy Bodurka, formerly at the NIH, to provide
+a way to graph physiological signals monitored while the subject is in the
+scanner, at the same time the EPI images are being sent to the AFNI
+realtime plugin.]
+
+At present there are two similar kinds of graphs:
+
+  XY = connected (x,y) pairs - you must supply (x,y) for each new point
+  1D = x increments by 1 each time, so you only give y for each new point;
+       when x overflows past the right boundary, it wraps back to x=0.
+
+Each graph can have multiple sub-graphs, which are stacked up vertically
+with separate y axes and a common x axis (sub-graph #1 at the bottom, etc.).
+
+Label strings in the graphs are interpreted in a TeX-like fashion.  In
+particular, an underscore means to start a subscript and a circumflex means
+to start a superscript.  Subscript or superscripts that are more than one
+character long can be grouped using curly {braces}.
+
+Greek letters and other special characters can be included using TeX-like
+escapes. For example, "time (\Delta t=0.1)" might be a good label for the
+x-axis of a 1D graph.  The full list of such escapes is
+
+  \Plus      \Cross      \Diamond        \Box
+  \FDiamond  \FBox       \FPlus          \FCross    \Burst    \Octagon
+  \alpha     \beta       \gamma          \delta     \epsilon  \zeta
+  \eta       \theta      \iota           \kappa     \lambda   \mu
+  \nu        \xi         \omicron        \pi        \rho      \sigma
+  \tau       \upsilon    \phi            \chi       \psi      \omega
+  \Alpha     \Beta       \Gamma          \Delta     \Epsilon  \Zeta
+  \Eta       \Theta      \Iota           \Kappa     \Lambda   \Mu
+  \Nu        \Xi         \Omicron        \Pi        \Rho      \Sigma
+  \Tau       \Upsilon    \Phi            \Chi       \Psi      \Omega
+  \propto    \int        \times          \div       \approx   \partial
+  \cap       \langle     \rangle         \ddagger   \pm
+  \leq       \S          \hbar           \lambar
+  \cup       \degree     \nabla          \downarrow
+  \leftarrow \rightarrow \leftrightarrow \oint
+  \in        \notin      \surd           \cents
+  \bar       \exists     \geq            \forall
+  \subset    \oplus      \otimes         \dagger
+  \neq       \supset     \infty          \uparrow
+  \{         \}          \\              \_         \?
+
+All characters are drawn with line strokes from an internal font; standard
+fonts (e.g., Helvetica) are not available.  If you want classier looking
+graphs, stop whining and find another program.
+
+--------------------------
+
+OPEN_GRAPH_XY gname toplab xbot xtop xlab ny ybot ytop ylab nam_1 .. nam_ny
+  This opens a graph window for graphing non-MRI data.  Each graph window
+  has a gname string; this lets you graph into more than one window.
+  Other arguments are
+    toplab = string to graph at top of graph              [empty]
+    xbot   = numerical minimum of x-axis in graph         [0]
+    xtop   = numerical maximum of x-axis in graph         [1]
+    xlab   = string to graph below x-axis                 [empty]
+    ny     = number of sub-graphs (all share same x-axis) [1]
+    ybot   = numerical minimum of y-axis in graph         [0]
+    ytop   = numerical maximum of y-axis in graph         [1]
+    ylab   = string to graph to left of y-axis            [empty]
+    nam_1  = name to plot at right of sub-graph 1, etc.   [not plotted]
+  Arguments are separated by spaces.  If a label has a space in it, you can
+  put the label inside "double" or 'single' quote characters.  If you don't
+  want a particular label plotted, make it the empty string "" or ''.  If you
+  don't want names plotted at the right of sub-graphs, stop the arguments at
+  ylab.  Only the gname argument is strictly required - the other arguments
+  have default values, which are given in [brackets] above.
+
+CLOSE_GRAPH_XY gname
+  Closes the graph window with the given name.
+
+CLEAR_GRAPH_XY gname
+  Clears the graph out of the given window (leaves the axes and labels).
+
+ADDTO_GRAPH_XY gname x y_1 y_2 .. y_ny [repeat]
+  Actually plots data into the given window.  In the i-th sub-graph, a line
+  will be drawn connecting to (x,y_i), for i=1..ny.  You can put many sets
+  of points on the line, subject to the limitation that a plugout command
+  line cannot contain more than 64 Kbytes.
+
+--------------------------
+
+OPEN_GRAPH_1D gname toplab nx dx xlab ny ybot ytop ylab nam_1 .. nam_ny
+  Opens a graph window that is set up to plot nx points across with spacing dx,
+  in ny separate sub-graphs.  When the graph is full, the graph recycles back
+  to the beginning.  The meaning and [default] values of parameters are:
+    toplab = string to graph at top of graph              [empty]
+    nx     = number of points along the x-axis            [500]
+    dx     = spacing between x-axis points                [1]
+    xlab   = string to graph below x-axis                 [empty]
+    ny     = number of sub-graphs (all share same x-axis) [1]
+    ybot   = numerical minimum of y-axis in graph         [0]
+    ytop   = numerical maximum of y-axis in graph         [1]
+    ylab   = string to graph to left of y-axis            [empty]
+    nam_1  = name to plot at right of sub-graph 1, etc.   [not plotted]
+
+CLOSE_GRAPH_1D gname
+  Closes the graph window with the given name.
+
+CLEAR_GRAPH_1D gname
+  Clears the graph out of the given window (leaves the axes and labels).
+
+ADDTO_GRAPH_1D gname y_1 y_2 .. y_ny [repeat]
+  Actually plots data into the given window.  You can put many sets of ny
+  values at a time on the command line, subject to the limitation that a
+  plugout command line cannot contain more than 64 Kbytes.  Also, if you
+  put more than nx sets of values, only the first nx will be plotted, since
+  that will fill up the graph through one full cycle.
+
+--------------------------
+
+SET_GRAPH_GEOM gname geom=X-geometry-string
+  This lets you move/resize a graph (1D or XY).  X-geometry-string is one
+  of the forms:
+    300x100         = set window size to 300 pixels wide, 100 high
+    +50+90          = set window location to 50 pixels across, 90 down
+    300x100+50+90   = set window size and location at the same time
+
+--------------------------

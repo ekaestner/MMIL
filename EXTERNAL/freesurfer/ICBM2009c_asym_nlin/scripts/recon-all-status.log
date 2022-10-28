@@ -1,0 +1,76 @@
+status file for recon-all
+Wed Oct 26 03:50:29 PDT 2016
+#@# MotionCor Wed Oct 26 03:50:32 PDT 2016
+#@# Talairach Wed Oct 26 03:50:38 PDT 2016
+#@# Talairach Failure Detection Wed Oct 26 03:52:14 PDT 2016
+#@# Nu Intensity Correction Wed Oct 26 03:52:15 PDT 2016
+#@# Intensity Normalization Wed Oct 26 03:53:57 PDT 2016
+#@# Skull Stripping Wed Oct 26 03:55:35 PDT 2016
+#@# EM Registration Wed Oct 26 03:58:46 PDT 2016
+#@# CA Normalize Wed Oct 26 04:02:19 PDT 2016
+#@# CA Reg Wed Oct 26 04:03:29 PDT 2016
+#@# SubCort Seg Wed Oct 26 05:35:28 PDT 2016
+#@# Merge ASeg Wed Oct 26 06:36:42 PDT 2016
+#@# Intensity Normalization2 Wed Oct 26 06:36:42 PDT 2016
+#@# Mask BFS Wed Oct 26 06:38:51 PDT 2016
+#@# WM Segmentation Wed Oct 26 06:38:52 PDT 2016
+#@# Fill Wed Oct 26 06:40:50 PDT 2016
+#@# Tessellate lh Wed Oct 26 06:41:19 PDT 2016
+#@# Tessellate rh Wed Oct 26 06:41:23 PDT 2016
+#@# Smooth1 lh Wed Oct 26 06:41:27 PDT 2016
+#@# Smooth1 rh Wed Oct 26 06:41:32 PDT 2016
+#@# Inflation1 lh Wed Oct 26 06:41:37 PDT 2016
+#@# Inflation1 rh Wed Oct 26 06:41:53 PDT 2016
+#@# QSphere lh Wed Oct 26 06:42:06 PDT 2016
+#@# QSphere rh Wed Oct 26 06:44:08 PDT 2016
+#@# Fix Topology Copy lh Wed Oct 26 06:45:45 PDT 2016
+#@# Fix Topology Copy rh Wed Oct 26 06:45:45 PDT 2016
+#@# Fix Topology lh Wed Oct 26 06:45:45 PDT 2016
+#@# Fix Topology rh Wed Oct 26 07:01:51 PDT 2016
+#@# Make White Surf lh Wed Oct 26 07:12:12 PDT 2016
+#@# Make White Surf rh Wed Oct 26 07:16:50 PDT 2016
+#@# Smooth2 lh Wed Oct 26 07:21:40 PDT 2016
+#@# Smooth2 rh Wed Oct 26 07:21:45 PDT 2016
+#@# Inflation2 lh Wed Oct 26 07:21:49 PDT 2016
+#@# Inflation2 rh Wed Oct 26 07:22:05 PDT 2016
+#@# Curv .H and .K lh Wed Oct 26 07:22:20 PDT 2016
+#@# Curv .H and .K rh Wed Oct 26 07:23:27 PDT 2016
+#@# Curvature Stats lh Wed Oct 26 07:24:33 PDT 2016
+#@# Curvature Stats rh Wed Oct 26 07:24:37 PDT 2016
+#@# Sphere lh Wed Oct 26 07:24:40 PDT 2016
+#@# Sphere rh Wed Oct 26 07:34:46 PDT 2016
+#@# Surf Reg lh Wed Oct 26 07:43:15 PDT 2016
+#@# Surf Reg rh Wed Oct 26 08:06:01 PDT 2016
+#@# Jacobian white lh Wed Oct 26 08:27:15 PDT 2016
+#@# Jacobian white rh Wed Oct 26 08:27:17 PDT 2016
+#@# AvgCurv lh Wed Oct 26 08:27:18 PDT 2016
+#@# AvgCurv rh Wed Oct 26 08:27:20 PDT 2016
+#@# Cortical Parc lh Wed Oct 26 08:27:21 PDT 2016
+#@# Cortical Parc rh Wed Oct 26 08:27:33 PDT 2016
+#@# Make Pial Surf lh Wed Oct 26 08:27:45 PDT 2016
+#@# Make Pial Surf rh Wed Oct 26 08:40:27 PDT 2016
+#@# Surf Volume lh Wed Oct 26 08:53:28 PDT 2016
+#@# Surf Volume rh Wed Oct 26 08:53:31 PDT 2016
+#@# Cortical ribbon mask Wed Oct 26 08:53:35 PDT 2016
+#@# Parcellation Stats lh Wed Oct 26 09:00:45 PDT 2016
+#@# Parcellation Stats rh Wed Oct 26 09:01:39 PDT 2016
+#@# Cortical Parc 2 lh Wed Oct 26 09:02:37 PDT 2016
+#@# Cortical Parc 2 rh Wed Oct 26 09:02:51 PDT 2016
+#@# Parcellation Stats 2 lh Wed Oct 26 09:03:07 PDT 2016
+#@# Parcellation Stats 2 rh Wed Oct 26 09:03:35 PDT 2016
+#@# Cortical Parc 3 lh Wed Oct 26 09:04:03 PDT 2016
+#@# Cortical Parc 3 rh Wed Oct 26 09:04:15 PDT 2016
+#@# Parcellation Stats 3 lh Wed Oct 26 09:04:28 PDT 2016
+#@# Parcellation Stats 3 rh Wed Oct 26 09:04:57 PDT 2016
+#@# WM/GM Contrast lh Wed Oct 26 09:05:24 PDT 2016
+#@# WM/GM Contrast rh Wed Oct 26 09:05:30 PDT 2016
+#@# Relabel Hypointensities Wed Oct 26 09:05:35 PDT 2016
+#@# AParc-to-ASeg aparc Wed Oct 26 09:05:55 PDT 2016
+#@# AParc-to-ASeg a2009s Wed Oct 26 09:09:32 PDT 2016
+#@# AParc-to-ASeg DKTatlas Wed Oct 26 09:13:08 PDT 2016
+#@# APas-to-ASeg Wed Oct 26 09:16:41 PDT 2016
+#@# ASeg Stats Wed Oct 26 09:16:46 PDT 2016
+#@# WMParc Wed Oct 26 09:17:15 PDT 2016
+#@# BA_exvivo Labels lh Wed Oct 26 09:22:46 PDT 2016
+#@# BA_exvivo Labels rh Wed Oct 26 09:26:58 PDT 2016
+recon-all -s ICBM2009c_fs6 finished without error at Wed Oct 26 09:31:14 PDT 2016

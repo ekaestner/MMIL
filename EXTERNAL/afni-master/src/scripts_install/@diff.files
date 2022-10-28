@@ -1,0 +1,273 @@
+#! /usr/bin/env tcsh
+
+set prog = `basename $0`
+
+set exit_on_missing = 1
+set list_missing = 1
+set longlist = 0
+set showfiles = 1
+set showdiffs = 0
+set savediffs = 0
+set xxdiff = 0
+set diffprog = ''       # can pass any, like xxdiff
+set diffopts = ()
+set verb = 1
+
+if ( $#argv < 2 ) then
+    goto SHOW_HELP
+endif
+
+set ac = 1
+while ( $ac < $#argv )
+    if ( "$argv[$ac]" == '-save' ) then
+        set savediffs = 1
+        @ ac ++
+    else if ( "$argv[$ac]" == '-ignore_missing' || "$argv[$ac]" == '-im' ) then
+        set exit_on_missing = 0
+        @ ac ++
+    else if ( "$argv[$ac]" == '-ll' || "$argv[$ac]" == '-longlist' ) then
+        set longlist = 1
+        @ ac ++
+    else if ( "$argv[$ac]" == '-show' ) then
+        set showdiffs = 1
+        set showfiles = 0
+        @ ac ++
+    else if ( "$argv[$ac]" == '-xxdiff' ) then
+        set xxdiff = 1
+        if ( "$diffprog" != "" ) then
+           echo "** only specify one of -xxdiff -diffprog"
+           exit 1
+        endif
+        # no longer call xxdiff explicitly
+        set diffprog = xxdiff
+        @ ac ++
+    else if ( "$argv[$ac]" == '-diff_opts' ) then
+        @ ac ++
+        set diffopts = ( $diffopts $argv[$ac] )
+        @ ac ++
+    else if ( "$argv[$ac]" == '-diff_prog' ) then
+        @ ac ++
+        set diffprog = "$argv[$ac]"
+        if ( $xxdiff ) then
+           echo "** only specify one of -xxdiff -diffprog"
+           exit 1
+        endif
+        @ ac ++
+    else if ( "$argv[$ac]" == '-X' ) then
+        set xxdiff = 1
+        set diffprog = xxdiff
+        set exit_on_missing = 0
+        @ ac ++
+    else if ( "$argv[$ac]" == '-verb' ) then
+        @ ac ++
+        set verb = "$argv[$ac]"
+        @ ac ++
+        if ( $verb > 2 ) then
+           set echo
+        endif
+    else
+        break
+    endif
+end
+
+if ( $verb > 1 ) then
+   set list_missing = 1
+endif
+
+# if a diffprog is requested, make sure it exists...
+if ( $diffprog != "" ) then
+   which $diffprog >& /dev/null
+   if ( $status ) then
+      echo "** $prog : missing Unix program $diffprog (please install)"
+      exit
+   endif
+endif
+
+# default to pdf output, but use ps if ps2pdf is not there
+# (** temporary change to ps output - ps2pdf is crashing **)
+set useps = 0
+which ps2pdf >& /dev/null
+if ( $status ) then
+    set useps = 1
+endif
+
+@ last = $#argv - 1
+
+set odir = $argv[$#argv]
+@ nfiles = $#argv - $ac
+
+set files = ( $argv[$ac-$last] )
+
+if ( ! -d $odir ) then
+    echo missing comparison directory: $odir
+    exit
+endif
+
+# see if all of the files exist
+set missA = 0
+set missB = 0
+foreach file ( $files )
+    if ( ! -e $file ) then
+        echo missing A: $file
+        @ missA ++
+    endif
+end
+foreach file ( $files )
+    if ( ! -e $odir/$file ) then
+        echo missing B: $odir/$file
+        @ missB ++
+    endif
+end
+
+if ( $missA || $missB ) then
+   if ( $exit_on_missing ) exit
+
+   # ls missing files
+   if ( $list_missing ) then
+      echo "==== missing files ($missA and $missB) ===="
+      foreach file ( $files )
+          if ( -e $file && ! -e $odir/$file ) then
+              ls -ld $file
+          endif
+      end
+      foreach file ( $files )
+          if ( ! -e $file && -e $odir/$file ) then
+              ls -ld $odir/$file
+          endif
+      end
+   echo ""
+   echo "   ... done with missing, on to diffs ..."
+
+   endif
+
+   echo ""
+
+endif
+
+# remove directories and missing files
+set newfiles = ()
+foreach file ( $files )
+    if ( -f $file && -f $odir/$file ) then
+        set newfiles = ( $newfiles $file )
+    endif
+end
+
+set files = ( $newfiles )
+
+
+# prepare diffs directory
+if ( $savediffs ) then
+    if ( -d diffs ) then
+        echo removing old diff files...
+        \rm -f diffs/* >& /dev/null
+    else
+        mkdir diffs
+        if ( $status ) then
+            echo failed to make diffs dir, exiting...
+            exit
+        endif
+    endif
+endif
+
+# check for diffs
+set count = 0
+foreach file ( $files )
+    cmp -s $file $odir/$file
+    set result = $status
+    if ( $result ) then
+        if ( $showdiffs ) then
+            echo --------------------- $file --------------------- 
+            diff $diffopts $file $odir/$file
+        endif
+
+        if ( $longlist ) then
+           ls -l $file $odir/$file
+           echo ""
+        else if ( $showfiles ) then
+           if ( $verb > 1 ) then
+              echo "    diff: $file"
+           else
+              echo "    $file"
+           endif
+        endif
+        @ count ++
+
+        if ( $diffprog != "" ) then
+           $diffprog $file $odir/$file
+        endif
+
+        if ( $savediffs ) then 
+            set dfile = `echo $file | sed 's/\//./g'`
+            diff $diffopts $file $odir/$file > diffs/$dfile.txt
+            if ( $useps ) then
+                diff -bB $odir/$file $file | diffpp $odir/$file \
+                         | enscript -Ge -p diffs/$dfile.ps
+            else
+                diff -bB $odir/$file $file | diffpp $odir/$file \
+                         | enscript -Ge -p - | ps2pdf - diffs/$dfile.pdf
+            endif
+        endif
+    else if ( $verb > 1 ) then
+       echo "    no diff: $file"
+    endif
+end
+
+if ( $count > 0 ) then
+    echo ""
+    echo $count diffs found
+endif
+
+exit
+SHOW_HELP:
+
+cat << EOF
+
+   ----------------------------------------------------------------------
+   $prog - show file differences (between "these" files and "those" files)
+
+      Given:
+         - a list of files
+         - a directory name
+
+      Show files that differ (and/or their differences) between each file
+      in the given list and its corresponding file in the other directory.
+
+      This is similar to @diff.tree, except that one main input is a list
+      of files.
+
+   ----------------------------------------------------------------------
+   usage: $prog [options] file1 file2 ... old_dir
+
+   ----------------------------------------------------------------------
+   options:
+      -diff_opts 'OPTS'  : add options to diff command
+                           e.g. -diff_opts -w
+      -diff_prog DPROG   : display diffs using DPROG (probably graphical)
+                           e.g. -diff_opts meld
+                           e.g. -diff_opts xxdiff    [same as -xxdiff]
+                           Consider also: kdiff3, tkdiff.
+      -ignore_missing    : continue even if files are missing
+                           alt: -im
+      -longlist          : instead of listing file, run 'ls -l' on both
+                           alt: -ll
+      -save              : create pdfs of diffs
+      -show              : show diffs using 'diff'
+      -xxdiff            : show diffs using 'xxdiff'
+      -X                 : implies -xxdiff and -ignore_missing'
+      -verb LEVEL        : be more chatty at 2 (set echo at 3)
+
+   ----------------------------------------------------------------------
+   examples:
+
+      $prog file1             some/other/directory
+      $prog file1 file2 file3 some/other/directory
+      $prog *                 some/other/directory
+
+      $prog -im *             some/other/directory
+      $prog -X  *             some/other/directory
+
+   ----------------------------------------------------------------------
+   R Reynolds    written ages ago, but added 10 Jun, 2015
+   ----------------------------------------
+
+EOF

@@ -1,0 +1,70 @@
+#The obvious lot
+CVS
+.DS_Store
+___*
+*.o
+*.so
+*.dylib
+*.a
+*.dSYM
+*junk*
+*.swp
+.*.swp
+
+#Datasets
+*.nii*
+*.BRIK*
+*.HEAD*
+*.gii*
+*.dset*
+*.niml
+*.1D
+
+#R Hidden files
+*.Rout
+*.args
+
+#Miscellaneous
+*.BAK
+
+# Matlab temporary files
+*.m~
+
+# Octave workspace
+octave-workspace
+/Debug/
+
+# Python
+__pycache__
+*.pyc
+*.egg-info
+
+# Test and coverage artifacts
+.pytest_cache
+.coverage
+output_of_tests
+sample_output_of_tests
+
+#From AFNI builds
+src/.gitignore
+src/prog_list.txt
+src/prog_list_bin.txt
+Makefile.back.*
+macros.make
+Makefile
+Makevars
+Makefile.R.INCLUDE
+Makefile.R.INCLUDE.BACK
+AFNI_version.txt
+AFNI_version.h
+
+#Python
+*.pyc
+
+#From SUMA/gts
+*.lo
+*.libs
+*.deps
+
+#Cscope
+*cscope*

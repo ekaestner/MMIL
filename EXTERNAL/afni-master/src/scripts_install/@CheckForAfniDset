@@ -1,0 +1,78 @@
+#!/bin/tcsh -f
+set stat = 0
+if ("$1" == '' || "$1" == '-h' || "$1" == '-help') then
+	goto USAGE
+endif
+
+set iname = 1
+
+#save path
+
+set lll = `@parse_afni_name "$argv[$iname]"`
+set pt = $lll[1]
+
+set pref = `@GetAfniPrefix "$argv[$iname]"`
+set view = `@GetAfniView "$argv[$iname]"`
+
+set ext = "$argv[$iname]:e"
+if ("$ext" == "gz" || "$ext" == "bz2" || "$ext" == "Z" ) then
+   set Name2 = "$argv[$iname]:r"
+   set ext = "$Name2:e"
+endif
+
+if ("$ext" =~ "nii*") then
+   if ( -f "$argv[$iname]" || -f "$lll[1]/$lll[2]") then
+      set cnt = 3
+   else 
+      set cnt = 0
+   endif
+   goto RESULT
+endif
+
+   
+if ("$view" == "" && "$ext" !~ "nii*") then
+   echo 0
+   #echo "Error: No view specified in dset name $argv[$iname]"
+   #echo "Make sure you are not passing a prefix instead"
+   #echo "of a dataset name"
+   set stat = 1
+   goto ENDALL
+endif
+
+set dsethead = "${pt}/${pref}${view}.HEAD"
+set dsetbrik = "${pt}/${pref}${view}.BRIK"
+set cnt = 0
+if ( -f "$dsethead" ) then 
+   @ cnt ++
+else
+   goto RESULT
+endif
+if ( -f "$dsetbrik" || -f "${dsetbrik}.gz" || -f "${dsetbrik}.bz2" || -f "${dsetbrik}.Z" ) then 
+   @ cnt ++
+else
+   goto RESULT
+endif
+
+
+RESULT:
+echo $cnt
+
+goto ENDALL
+
+USAGE:
+	echo "Usage: `basename $0` <Name> ....."
+	echo "example: `basename $0` /Data/stuff/Hello+orig.HEAD"
+	echo "returns 0 if neither .HEAD nor .BRIK(.gz)(.bz2)(.Z) exist"
+   echo "          OR in the case of an error"
+   echo "             An error also sets the status flag"
+   echo "        1 if only .HEAD exists"
+   echo "        2 if both .HEAD and .BRIK(.gz)(.bz2)(.Z) exist"
+	echo "        3 if .nii dataset "
+   echo "See also 3dinfo -exists"
+   echo "Ziad Saad (saadz@mail.nih.gov)"
+   echo "  SSCC/NIMH/ National Institutes of Health, Bethesda Maryland"
+   echo ""
+	goto ENDALL
+
+ENDALL:
+exit $stat

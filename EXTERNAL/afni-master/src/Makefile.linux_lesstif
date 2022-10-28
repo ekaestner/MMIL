@@ -1,0 +1,66 @@
+# This Makefile works on Linux 1.2.13
+
+# This Makefile is designed to work with LessTif (http://www.lesstiff.org).
+# It assumes you have installed LessTif in directory /usr/local
+
+CCDEBS = -DAFNI_DEBUG -DIMSEQ_DEBUG -DDISPLAY_DEBUG -DTHD_DEBUG
+CEXTRA = -Wcomment -Wformat -DUSE_TRACING
+CC     = gcc -O2 -m486 -ffast-math -DLINUX -DNO_GAMMA $(CEXTRA)
+CCVOL  = gcc -DLINUX -DNO_GAMMA $(CEXTRA)
+CCFAST = $(CC)
+CCMIN  = gcc
+CCD    = $(CC) $(CCDEBS)
+CCOLD  = $(CC)
+
+IFLAGS = -I. -I/usr/local/include -I/usr/X11R6/include
+LFLAGS = -s -L. -L/usr/local/lib -L/usr/X11R6/lib
+
+CCSVD  = gcc -O0
+
+
+PLUGIN_SUFFIX = so
+PLUGIN_LFLAGS = -shared
+PLUGIN_CC     = $(CC)
+PLFLAGS       = -s -rdynamic -L. -L/usr/local/lib -L/usr/X11R6/lib
+
+AR     = /usr/bin/ar
+RANLIB = /usr/bin/ranlib
+TAR    = /bin/tar
+MKDIR  = /bin/mkdir
+TAPE   = /dev/st0
+GZIP   = /bin/gzip
+LD     = gcc
+
+RM = /bin/rm -f
+MV = /bin/mv -f
+CP = /bin/cp -f
+
+LINT = /usr/bin/lint -a -b -u -v -x $(IFLAGS) $(CCDEFS)
+
+INSTALLDIR = ./linux_lesstif
+LIBDIR = $(INSTALLDIR)
+
+# for dynamic linking
+# (You may need to include libXp.a here for some Motif versions)
+
+LLIBS  = -lmri -lf2c -lXm -lXpm -lXext -lXmu -lXt -lX11 -lm  -ldl -lc
+
+# for static linking, as far as possible
+
+# LLIBS = -lmri -lf2c -ldl               \
+#         /usr/X11R6/lib/libXm.a   \
+#         /usr/X11R6/lib/libXpm.a  \
+#         /usr/X11R6/lib/libXext.a \
+#         /usr/X11R6/lib/libXmu.a  \
+#         /usr/X11R6/lib/libXt.a   \
+#         /usr/X11R6/lib/libSM.a   \
+#         /usr/X11R6/lib/libICE.a  \
+#         /usr/X11R6/lib/libX11.a  \
+#         /usr/lib/libm.a          \
+#         /usr/lib/libc.a
+
+
+###############################################################
+
+MAKE = make
+include Makefile.INCLUDE

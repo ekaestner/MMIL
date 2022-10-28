@@ -1,0 +1,2416 @@
+08 March 2002:
+  * added plug_crender.c
+
+21 May 2002:
+  * added rickr directory containing r_idisp.[ch], r_misc.[ch],
+      r_new_resam_dset.[ch] and Makefile
+  * added new program 3dresample (rickr/3dresample.c)
+  * modified Makefile.INCLUDE to build rickr directory
+
+06 June 2002:
+  * added @SUMA_Make_Spec_FS
+
+20 June 2002:
+  * added @make_stim_file
+
+21 June 2002:
+  * modified afni_plugin.c, NLfit_model.c and thd_get1D.c to
+      validate directories
+  * added rickr/AFNI.changes.rickr
+
+01 July 2002:
+  * added rai orientation to plug_crender.c
+  * added plug_crender.so target to Makefile.INCLUDE for use of librickr.a
+
+02 July 2002:
+  * modified 3dresample
+      - fully align dataset to the master (not just dxyz and orient)
+      - removed '-zeropad' option (no longer useful with new alignment)
+  * modified r_new_resma_dset.[ch]
+      - r_new_resam_dset() now takes an additional mset argument, allowing
+        a master alignment dataset (overriding dxyz and orient inputs)
+  * modified plug_crender.c to pass NULL for the new mset argument to
+      r_new_resam_dset()
+  * modified @SUMA_AlignToExperiment, removing '-zeropad' argument when
+      running program 3dresample
+
+15 July 2002:
+  * added @SUMA_Make_Spec_SF and @make_stim_file to SCRIPTS in Makefile.INCLUDE
+
+29 July 2002:
+  * modified plug_crender.c to allow arbitrary orientation and grid spacing
+      of functional overlay (no longer needs to match underlay)
+  * modified r_new_resam_dset.c to set view type to that of the master
+  * updated VERSION of 3dresample to 1.2 (to note change to r_new_resam_dset)
+
+05 August 2002:
+  * modified plug_crender.c (rv 1.5) to align crosshairs with master grid
+  * added ENTRY() and RETURN() statements
+
+11 September 2002:
+  * added rickr/file_tool.[ch]
+  * modified rickr/Makefile and Makefile.INCLUDE to be able to build file_tool
+    (note that file_tool will not yet be built automatically)
+  * modified r_idisp.c to include r_idisp_vec3f()
+
+20 September 2002:
+  * modified thd_opendset.c so that HEAD/BRIK are okay in directory names
+    (see 'fname' and 'offset' in THD_open_one_dataset())
+
+26 September 2002:
+  * modified plug_crender.c
+      - calculate and draw crosshairs directly
+      - added debugging interface (access via 'dh' in opacity box)
+  * modified cox_render.[ch] - pass rotation matrix pointer to CREN_render()
+  * modified testcox.c - pass NULL to CREN_render() for rotation matrix pointer
+
+01 October 2002:
+  * modified Makefile.INCLUDE to build file_tool automatically
+
+23 October 2002:
+  * modified plug_crender.c so that Incremental rotation is the default
+
+29 October 2002:
+  * modified plug_second_dataset.c and plug_nth_dataset.c to update dataset
+      pointers from idcodes on a RECEIVE_DSETCHANGE notification
+
+22 November 2002:
+  * added new program Hfile, including files rickr/Hfile.[ch]
+  * modified rickr/Makefile and Makefile.INCLUDE to build Hfile
+
+27 November 2002:
+  * Hfile is now Imon
+  * many modifications to Imon.[ch] (formerly Hfile.[ch])
+      - see rickr/Imon.c : history for version 1.2
+  * renamed Hfile.[ch] to Imon.[ch]
+  * modified rickr/Makefile to reflect the name change to Imon
+  * modified Makefile.INCLUDE to reflect the name change to Imon
+
+13 December 2002:
+  * Imon no longer depends on Motif
+      - mcw_glob.[ch] are used locally as l_mcw_glob.[ch]
+      - Imon.c now depends only on l_mcw_glob.[ch]
+      - rickr/Makefile now compiles Imon.c and l_mcw_glob.c
+        with -DDONT_USE_MCW_MALLOC
+
+14 January 2003:
+  * update 3dresample to clear warp info before writing to disk
+
+15 January 2003:
+  * The highly anticipated release of Imon 2.0!!
+      - Imon now has optional rtfeedme functionality.
+      - add files rickr/realtime.[ch]
+      - modified rickr/Imon.[ch]
+      - modified rickr/Makefile
+          o to build .o files with -DDONT_USE_MCW_MALLOC
+          o to use $(EXTRA_LIBS) for sockets on solaris machines
+      - modified Makefile.INCLUDE
+          o Imon now also depends on rickr/realtime.[ch]
+          o pass $(EXTRA_LIBS) to the make under rickr
+
+27 January 2003:
+  * modified Makefile.solaris28_gcc : defined EXTRA_LIBS_2
+      (is EXTRA_LIBS without -lgen and -ldl)
+  * modified Makefile.INCLUDE for Imon to use EXTRA_LIBS_2
+  * modified rickr/Makefile for Imon to use EXTRA_LIBS_2
+
+28 January 2003:
+  * modified Imon.[ch] to add '-nt VOLUMES_PER_RUN' option (revision 2.1)
+
+02 February 2003:
+  * modified Imon.[ch] to fail only after 4 I-file read failures (rv 2.2)
+
+10 February 2003:
+  * added a new SUMA program, 3dSurfMaskDump
+      o added files SUMA/SUMA_3dSurfMaskDump.[ch]
+      o modified SUMA_Makefile to make 3dSurfMaskDump
+      o modified Makefile.INCLUDE, targets:
+	    suma_exec, suma_clean, suma_link, suma_install
+  * modified Makefile.solaris2[67]_gcc, defining EXTRA_LIBS_2
+
+11 February 2003:
+  * minor updates to SUMA/SUMA_3dSurfMaskDump.c (for -help)
+  * 3dSurfMaskDump rv 1.2: do not free structs at the end
+
+13 February 2003:
+  * 3dSurfMaskDump rv 1.2: redo rv1.2: free structs conditionally (and init)
+
+14 February 2003:
+  * 3dSurfMaskDump rv 1.3: optionally enable more SUMA debugging
+  * modified Imon.[ch] (rv 2.3): added '-start_file' option
+
+18 February 2003:
+  * modified Imon.[ch] (rv 2.4), realtime.[ch]
+      o added DRIVE_AFNI command to open a graph window (-nt points)
+      o added '-drive_afni' option, to add to the above command
+      o pass Imon command as a dataset NOTE
+  * modified rickr/Makefile - added WARN_OPT
+
+20 February 2003:
+  * modified rickr/Imon.[ch] rickr/realtime.c (Imon rv 2.5)
+      o appropriately deal with missing first slice of first volume
+      o separate multiple DRIVE_AFNI commands
+      o minor modifications to error messages
+
+28 February 2003:
+  * modified rickr/file_tool.[ch]: added '-quiet' option
+
+25 March 2003:
+  * modified Imon to version 2.6: Imon.[ch] realtime.[ch]
+      o added -GERT_Reco2 option to output script
+      o RT: only send good volumes to afni
+      o RT: added -rev_byte_order option
+      o RT: also open relevant image window
+      o RT: mention starting file in NOTE command
+
+01 May 2003:
+  * modified mcw_glob.c and rickr/l_mcw_glob.c
+	- removed #ifdef around #include <errno.h>
+  * modified imseq.c - added #include <errno.h>
+
+06 May 2003:
+  * file_tool 1.3 - added interface for GEMS 4.x image files
+      o added ge4_header.[ch]     - all of the processing for 4.x images
+      o added options for raw data display (disp_int2, disp_int4, disp_real4)
+      o modified file_tool.[ch]   - interface to ge4
+      o modified rickr/Makefile   - file_tool depends on ge4_header.o
+      o modified Makefile.INCLUDE - file_tool depends on ge4_header.o
+
+09 May 2003:
+  * modified 3dmaskdump.c
+      o added -index option for Mike B
+      o combined changes with Bob's
+
+28 May 2003:
+  * added SUMA/SUMA_3dSurf2Vol.[ch]
+
+29 May 2003:
+  * modified Makefile.INCLUDE and SUMA/SUMA_Makefile to build 3dSurf2Vol
+  * 3dSurf2Vol (version 1.0) is now part of the suma build
+  * file_tool version 2.0 : added ge4 study header info
+      o modified ge4_header.[ch] rickr/file_tool.[ch]
+
+03 June 2003:
+  * modified ge4_header.[ch] to be called from mri_read.c
+  * modified mri_read.c - added mri_read_ge4 and call from mri_read_file()
+  * modified mrilib.h - added declaration for mri_read_ge4()
+  * modified Makefile.INCLUDE - added ge4_header.o to MRI_OBJS for mri_read_file
+  * modified file_tool (version 2.1) for slight change to ge4_read_header()
+
+06 June 2003:
+  * modified SUMA_3dSurfMaskDump.[ch]
+      o now 3dSurfMaskDump version 2.0
+      o re-wrote program in terms of 3dSurf2Vol, to handle varying map types
+      o added 'midpoint' map function
+
+12 June 2003:
+  * modified SUMA_3dSurf2Vol.c - minor changes to help and s2v_fill_mask2()
+  * modified ge4_header.c to remove "static" warnings
+
+17 June 2003:
+  * modified SUMA_3dSurfMaskDump.[ch] -> version 2.1
+      o added 'ave' map function
+
+19 June 2003:
+  * modified SUMA_3dSurfMaskDump.[ch] -> version 2.2
+      o added -m2_index INDEX_TYPE for the option of indexing across nodes
+      o set the default of -m2_steps to 2
+      o replace S2V with SMD in macros
+  * modified SUMA_ParseCommands.c
+      o In SUMA_FreeMessageListData(), do not free Message or Source, as
+        they are added as static or local strings (but never alloc'd).
+
+26 June 2003:
+  * modified Imon.[ch], realtime.c to add axis offset functionality
+      -> Imon version 2.7
+
+27 June 2003:
+  * modified Imon.c, realtime.c to pass BYTEORDER command to realtime plugin
+      -> Imon version 2.8
+  * modified plug_realtime.c to handle BYTEORDER command
+
+30 June 2003:
+  * modified README.realtime to provide details of the BYTEORDER command
+  * modified plug_realtime.c to accept BYTEORDER for MRI_complex images
+
+21 July 2003:
+  * modified SUMA_3dSurfMaskDump.[ch] -> version 2.3
+      - fixed a problem: voxels outside gpar dataset should be skipped (or
+	get a special value, like 0)
+      - added min/max distance output (at debug level > 0)
+
+22 July 2003:
+  * modified plug_crender.c to handle bigmode color bar (version 1.8)
+      ** need to add bigmode information to widget storage
+  * modified SUMA_3dSurf2Vol.[ch] -> version 1.2
+      - see 3dSurfMaskDump: skip nodes outside dataset space
+
+27 July 2003:
+  * modified 3dresample.c (v1.4), file_tool.[ch] (v2.2), Imon.c (v2.9),
+    realtime.[ch] (v2.9), r_idisp.[ch] (v1.2) - added CHECK_NULL_STR() to
+    questionable strings for printing (old glibc doesn't print (nil))
+  * modified Imon.h - increase IFM_EPSILON to 0.01 and IFM_MAX_DEBUG to 4
+
+05 August 2003:
+  * renamed SUMA_3dSurfMaskDump.[ch] to SUMA_3dVol2Surf.[ch]
+  * modified Makefile.INCLUDE and SUMA/SUMA_Makefile_NoDev for 3dVol2Surf
+  * modified SUMA_3dVol2Surf (major re-write -> version 3.0)
+      - all output functions now go through dump_surf_3dt
+      - dump_surf_3dt() is a generalized function to get an MRI_IMARR for one
+        or a pair of nodes, by converting to a segment of points
+      - added v2s_adjust_endpts() to apply segment endpoint modifications
+      - added segment_imarr() to get the segment of points and fill the
+        MRI_IMARR list (along with other info)
+      - filter functions have been taken to v2s_apply_filter()
+      - added min, max and seg_vals map functions (filters)
+      - added options of the form -f_pX_XX to adjust segment endpoints
+      - added -dnode option for specific node debugging
+      - changed -output option to -out_1D
+      - added new debug info
+      - added checking of surface order (process from inner to outer)
+  * modified Imon (-> v2.10): added '-sp SLICE_PATTERN' option
+
+14 August 2003:
+  * modified Imon.[ch], realtime.h:
+      - added '-quit' option
+      - allow both 'I.*' and 'i.*' filenames
+      
+15 August 2003:
+  * modified 3dDeconvolve.c   - only output timing with -jobs option
+  * modified Makefile.INCLUDE - fix cygwin compile
+      - created PROGRAM_EXE targets for Imon.exe, file_tool.exe, 3dresample.exe
+
+20 August 2003:
+  * modified Imon.c (-> v3.0)  - retest errors before reporting them
+      - major version change for high numbers, plus new warning output
+
+02 September 2003:
+  * modified Imon.c (->v3.1) - added '-gert_outdir OUTPUT_DIR' option
+
+08 September 2003:
+  * modified L_CREATE_SPEC write error to name correct directory
+
+11 September 2003:
+  * modified 3dfim+.c: read_one_time_series() was still using old 'filename'
+
+17 September 2003:
+  * modified SUMA_3dVol2Surf.c: fixed help info for '-cmask option'
+
+21 September 2003:
+  * modified SUMA_3dVol2Surf.c:
+      - added max_abs mapping function
+      - added '-oob_index' and '-oob_value' options
+      - added CHECK_NULL_STR macro
+
+23 September 2003:
+  * modified SUMA_3dVol2Surf.c: added help for -no_header option
+
+01 October 2003:
+  * modified SUMA_3dVol2Surf.c: added -oom_value option and help example
+
+02 October 2003:
+  * major upgrades to 3dSurf2Vol (-> v2.0)
+      - changes accepting surface data, surface coordinates, output data type,
+        debug options, multiple sub-brick output, and segment alterations
+      - added the following options:
+	  '-surf_xyz_1D', '-sdata_1D', '-data_expr', '-datum', '-dnode',
+	  '-dvoxel', '-f_index', '-f_p1_fr', '-f_pn_fr', '-f_p1_mm', '-f_pn_mm'
+
+06 October 2003:
+  * modified 2dImReg.c: if nsl == 0, use nzz for num_slices
+
+07 October 2003:
+  * modified plug_roiedit.[ch]: old/new -> Bold/Bnew for C++ compilation
+
+08 October 2003:
+  * modified @SUMA_AlignToExperiment to use tcsh instead of csh (for $#)
+
+20 October 2003:
+  * modified SUMA files SUMA_Load_Surface_Object.[ch] SUMA_MiscFunc.[ch] and
+    SUMA_Surface_IO.[ch] to make non-error output optional via a debug flag
+      - renamed the following functions to XXX_eng (engine functions):
+          SUMA_Load_Surface_Object, SUMA_LoadSpec, SUMA_SurfaceMetrics,
+          SUMA_Make_Edge_List, SUMA_FreeSurfer_Read
+      - wrote functions with original names to call engines with debug
+        flags set
+  * modified SUMA_3dVol2Surf.c to call the new SUMA_LoadSpec_eng()   (-> v3.5)
+  * modified SUMA_3dSurf2Vol.c to call the new SUMA_LoadSpec_eng()   (-> v2.1)
+  * modified rickr/r_idisp.c to handle new ALLOW_DATASET_VLIST macro (-> v1.3)
+
+21 October 2003:
+  * modified SUMA_3dVol2Surf.c to complete the -f_keep_surf_order option
+    (-> v3.6)
+
+30 October 2003:
+  * modified 3dbucket.c to search for trailing view type extension from end
+    (under -glueto option processing)
+  * modified plug_realtime.c to compute function on registered data
+
+05 November 2003:
+  * modified SUMA_3dVol2Surf.c to include ENTRY() stuff (3dVol2Surf -> v3.7)
+
+07 November 2003:
+  * Added SUMA_SurfMeasures.[ch] -> SurfMeasures (v0.2)
+      - this is not a release version (this checkin is for backup)
+      - supported functions are coord_A, coord_B, n_area_A, n_area_B,
+        nodes, node_vol and thick
+
+14 November 2003:
+  * updates to SurfMeasures (v0.3 - not yet released)
+
+19 November 2003:
+  * more updates to SurfMeasures (v0.5)
+
+01 December 2003:
+  * finally!!  SurfMeasures is ready for release (v1.0)
+      - checked in v1.0 of SUMA/SUMA_SurfMeasures.[ch]
+  * modified Makefile.INCLUDE for SurfMeasures
+  * modified SUMA/SUMA_Makefile_NoDev for SurfMeasures
+
+03 December 2003
+  * modified SUMA/SUMA_SurfMeasures.[ch]  (v1.2)
+      - added '-cmask' and '-nodes_1D' options
+
+16 December 2003
+  * modified SUMA_Load_Surface_Object.[ch]
+      - added functions: SUMA_spec_select_surfs(), SUMA_swap_spec_entries(),
+        SUMA_unique_name_ind(), SUMA_coord_file(), swap_strings()
+      - made change to restrict spec struct (and therefore surface loading)
+        to surfaces named in a list
+  * modified SUMA_SurfMeasures.[ch] (-> SurfMeasures v1.3)
+      - added '-surf_A' and '-surf_B' to specify surfaces from the spec file
+        (goes through new function SUMA_spec_select_surfs())
+      - fixed loss of default node indices (from -nodes_1D change)
+      - added '-hist' option
+      - display angle averages only if at least 1 total is computed
+  * modified SUMA_3dVol2Surf.[ch] (-> 3dVol2Surf v3.8)
+      - added '-surf_A' and '-surf_B' to specify surfaces from the spec file
+      - depreciated option '-kso'
+      - added '-hist' option
+  
+18 December 2003
+  * modified SUMA_3dSurf2Vol[ch] (-> 3dSurf2Vol v2.2)
+      - added '-surf_A' and '-surf_B' to specify surfaces from the spec file
+      - added '-hist' option
+  * modified SUMA_3dSurf2Vol[ch] (-> 3dSurf2Vol v3.0)
+      - removed requirement of 2 surfaces for most functions
+        (this was not supposed to be so easy)
+
+22 December 2003
+  * modified afni_graph.[ch] to add Mean and Sigma to bottom of graph window
+
+07 January 2004
+  * modified 3dresample.c
+      - added suggestion of 3dfractionize to -help output
+      - added -hist option
+
+13 January 2004
+  * modified Imon.[ch] realtime.[ch]
+      - added '-zorder ORDER' option for slice patterns in real-time mode
+        (the default has been changed from 'seq' to 'alt')
+      - add '-hist' option
+
+22 January 2004
+  * modified SUMA_3dVol2Surf.[ch]  (-> 3dVol2Surf v3.9)
+      - added use of normals to compute segments, instead of second surface
+        (see options '-use_norms', '-norm_len', '-keep_norm_dir')
+      - reversed order of '-hist' output
+  * modified SUMA_SurfMeasures.[ch] (-> SurfMeasures v1.4)
+      - fixed node coord output error when '-nodes_1D' gets used
+      - added '-sv' option to examples (recommended)
+      - reversed order of '-hist' output
+
+23 January 2004
+  * modified SUMA_3dVol2Surf.c, SUMA_3dSurf2Vol.c and SUMA_SurfMeasures.c
+             ( -> v4.0            -> v3.1              -> v 1.5 )
+      - SUMA_isINHmappable() is depricated, check with AnatCorrect field
+
+29 January 2004
+  * modified plug_realtime.c :
+      - allow 100 chars in root_prefix via PREFIX (from 31)
+      - x-axis of 3-D motion graphs changed from time to reps
+      - plot_ts_... functions now use reg_rep for x-axis values
+      - reg_graph_xr is no longer scaled by TR
+      - added (float *)reg_rep, for graphing with x == rep num
+      - added RT_set_grapher_pinnums(), to call more than once
+      - added GRAPH_XRANGE and GRAPH_YRANGE command strings for control over
+        the scales of the motion graph
+      - if GRAPH_XRANGE and GRAPH_YRANGE commands are both passed, do not
+        display the final (scaled) motion graph
+  * modified README.realtime with details on GRAPH_XRANGE and GRAPH_YRANGE
+
+10 February 2004:
+  * modified  SUMA_3dSurf2Vol.c (-> v3.2) to add debug output for AnatCorrect
+  * modified  SUMA_3dVol2Surf.c (-> v4.1) to add debug output for AnatCorrect
+
+11 February 2004:
+  * modified  SUMA_SurfMeasures.c (-> v1.6) to add debug output for AnatCorrect
+
+13 February 2004:
+  * modified README.realtime to include the GRAPH_EXPR command
+  * modified plug_realtime.c:
+      - added RT_MAX_PREFIX for incoming PREFIX command
+      - if GRAPH_XRANGE or GRAPH_YRANGE is given, disable respective 'pushing'
+      - added GRAPH_EXPR command, as explained in README.realtime
+      - added parser functionality to convert 6 graphs to 1 via the expression
+  * modified Imon.[ch], realtime.[ch] -> (Imon v3.3)
+      - added '-rt_cmd' option for passing commands to the realtime plugin
+      - the '-drive_cmd' option can now be used multiple times
+      - the realtime zorder is defaulting to seq again (affects physical order)
+      - passed lists of drive and RT commands to realtime plugin
+
+18 February 2004:
+  * modified SUMA_3dVol2Surf.[ch] (->v4.2) 
+      - add functionality for mapping functions that require sorting
+      - added mapping functions 'median' and 'mode'
+
+19 February 2004:
+  * modified SUMA_3dVol2Surf.[ch] (->v4.3) to track 1dindex sources 
+
+20 February 2004:
+  * modified plug_maxima.c
+      - added ENTRY/RETURN calls
+      - error: do not process last plane in find_local_maxima()
+
+23 February 2004:
+  * modified mri_dup.c to allow NN interpolation if AFNI_IMAGE_ZOOM_NN is Y
+  * modified afni_pplug_env.c to add control for AFNI_IMAGE_ZOOM_NN
+  * modified README.environment to add a description of AFNI_IMAGE_ZOOM_NN
+  * modified SUMA_SurfMeasures.[ch] to add functions:
+      'n_avearea_A', 'n_avearea_B', 'n_ntri'
+
+01 March 2004:
+  * fixed mbig.c (was using AFMALL() without #include), left malloc() for speed
+
+04 March 2004:
+  * modified 3dresample.c to check RESAM_shortstr, reversed history
+
+08 March 2004:
+  * modified 3dFWHM.c to output NO_VALUE when results cannot be computed
+
+15 March 2004:
+  * modified 3dfim+.c: init sum to 0.0 in set_fim_thr_level()
+
+17 March 2004:
+  * modified file_tool.[ch] (-> v3.0), adding binary data editing
+    (this was the original goal of the program, yet it took 18 months...)
+      - added ability to modify 1, 2 or 4-byte signed or unsigned ints
+      - added ability to modify 4 or 8-byte reals (floats or doubles)
+      - added '-ge_off' option to display file offsets for certain GE fields
+      - added '-hist' option to display module history
+
+24 March 2004:
+  * modified file_tool.c (-> v3.2), only check max length for mods
+
+30 March 2004:
+  * made history notes of ziad's added argument to SUMA_LoadSpec_eng()
+      - 3dSurf2Vol (v3.3), 3dVol2Surf (v4.4), SurfMeasures (v1.8)
+
+31 March 2004:
+  * added rickr/serial_helper.c (-> v1.0)
+      - this tcp server passes registration correction params to a serial port
+  * modified plug_realtime.c
+      - added the ability to pass registration correction parameters over
+        a tcp socket (see 'serial_helper -help')
+  * modified afni_pplug_env.c, adding AFNI_REALTIME_MP_HOST_PORT
+  * modified README.environment, describing AFNI_REALTIME_MP_HOST_PORT
+  * modified Makefile.INCLUDE, for building serial_helper
+  * modified rickr/Makefile, for building serial_helper
+
+01 April 2004:
+  * modified rickr/serial_helper.c (-> v1.2)
+      - adding a little more help
+      - checking for bad options
+      
+02 April 2004:
+  * modified rickr/serial_helper.c [request of tross] (-> v1.3)
+      - change default min to -12.7, and use -128 for serial start signal
+  * modified plug_realtime.so [request of tross]
+      - move RT_mp_comm_close() out of check for resize plot
+
+07 April 2004:
+  * modified SUMA_3dVol2Surf.c (-> v4.5) to fix default direction of normals
+  * modified serial_helper.c (-> v1.4) to #include sys/file.h for Solaris
+  * modified Makefile.INCLUDE to pass EXTRA_LIBS_2 for serial_helper build
+  * modified rickr/Makefile to apply EXTRA_LIBS_2 for Solaris build
+
+13 May 2004:
+  * added -NN help info to 3drotate.c
+
+17 May 2004:
+  * modified edt_dsetitems.c: THD_deplus_prefix() to remove only the basic
+    three extensions: +orig, +acpc, +tlrc (blame Shruti)
+
+18 May 2004:
+  * modified SUMA_3dVol2Surf.[ch] (-> v5.0)
+      - allow niml output via '-out_niml'
+      - accept '-first_node' and '-last_node' options for restricted output
+
+19 May 2004:
+  * modified coxplot/plot_ts.c:init_colors() to start with color 0 (not 1)
+    (allows users to modify ...COLOR_01, too, matching README.environment)
+
+20 May 2004:
+  * modified SUMA_3dVol2Surf.c (-> v5.1)
+      - Ziad reminded me to add help for options '-first_node' and '-last_node'
+
+07 June 2004:
+  * modified @RenamePanga - subtract 1 from init of Nwhatapain
+
+21 June 2004:
+  * modified SUMA_3dSurf2Vol.[ch] (-> v3.4): fixed -surf_xyz_1D option
+
+07 July 2004:
+  * modified 3dROIstats - added -minmax, -nzminmax options
+
+20 July 2004:
+  * modified 3dANOVA3.c to fix stack space problem (see N_INDEX)
+
+22 July 2004:
+  * modified SUMA_3dSurf2Vol.c (-> v3.5) fixed bug in sdata_1D file test
+
+26 July 2004:
+  * modified thd_mastery.c
+	- changed THD_setup_mastery() to return int
+	- added THD_copy_dset_subs(), to copy a list of sub-bricks
+  * modified 3ddata.h: added declaration for THD_copy_dset_subs()
+  * modified r_new_resam_dset.[ch], taking new sublist parameter
+  * modified 3dresample.c (-> v1.7), passing NULL for sublist
+  * modified plug_crender.c (-> v1.9a), temporary update, passing sublist NULL
+
+27 July 2004:
+  * modified plug_crender.c (-> v1.9) to resample only appropriate sub-bricks
+
+28 July 2004:
+  * modifed SUMA_3dSurf2Vol.c (-> v3.6), fixed bug where a previous change
+    caused the default f_steps to revert from 2 to 1 (discovered by Kuba)
+
+02 August 2004:
+  * modified SUMA_SurfMeasures.c (-> v1.9), do not require anat correct
+  * modified SUMA_glxdino.c, cast each 3rd gluTessCallback arg as _GLUfuncptr
+    (some 64-bit machines have complained)
+
+03 August 2004:
+  * modified f2cdir/rawio.h, hiding read/write declarations for 64-bit machines
+  * added Makefile.solaris9_suncc_64
+  * added Makefile.linux_gcc33_64 (for Fedora Core 2, x86-64)
+  * modified SUMA_glxdino.c, SUMA_pixmap2eps.c to cast gluTessCallback()'s
+    3rd argument only in the case of the LINUX2 define
+
+11 August 2004:
+  * SUMA_SurfMeasures.c (-> v1.10) to warn users about ~10% inaccuracy in volume
+
+26 August 2004:
+  * modified FD2.c: added -swap_yes and -swap_no options
+
+27 August 2004:
+  * modified FD2.c: replace -swap_yes and -swap_no with a plain -swap
+		    (this alters the original program!)
+
+01 September 2004:
+  * modified 3dVol2Surf (-> v6.0)
+    - created vol2surf() library files vol2surf.[ch] from core functions
+    - this represents a significant re-write of many existing functions,
+      modifying locations of action, structure names/contents, etc.
+    - add library to libmri (as this will end up in afni proper)
+    - separate all vol2surf.[ch] functions from SUMA_3dVol2surf.[ch]
+    - keep allocation/free action of results struct within library
+    - now using SUMA_surface struct for surface info (replace node_list)
+    - added main vol2surf(), afni_vol2surf(), free_v2s_results(),
+      and disp...() functions as vol2surf library interface
+    - added options to control column output (-skip_col_NAME)
+    - added -v2s_hist option for library history access
+  * modified Makefile.INCLUDE to put the vol2surf functions in libmri
+    - added vol2surf.o into CS_OBJS and vol2surf.h into LIBHEADERS
+  * added vol2surf.[ch] into the src directory (for libmri)
+
+02 September 2004:
+  * modified 3dROIstats.c to fix the minmax initializer
+  * modified vol2surf.[ch] SUMA_3dVol2Surf.[ch] (-> v6.1) : library shuffle
+
+09 September 2004:
+  * added plug_vol2surf.c: for setting the internal volume to surface options
+  * modifed afni_plugin.[ch]: added function PLUTO_set_v2s_addrs()
+  * modified vol2surf.c
+    - in afni_vol2surf(), show options on debug
+    - allow first_node > last_node if last is 0 (default to n-1)
+
+17 September 2004:
+  * modified SUMA_3dVol2Surf.[ch] (-> v6.2):
+    - added -gp_index and -reverse_norm_dir options
+  * modified vol2surf.[ch]: added support for gp_index and altered norm_dir
+
+23 September 2004:
+  * modified Makefile.linux_gcc33_64 for static Motif under /usr/X11R6/lib64
+
+28 September 2004:
+  * modified thd_coords.c and 3ddata.h, adding THD_3dmm_to_3dind_no_wod()
+
+04 October 2004:
+  * added afni_vol2surf.c: for computing SUMA_irgba from v2s_results
+  * modified afni_niml.c:
+    - if gv2s_plug_opts.ready, call AFNI_vol2surf_func_overlay()
+    - use saved_map in case of calling vol2surf twice, indentically
+    - only send nvtot and nvused to suma via AFNI_vnlist_func_overlay()
+  * modified Makefile.INCLUDE: added afni_vol2surf.o to AFOBJS
+  * modified plug_vol2surf.c:
+    - now set global ready if all is well
+    - clear norms if not in use
+    - name all local functions PV2S_*
+    - if debug > 0, display chosen surfaces in terminal
+    - if debug > 1, display all possible surfaces in terminal
+    - allow oob and oom values to be arbitrary
+    - on debug, output complete surface listing in PV2S_check_surfaces()
+  * modified vol2surf.c:
+    - added thd_mask_from_brick()
+    - added compact_results(), in case nalloc > nused
+    - added realloc_ints() and realloc_vals_list()
+    - in afni_vol2surf(), if 1 surf and no norms, set steps to 1
+    - in set_surf_results(), pass gp_index to v2s_apply_filter
+    - in segment_imarr()
+        o  changed THD_3dmm_to_3dind() to new THD_3dmm_to_3dind_no_wod()
+        o  if THD_extract_series() fails, report an error
+    - in init_seg_endpoints()
+        o  get rid of p1 and pn
+        o  save THD_dicomm_to_3dmm() until the end
+
+06 October 2004:
+  * modified afni.h: added AFNI_vol2surf_func_overlay() prototype
+  * modified afni_niml.c:AFNI_process_niml_data()
+    - added case for name "SUMA_node_normals" via SUMA_add_norms_xyz()
+  * modified afni_suma.h: added SUMA_add_norms_xyz() prototype
+  * modified afni_suma.c: added SUMA_add_norms_xyz() function
+  * modified SUMA_SurfMeasures.c (->v1.11): to mention 'SurfPatch -vol'
+
+07 October 2004:
+  * modified afni_plugin.h: fixed extern name PLUTO_set_v2s_addrs()
+  * modified afni.h: changed prototype for AFNI_vol2surf_func_overlay()
+  * modified afni_niml.c
+    - most of the file is part of a diff, beware...
+    - received local_domain_parent and ID from suma
+    - added local struct types ldp_surf_list and LDP_list
+    - in AFNI_process_NIML_data(), broke process_NIML_TYPE blocks out
+      as separate functions
+    - added process_NIML_SUMA_node_normals()
+    - modified AFNI_niml_redisplay_CB() to process surfaces over a list
+      of local domain parents
+    - added fill_ldp_surf_list(), to create an LDP list from the surfaces
+    - added disp_ldp_surf_list(), for debug
+  * modified afni_vol2surf.c
+    - new params surfA, surfB, use_defaults for AFNI_vol2surf_func_overlay()
+    - pass use_defaults to afni_vol2surf()
+  * modified plug_vol2surf.c
+    - added second surface pair to globals
+    - small help and hint changes
+    - fixed receive order of fr and mm offsets
+    - verify that surface pairs have matching LDPs
+    - added PV2S_disp_afni_surfaces() to list all surfaces w/indices
+  * modified vol2surf.[ch]
+    - added disp_v2s_plugin_opts()
+    - dealt with default v2s mapping of surface pairs
+    - added fill_sopt_default()
+    - moved v2s_write_outfile_*() here, with print_header()
+    - in afni_vol2surf(), actually write output files
+  * modified afni_suma.[ch]
+    - change idcode_domaingroup to idcode_ldp
+    - add char label_ldp[64]
+    - init label_ldp and idcode_ldp
+  * modified SUMA_3dVol2Surf.[ch] (-> v6.3)
+    - in suma2afni_surf() deal with LDP changes to SUMA_surface
+    - changed write_outfile functions to v2s_* and moved them to library
+
+25 October 2004:
+  * modified afni_niml.c
+    - use vol2surf for all surfaces now
+    - so nvused is no longer computed
+    - in ldp_surf_list, added _ldp suffix to idcode and label
+    -                   added full_label_ldp for user clarity
+    - added functions int_list_posn, slist_choose_surfs,
+      slist_check_user_surfs and slist_surfs_for_ldp to
+      handle an arbitrary number of surfaces per LDP
+    - moved old debug off margin
+    - pass data/threshold pointers to AFNI_vol2surf_func_overlay()
+    - pass threshold element with rthresh
+    - prepare for sending data to suma (but must still define new NIML type)
+      can get data and global threshold from vol2surf
+    - for users, try to track actual LDP label in full_label_ldp
+    - allow absolute thresholding in thd_mask_from_brick()
+  * modified plug_vol2surf.c
+    - make sure the surface pairs are actually different
+    - make sure surfaces have the same number of nodes
+    - process all parameters, but only complain if "ready"
+    - always pass along debug/dnode
+  * modified afni_vol2surf.c:AFNI_vol2surf_func_overlay():
+    - pass Rdata and Rthr pointers, to optionally return data and thresh
+    - require absolute thresholding for vol2surf mask
+  * modified afni.h
+    - updated AFNI_vol2surf_func_overlay() prototype
+  * modified vol2surf.c
+    - apply debug and dnode, even for defaults
+    - if the user sets dnode, then skip any (debug > 0) tests for it
+    - check for out of bounds, even if an endpoint is in (e.g. midpoint)
+
+01 November 2004:
+  * modified nifti1.h, correcting 3 small errors in the descriptions:
+    - integers from 0 to 2^24 can be represented with a 24 bit mantissa
+    - we require that a = sqrt(1.0-b*b-c*c-d*d) be nonnegative
+    - [a,b,0,0] * [0,0,0,1] = [0,0,-b,a]
+  * modified plug_maxima.[ch]
+    - remove restrictions on threshold input
+    - rearrange options, and add a Debug Level
+    - increment style (should be in {1,2}, not {0,1}
+    - add a little debug output, including show_point_list_s()
+    - removed unused variables
+    - true_max update in find_local_maxima()
+    - added check for warp-on-demand failure
+
+16 November 2004:
+  * modified nifti1_io.[ch] nifti1_test.c to include changes from M Jenkinson
+    - also modified nifti_validfilename, nifti_makebasename and
+      added nifti_find_file_extension
+  * added znzlib directory containing config.h Makefile znzlib.[ch]
+    (unmodified from Mark Jenkinson, except not to define USE_ZLIB)
+  * modified Makefile.INCLUDE to link znzlib.o into nifti1_test and
+    with the CS_OBJS in libmri.a
+
+03 December 2004:
+  * modified nifti1_io.[ch]:
+    - note: header extensions are not yet checked for
+    - added formatted history as global string (for printing)
+    - added nifti_disp_lib_hist(), to display the nifti library history
+    - added nifti_disp_lib_version(), to display the nifti library version
+    - re-wrote nifti_findhdrname()
+        o used nifti_find_file_extension()
+        o changed order of file tests (default is .nii, depends on input)
+        o free hdrname on failure
+    - made similar changes to nifti_findimgname()
+    - check for NULL return from nifti_findhdrname() calls
+    - removed most of ERREX() macros
+    - modified nifti_image_read()
+        o added debug info and error checking (on gni_debug > 0, only)
+        o fail if workingname is NULL
+        o check for failure to open header file
+        o free workingname on failure
+        o check for failure of nifti_image_load()
+        o check for failure of nifti_convert_nhdr2nim()
+    - changed nifti_image_load() to int, and check nifti_read_buffer return
+    - changed nifti_read_buffer() to fail on short read, and to count float
+      fixes (to print on debug)
+    - changed nifti_image_infodump to print to stderr
+    - updated function header comments, or moved comments above header
+    - removed const keyword, changed nifti_image_load() to int, and
+      added LNI_FERR() macro for error reporting on input files
+  * modified nifti1_test.c
+    - if debug, print header and image filenames before changing them
+    - added -nifti_hist and -nifti_ver options
+
+06 December 2004:
+  * added list_struct.[ch] to create TYPE_list structures (for nifti, etc.)
+    (see float_list, for example)
+  * modified mrilib.h to #include list_struct.h
+  * modified Makefile.INCLUDE, adding list_struct.o to CS_OBJS
+  * modified vol2surf.c, changing float_list to float_list_t
+
+10 December 2004:   added header extensions to nifti library (v 0.4)
+  * in nifti1_io.h:
+      - added num_ext and ext_list to the definition of nifti_image
+      - made many functions static (more to follow)
+      - added LNI_MAX_NIA_EXT_LEN, for max nifti_type 3 extension length
+  * added __DATE__ to version output in nifti_disp_lib_version()
+  * added nifti_disp_matrix_orient() to print orientation information
+  * added '.nia' as a valid file extension in nifti_find_file_extension()
+  * added much more debug output
+  * in nifti_image_read(), in the case of an ASCII header, check for
+  * extensions after the end of the header
+  * added nifti_read_extensions() function
+  * added nifti_read_next_extension() function
+  * added nifti_add_exten_to_list() function
+  * added nifti_valid_extension() function
+  * added nifti_write_extensions() function
+  * added nifti_extension_size() function
+  * in nifti_set_iname_offest():
+      - adjust offset by the extension size and the extender size
+      - fixed the 'ceiling modulo 16' computation
+  * in nifti_image_write_hdr_img2():
+      - added extension writing
+      - check for NULL return from nifti_findimgname()
+  * include number of extensions in nifti_image_to_ascii() output
+  * in nifti_image_from_ascii():
+      - return bytes_read as a parameter, computed from the final spos
+      - extract num_ext from ASCII header
+
+11 Dec 2004:
+  * added a description of the default operation to the Help in plug_vol2surf.c
+
+14 Dec 2004: added loading a brick list to nifti1 library (v 0.5)
+  * added nifti_brick_list type to nifti1_io.h, along with new prototypes
+  * added main nifti_image_read_bricks() function, with description
+  * added nifti_image_load_bricks() - library function (requires nim)
+  * added valid_nifti_brick_list() - library function
+  * added free_NBL() - library function
+  * added update_nifti_image_for_brick_list() for dimension update
+  * added nifti_load_NBL_bricks(), nifti_alloc_NBL_mem(),
+          nifti_copynsort() and force_positive() (static functions)
+  * in nifti_image_read(), check for failed load only if read_data is set
+  * broke most of nifti_image_load() into nifti_image_load_prep()
+
+15 Dec 2004: (v 0.6) added writing a brick list to nifti library, and
+             and nifti library files under a new nifti directory
+  * modified nifti1_io.[ch]:
+      - nifti_read_extensions(): print no offset warning for nifti_type 3
+      - nifti_write_all_data():
+          o pass nifti_brick_list * NBL, for optional writing
+          o if NBL, write each sub-brick, sequentially
+      - nifti_set_iname_offset(): case 1 must have sizeof() cast to int
+      - pass NBL to nifti_image_write_hdr_img2(), and allow NBL or data
+      - added nifti_image_write_bricks() wrapper for ...write_hdr_img2()
+      - prepared for compression use
+  * modified Makefile.INCLUDE to use nifti directory (and for afni_src.tgz)
+  * renamed znzlib directory to nifti
+  * moved nifti1.h, nifti1_io.c, nifti1_io.h and nifti1_test.c under nifti
+  * modified thd_analyzeread.c and thd_niftiread.c: nifti1_io.h is under nifti
+
+16 Dec 2004:
+  * moved nifti_stats.c into the nifti directory
+  * modified Makefile.INCLUDE to compile nifti_stats from the nifti dir
+  * nifti1.io.[ch] (v 0.7): minor changes to extension reading 
+
+21 Dec 2004: nifti library update (v 0.8)
+  * in nifti_image_read(), compute bytes for extensions (see remaining)
+  * in nifti_read_extensions(), pass 'remain' as space for extensions,
+      pass it to nifti_read_next_ext(), and update for each one read
+  * in nifti_valid_extension(), require (size <= remain)
+  * in update_nifti_image_brick_list(), update nvox
+  * in nifti_image_load_bricks(), make explicit check for nbricks <= 0
+  * in int_force_positive(), check for (!list)
+  * in swap_nifti_header(), swap sizeof_hdr, and reorder to struct order
+  * change get_filesize functions to signed ( < 0 is no file or error )
+  * in nifti_valid_filename(), lose redundant (len < 0) check
+  * make print_hex_vals() static
+  * in disp_nifti_1_header, restrict string field widths
+
+23 Dec 2004: nifti library update (v 0.9) - minor updates
+  * broke ASCII header reading out of nifti_image_read(), into new
+      functions has_ascii_header() and read_ascii_image()
+  * check image_read failure and znzseek failure
+  * altered some debug output
+  * nifti_write_all_data() now returns an int
+
+29 Dec 2004: nifti library update (v 0.10)
+  * renamed nifti_valid_extension() to nifti_check_extension()
+  * added functions nifti_makehdrname() and nifti_makeimgname()
+  * added function valid_nifti_extensions()
+  * in nifti_write_extensions(), check for validity before writing
+  * rewrote nifti_image_write_hdr_img2():
+      - set write_data and leave_open flags from write_opts
+      - add debug print statements
+      - use nifti_write_ascii_image() for the ascii case
+      - rewrote the logic of all cases to be easier to follow
+  * broke out code as nifti_write_ascii_image() function
+  * added debug to top-level write functions, and free the znzFile
+  * removed unused internal function nifti_image_open()
+  * modified Makefiles for optional zlib compilation
+    on:  Makefile.linux_gcc32, Makefile.linux_gcc33_64, Makefile.macosx_10.3_G5
+    off: Makefile.linux_glibc22 Makefile.macosx_10.2, Makefile.macosx_10.3,
+         Makefile.solaris29_suncc, Makefile.solaris9_suncc_64, Makefile.BSD,
+         Makefile.darwin, Makefile.cygwin, Makefile.FreeBSD, Makefile.linuxPPC,
+         Makefile.sgi10k_6.5, Makefile.sgi10k_6.5_gcc, Makefile.sgi5k_6.3,
+         Makefile.solaris28_gcc, Makefile.solaris28_suncc, Makefile.solaris_gcc,
+         Makefile.sparc5_2.5, Makefile.sparky, Makefile.sunultra
+
+30 Dec 2004: nifti library and start of nifti_tool
+  * modified nifti/nifti1_io.[ch] (library v 1.11)
+      - moved static function prototypes from header to C file
+      - free extensions in nifti_image_free()
+  * added nifti/nifti_tool.[ch] (v 0.1) for new program, nifti_tool
+  * modified Makefile.INCLUDE to compile nifti_tool
+  * modified nifti/Makefile to compile nifti_stats nifti_tool and nifti1_test
+
+03 Jan 2005:
+  * modified mri_read.c:mri_imcount() to check for ':' after "3D"
+
+04 Jan 2005:
+  * afni_niml.c to allow changing the nodes for a surface, made receive
+      message default to the terminal window
+  * added a description of AFNI_SHOW_SURF_POPUPS in README.environment
+
+07 Jan 2005: INITIAL RELEASE OF NIFTI LIBRARY (v 1.0)
+  * added function nifti_set_filenames()
+  * added function nifti_read_header()
+  * added static function nhdr_looks_good()
+  * added static function need_nhdr_swap()
+  * exported nifti_add_exten_to_list symbol
+  * fixed #bytes written in nifti_write_extensions()
+  * only modify offset if it is too small (nifti_set_iname_offset)
+  * added nifti_type 3 to nifti_makehdrname and nifti_makeimgname
+  * added function nifti_set_filenames()
+  * nifti library release 1.1: swap header in nifti_read_header()
+07 Jan 2005: INITIAL RELEASE OF nifti_tool (v 1.0)
+  * lots of functions
+  * modified Makefile.INCLUDE to compile nifti_test, nifti_stats and
+      nifti1_test automatically
+
+11 Jan 2005:
+  * modified afni_niml.c: slist_choose_surfs() check_user_surfs on nsurf == 1
+
+14 Jan 2005: nifti_tool v1.1:
+  * changed all non-error/non-debug output from stderr to stdout
+      note: creates a mis-match between normal output and debug messages
+  * modified act_diff_hdrs and act_diff_nims to do the processing in
+      lower-level functions
+  * added functions diff_hdrs, diff_hdrs_list, diff_nims, diff_nims_list
+  * added function get_field, to return a struct pointer via a fieldname
+  * made 'quiet' output more quiet (no description on output)
+  * made hdr and nim_fields arrays global, so do not pass in main()
+  * return (from main()) after first act_diff() difference
+
+21 Jan 2005:
+  * modified Makefile.INCLUDE per the request of Vinai Roopchansingh,
+      adding $(IFLAGS) to the CC line for compiling whereami
+  * submitted the updated plug_permtest.c from Matthew Belmonte
+
+10 Feb 2005:
+  * modified nifti1.h and nifti1_io.[ch] for Kate Fissell's doxygen updates
+  * modified nifti1.h: added doxygen comments for extension structs
+  * modified nifti1_io.h: put most #defines in #ifdef _NIFTI1_IO_C_ block
+  * modified nifti1_io.c:
+      - added a doxygen-style description to every exported function
+      - added doxygen-style comments within some functions
+      - re-exported many znzFile functions that I had made static
+      - re-added nifti_image_open (sorry, Mark)
+      - every exported function now has 'nifti' in the name (19 functions)
+      - made sure every alloc() has a failure test
+      - added nifti_copy_extensions function, for use in nifti_copy_nim_info
+      - nifti_is_gzfile: added initial strlen test
+      - nifti_set_filenames: added set_byte_order parameter option
+        (it seems appropriate to set the BO when new files are associated)
+      - disp_nifti_1_header: prints to stdout (a.o.t. stderr), with fflush
+  * modified thd_niftiread.c to call nifti_swap_Nbytes (nifti_ is new)
+
+14 Feb 2005:
+  * modified plug_maxima.[ch]:
+      - added 'Sphere Values' and 'Dicom Coords' interface options
+
+16 Feb 2005:
+  * modified 3dROIstats, added the -mask_f2short option
+
+23 Feb 2005:
+  * merged Kate's, Mark's and my own nifti code, and made other revisions
+  * removed contents of nifti directory, and re-created it with the source
+      tree from sourceforge.net
+  * modified Makefile.INCLUDE to deal with the new nifti directories
+  * modifed thd_analyzeread.c and thd_niftiread.c not to use include directories
+      - they now have explicit targets in Makefile.INCLUDE
+
+07 Mar 2005:
+  * modified thd_coords.c: added THD_3dind_to_3dmm_no_wod()
+  * modified 3ddata.h: added THD_3dind_to_3dmm_no_wod declaration
+  * modified plug_maxima.[ch]:
+      - output appropriate coords via new THD_3dind_to_3dmm_no_wod()
+      - added new debug output
+      - changed default separation to 4 voxels
+      - added gr_fac for printing data values in debug mode
+
+08 Mar 2005:
+  * modified nifti1_io.[ch], adding global options struct, and optional
+      validation in nifti_read_header()
+  * modified nifti_tool.c to remove validation of nifti_1_header structs
+
+17 Mar 2005:
+  * modified 3dROIstats.c to properly check for failure to use -mask option
+
+21 Mar 2005:
+  * updated nifti tree with Kate's changes (to fsliolib, mostly)
+
+22 Mar 2005:
+  * removed all tabs from these files:
+      - vol2surf.[ch] rickr/3dresample.c rickr/file_tool.[ch]
+      - plug_crender.c plug_vol2surf.c
+      - rickr/Imon.[ch] rickr/realtime.[ch] rickr/r_idisp.[ch]
+      - rickr/r_misc.[ch] rickr/r_new_resam_dset.[ch] rickr/serial_helper.c
+      - SUMA/SUMA_3dSurf2Vol.[ch] SUMA/SUMA_3dVol2Surf.[ch]
+
+24 March 2005:
+  * modified strblast.c: added -help, -new_char, -new_string, -unescape options
+
+05 April 2005: NIFTI changes also uploaded at sourceforge.net
+  * modified nifti/nifti1_io.[ch]
+      - added nifti_read_collapsed_image(), an interface for reading partial
+        datasets, specifying a subset of array indices
+      - for read_collapsed_image, added static functions: rci_read_data(),
+        rci_alloc_mem(), and make_pivot_list()
+      - added nifti_nim_is_valid() to check for consistency (more to do)
+      - added nifti_nim_has_valid_dims() to do many dimensions tests
+  * modified nifti/Makefile: removed escaped characters, added USEZLIB defn.
+  * modified nifti/niftilib/Makefile: added nifti1_io.o target, for USEZLIB
+  * modified nifti/znzlib/Makefile: removed USEZLIB defn.
+  * modified nifti/utils/nifti_tool.c: (v 1.5) cannot mod_hdr on gzipped file(s)
+
+06 April 2005:
+  * modified thd_niftiread.c to set ADN_datum with any ADN_ntt or ADN_nvals
+  * modified edt_dsetitems.c to init new brick types to that of sub-brick 0,
+      in the case where a type array is not provided
+
+08 April 2005:
+  * modified nifti_tool.[ch]  (-> v1.6)
+      - added -cbl: 'copy brick list' dataset copy functionality
+      - added -ccd: 'copy collapsed dimensions' dataset copy functionality
+      - added -disp_ts: 'disp time series' data display functionality
+      - moved raw data display to disp_raw_data()
+  * modified nifti1_io.[ch] (-> v1.7)
+      - added nifti_update_dims_from_array() - to update dimensions
+      - modified nifti_makehdrname() and nifti_makeimgname():
+          if prefix has a valid extension, use it (else make one up)
+      - added nifti_get_intlist - for making an array of ints
+      - fixed init of NBL->bsize in nifti_alloc_NBL_mem()  {thanks, Bob}
+  * modified thd_niftiread.c, thd_writedset.c and afni_pplug_env.c to use
+      the environment variable AFNI_NIFTI_DEBUG
+  * modified README.environment for AFNI_NIFTI_DEBUG
+
+14 April 2005:
+  * modified nifti/Makefile: mention 'docs' dir, not 'doc'
+  * modified nifti/utils/Makefile: added -Wall to nifti_tool build command
+  * modified nifti/niftilib/nifti1.h: doxygen comments for extension fields
+  * modified nifti/niftilib/nifti1.[ch] (-> v1.8)
+      - added nifti_set_type_from_names(), for nifti_set_filenames()
+        (only updates type if number of files does not match it)
+      - added is_valid_nifti_type(), just to be sure
+      - updated description of nifti_read_collapsed_image() for *data change
+        (if *data is already set, assume memory exists for results)
+      - modified rci_alloc_mem() to allocate only if *data is NULL
+  * modified nt_opts in nifti/utils/niftitool.h: ccd->cci, dts_lines->dci_lines,
+      ccd_dims->ci_dims, and added dci (for display collapsed image)
+  * modified nifti/utils/niftitool.[ch] (-> v1.7)
+     - added -dci: 'display collapsed image' functionality
+     - modified -dts to use -dci
+     - modified and updated the help in use_full()
+     - changed copy_collapsed_dims to copy_collapsed_image, etc.
+     - fixed problem in disp_raw_data() for printing NT_DT_CHAR_PTR
+     - modified act_disp_ci():
+         o was act_disp_ts(), now displays arbitrary collapsed image data
+         o added missed debug filename act_disp_ci()
+         o can now save free() of data pointer for end of file loop
+     - modified disp_raw_data()
+         o takes a flag for whether to print newline
+         o trailing spaces and zeros are removed from printing floats
+     - added clear_float_zeros(), to remove trailing zeros
+
+19 April 2005:
+  * modified nifti1_io.[ch] (-> v1.9) :
+      - added extension codes NIFTI_ECODE_COMMENT and NIFTI_ECODE_XCEDE
+      - added nifti_type codes NIFTI_MAX_ECODE and NIFTI_MAX_FTYPE
+      - added nifti_add_extension() {exported}
+      - added nifti_fill_extension() as a static function
+      - added nifti_is_valid_ecode() {exported}
+      - nifti_type values are now NIFTI_FTYPE_* file codes
+      - in nifti_read_extensions(), decrement 'remain' by extender size, 4
+      - in nifti_set_iname_offset(), case 1, update if offset differs
+      - only output '-d writing nifti file' if debug > 1
+  * modified nifti_tool.[ch] (-> v1.8) :
+      - added int_list struct, and keep_hist, etypes & command fields to nt_opts
+      - added -add_comment_ext action
+      - allowed for removal of multiple extensions, including option of ALL
+      - added -keep_hist option, to store the command as a COMMENT extension
+        (includes fill_cmd_string() and add_int(), is done for all actions)
+      - added remove_ext_list(), for removing a list of extensions by indices
+      - added -strip action, to strip all extensions and descrip fields
+
+28 April 2005:
+  * checked in Kate's changes to fsl_api_driver.c and fslio.[ch]
+
+30 April 2005:
+  * modified whereami.c so that it does not crash on missing TTatlas+tlrc
+
+05 May 2005:
+  * modified nifti1_io.h: fixed NIFTI_FTYPE_ASCII (should be 3, not 2)
+  * modified nifti1_io.c: to incorporate Bob's new NIFTI_SLICE_ALT_INC2
+      and NIFTI_SLICE_ALT_DEC2 codes from nifti1.h
+
+06 May 2005: Dimon (v 0.1)
+  * added files for Dimon: Dimon.[ch], dimon_afni.c, l_mri_dicom_hdr.c
+  * modified Imon.[ch], l_mcw_glob.[ch], rickr/Makefile, Makefile.INCLUDE
+  * mostly as a check-in for now, details and updates to follow
+
+10 May 2005: nifti fix, Dimon (v 0.2)
+  * added Kate's real_easy/nifti1_read_write.c to AFNI CVS
+  * modified znzlib.c, using gzseek() for the failing gzrewind()
+  * modified nifti_io.c, opening in compressed mode only on '.gz'
+  * modified to3d.c: fixed help on 'seqplus' and 'seqminus'
+  * modified plug_realtime.c to handle TPATTERN command for slice timing
+  * modified Dimon.c, Imon.h: added pause option to opts struct
+  * modified realtime.c to set TPATTERN from opts.sp (for now)
+  * modified Makefile.INCLUDE, rickr/Makefile: Dimon depends on Imon.h
+
+17 May 2005: Dimon update (v 0.3)
+  * modified Dimon.c:
+      - added -infile_pattern for glob option
+      - set ftype based on usage
+  * modified Imon.c, setting ftype
+  * modified Imon.h, adding IFM_IM_FTYPE_* codes
+  * modified rickr/realtime.c, base XYZFIRST on ftype, added orient_side_rai()
+  * modified plug_realtime.c, adding REG_strings_ENV (' ' -> '_')
+
+18 May 2005: Dimon (v 0.4)
+  * update complete_orients_str() for IFM_IM_FTYPE_DICOM
+
+02 June 2005: 3dVol2Surf (v 6.4)
+  * added -skip_col_non_results option
+
+08 June 2005: added 2 million to LBUF in mri_read.c (will revisit)
+
+10 June 2005: minor updates to plug_roiedit.[ch]
+
+22 June 2005: Dimon (v 0.5)
+  * modified Dimon.c: added -infile_prefix option and allowed single volume run
+  * modified mri_dicom_hdr.c, rickr/l_mri_dicom_hdr.c: fixed small memory leak
+
+23 June 2005:
+  * modified Makefile.linux_gcc32 and Makefile.linux_gcc33_64
+      - removed -DNO_GAMMA (was just a warning, but is an error on FC4)
+
+29 June 2005:
+  * modified nifti1_io.[ch]: changed NIFTI_ECODE_UNKNOWN to _IGNORE
+
+30 June 2005: Dimon (v 0.6)
+  * modified Dimon.c to process run of single-slice volumes
+  * modified afni_splash.c and afni_version.c to compile under cygwin
+
+05 July 2005: Dimon (v 1.0 initial release!), Imon (v 3.4)
+  * modified Dimon.c (-> v 0.7), Imon.[ch]: removed all tabs
+  * modified Dimon.c: updated -help
+  * modified Makefile.INCLUDE: include Dimon as part of automatic build
+
+07 July 2005:
+  * modified rickr/Makefile and Makefile.INCLUDE for the Dimon build
+    on solaris machines with gcc
+
+13 July 2005: Dimon (v 1.1)
+  * modified rickr/Dimon.c to handle a run of only 1 or 2 slices, total
+
+22 July 2005:
+  * modified 3dANOVA2.c 3dANOVA.c 3dclust.c 3dIntracranial.c 3dNotes.c
+      - Peggy updated the -help output
+  * modified 3ddelay.c: check for NULL strings before printing
+  * modified realtime.c (and Dimon.c ->v1.2) to use IOCHAN_CLOSENOW()
+
+25 July 2005:
+  * modified Dimon.c (-> v1.3): explicit connection close on ctrl-c
+
+27 July 2005:
+  * submitted Peggy's 3dcalc.c updates (for help)
+
+01 August 2005: Dimon 2.0
+  * modified Dimon.c, dimon_afni.c, Imon.c
+      - added the option '-dicom_org' to organize DICOM files before any
+        other processing
+      - enabled '-GERT_Reco2', to create a script to build AFNI datasets
+
+02 August 2005:
+  * modified 3dANOVA2.c, updated calculation of sums of squares for all
+      a contrasts (including amean and adiff) [rickr, gangc]
+
+03 August 2005:
+  * modified 3dresample.c, r_new_resam_dset.c, to allow dxyz to override
+      those from a master (if both are supplied)
+
+17 August 2005: (niftilib -> v1.12)
+  * incorporated Kate's niftilib-0.2 packaging (v1.11)
+  * updated comments on most functions, added nifti_type_and_names_match()
+
+22 August 2005:
+  * modified to3d.c:T3D_set_dependent_geometries, case of not IRREGULAR:
+      only use fov if nx == ny
+
+23 August 2005: (Dimon -> v2.1)
+  * added option -sort_by_num_suffix (for Jerzy)
+  * output TR (instead of 0) in GERT_Reco script (for Peggy)
+
+24 August 2005:
+  * modified 3dRegAna.c: check for proper ':' usage in -model parameters
+
+25 August 2005: nifti changes for Insight
+      (nifti_tool -> v1.9, niftilib -> v1.13)
+  * added CMakeLists.txt in every directory (Hans)
+  * added Testing/niftilib/nifti_test.c (Hans)
+  * removed tabs from all *.[ch] files
+  * modified many Makefiles for SGI test and RANLIB (Hans)
+  * added appropriate const qualifiers for funtion param pointers to const data
+  * modifed nifti_io.c, nifti1_test.c, nifti_tool.c, reducing constant
+    strings below 509 bytes in length (-hist, -help strings)
+  * modified nifti_stats.c: replaced strdup with malloc/strcpy for warning
+
+29 Auguest 2005: Dimon (-> v 2.2): added options -rev_org_dir and -rev_sort_dir
+
+01 September 2005:
+  * modified 3dANOVA2.c (to properly handle multiple samples)
+  * modified Dimon.c/Imon.h (Dimon -> v2.3): added option -tr
+
+13 September 2005:
+  * modified edt_emptycopy.c, editvol.h
+      - added functions okay_to_add_markers() and create_empty_marker_set()
+  * modified 3drefit.c
+      - moved marker test and creation to said functions in edt_emptycopy.c
+  * modified plug_realtime.c: add empty markers to appropriate datasets
+
+20 September 2005: modified 2dImReg.c to return 0 from main
+
+26 September 2005:
+  * modified 3dANOVA3.c: applied formulas provided by Gang for variance
+    computations of type 4 and 5, A and B contrasts (including means, diffs
+    and contrs)
+
+04 October 2005:
+  * checking in changes by Hans Johnson
+      - added new files Clibs/DartConfig.cmake
+      - updates to Testing/niftilib/niti_test.c (this is not all ANSI C - fix)
+      - znzlib.c: cast away const for call to gzwrite
+      - nifti1_io.c: comment nifti_valid_filename
+                     added nifti_is_complete_filename
+                     added 2 free()s in nifti_findhdrname
+                     cast away const in call to znzwrite
+                     fixed error in QSTR() defn (intent_name[ml]=0 -> nam[ml]=0)
+
+11 October 2005:
+  * added program 3dmaxima, with files 3dmaxima.c and maxima.[ch]
+  * plug_maxima.so is now built from plug_maxima.c and maxima.[ch]
+  * modified Makefile.INCLUDE, adding 3dmaxima to PROGRAMS, adding a
+        3dmaxima target, and a plug_maxima.so target (for maxima.o)
+
+17 October 2005:
+  * modified 3dANOVA3.c - added -aBcontr and -Abcontr as 2nd order contrasts
+  * modified 3dANOVA.h, 3dANOVA.lib - added and initialized appropriate fields
+
+27 October 2005:
+  * modified 3dANOVA3.c
+      - fixed -help typo, num_Abcontr assignment and df in calc_Abc()
+
+28 October 2005:
+  * niftilib update: merged updates by Hans Johnson
+      - nifti1_io.c:nifti_convert_nhdr2nim : use nifti_set_filenames()
+      - updated Testing/niftilib/nifti_test.c with more tests
+
+02 November 2005:
+  * modified nifti1_io.[ch]: added skip_blank_ext to nifti_global_options
+      - if skip_blank_ext and no extensions, do not read/write extender
+
+04 November 2005:
+  * modified SUMA_Surface_IO.c:SUMA_2Prefix2SurfaceName() to return NOPE in
+        exists if exist1 and exist2 are false
+
+07 November 2005:
+  * checked in rhammett's mri_read_dicom.c changes for the Siemens mosaic format
+
+10 November 2005:
+  * modified mri_dicom_hdr.h
+      - In defining LONG_WORD, it was assumed that long was 4 bytes, but this
+        is not true on 64-bit solaris.  Since it was figured out in defining
+        U32, just use that type for l.
+
+18 November 2005:
+  * modified nifti1_io.c (nifti_hist -> v1.16):
+      - removed any test or access of dim[i], i>dim[0]
+        (except setting them to 0 upon reading, so garbage does not propagate)
+      - do not set pixdim for collapsed dims to 1.0, leave them
+      - added magic and dim[i] tests in nifti_hdr_looks_good()
+  * modified nifti_tool.[ch] (-> v1.10)
+      - added check_hdr and check_nim action options
+  * checked in some of Hans' changes (with some alterations)
+      - a few casts in fslio.[ch] and nifti1_io.[ch] and () in nifti_stats.c
+
+22 November 2005:
+  * modified 3dANOVA3.c, 3dANOVA.h, 3dANOVA.lib
+      - added -old_method option for using the a/bmeans, a/bdiff, a/bcontr
+        computations that assume sphericity (not yet documented)
+
+23 November 2005:
+  * modified 3dANOVA2.c, added -old_method for type 3 ameans, adiff, acontr
+
+25 November 2005: modified 3dANOVA.c, added subject ethel to -help example
+
+29 November 2005: modified 3dROIstats.c, added more help with examples
+
+02 December 2005:
+  * modified 3dANOVA3.c, 3dANOVA2.c, 3dANOVA.h, 3dANOVA.lib
+      - Note updates at the web site defined by ANOVA_MODS_LINK
+      - The -old_method option requires -OK.
+      - Added the -assume_sph option and a check for validity of the contrasts.
+      - Contrasts are verified via contrasts_are_valid().
+  * fixed Makefile.INCLUDE (had extra '\' at end of PROGRAMS)
+
+08 December 2005: modified 3dRegAna.c, setting default workmem to 750 (MB)
+
+09 December 2005:
+  * modified 3dANOVA.c
+      - modified contrast t-stat computations (per Gang)
+      - added -old_method, -OK, -assume_sph and -debug options
+  * modified 3dANOVA.h, added debug field to anova_options
+  * modified 3dANOVA.lib
+      - no models to check for level 1 in old_method_applies()
+      - option -OK is insufficient by itself
+
+14 Dec 2005:
+  * modified edt_coerce.c, added EDIT_convert_dtype() and is_integral_data()
+  * modified 3dttest.c
+      - process entire volume at once, not in multiple pieces
+      - added -voxel option (similar to the 3dANOVA progs)
+      - replaced scaling work with EDIT_convert_dtype() call
+
+15 Dec 2005: modified 3dhistog.c: fixed use of sub-brick factors
+
+16 Dec 2005: modified 3dUniformize.c: fixed upper_limit==0 case in resample()
+
+28 Dec 2005:
+  * modified 3dANOVA3.c
+      - Added -aBdiff, -Abdiff and -abmean options and routines.
+      - Replaced calc_mean_sum2_acontr() with calc_type4_acontr(), to
+          avoid intermediate storage of data as floats (by absorbing the
+          calculate_t_from_sums() operation).
+      - Similarly, replaced calc_mean_sum2_bcontr() with calc_type4_bcontr().
+      - Removed calculate_t_from_sums().
+      - Do checks against EPSILON before sqrt(), in case < 0.
+  * modified 3dANOVA.h, adding aBdiff, Abdiff and abmean fields to
+      anova_options struct, along with the ANOVA_BOUND() macro.
+  * modified 3dANOVA.lib, to init aBdiff, Abdiff and abmean struct members.
+
+29 Dec 2005:
+  * modified Dimon.c
+      - make any IMAGE_LOCATION/SLICE_LOCATION difference only a warning
+  * modified Makefile.INCLUDE (for cygwin)
+      - removed plug_maxima.fixed from PLUGIN_FIXED
+      - added Dimon.exe target
+  * modified fixed_plugins.h: removed plugin_maxima from file
+
+04 Jan 2006:
+  * modified 3dANOVA2.c, replaced calc_sum_sum2_acontr and calc_t_from_sums
+        with calc_type3_acontr, to avoid intermediate storage of data as floats
+
+06 Jan 2006: modified waver.c: only output version info with new '-ver' option
+
+25 Jan 2006:
+  * added model_michaelis_menton.c model function for Jasmin Salloum
+  * modified NLfit_model.h, added NL_get_aux_filename and NL_get_aux_val protos
+  * modified 3dNLfim.c, added options -aux_name, -aux_fval and -voxel_count.
+  * modified Makefile.INCLUDE, added model_michaelis_menton to models target
+  * modified mri_read.1D: mri_read_ascii to allow 1x1 image file
+
+30 Jan 2006:
+  * modified model_michaelis_menton.c to get aux info via environment vars
+    (AFNI_MM_MODEL_RATE_FILE and AFNI_MM_MODEL_DT)
+  * modified NLfit_model.h and 3dNLfim.c, removing -aux_ options and code
+
+31 Jan 2006:
+  * modified 3dANOVA3.c, actually assign df_prod, and fix label for aBdiff
+  * modified nifti_tool.c, check for new vox_offset in act_mod_hdrs
+  * modified afni_plugout.c, applied (modified) changes by Judd Storrs to
+      override BASE_TCP_CONTROL with environment variable AFNI_PLUGOUT_TCP_BASE
+  * modified README.environment for description of AFNI_PLUGOUT_TCP_BASE
+
+02 Feb 2006: submitted version 7 of plug_permtest.c for Matthew Belmonte
+
+07 Feb 2006: added -datum option to 3dWavelets.c
+
+09 Feb 2006: added example to 3dANOVA3 -help
+
+02 Mar 2006:
+  * modified nifti_tool.c (v 1.12) to deal with nt = 0 in act_cbl(), due
+    to change of leaving nt..nw as 0 (potentially) in nifti1_io.c
+  * modified nifti1_io.c (v 1.18) to deal with nt = 0 in nifti_alloc_NBL_mem()
+  * modified thd_niftiread.c to be sure that ntt and nbuc are at least 1
+
+09 Mar 2006: modified waver.c not to show -help after command typo
+
+13 Mar 2006:
+  * added examples to 3dmaskave.c
+  * modified to3d.c, mri_read_dicom.c, mrilib.h: added option and global
+    variable for assume_dicom_mosaic, to apply the liberal DICOM mosaic test
+    only when set (via -assume_dicom_mosaic in to3d)
+
+23 Mar 2006: modified 3dcalc.c: do not scale shorts if values are {0,1}
+
+27 Mar 2006:
+  * modified model_michaelis_menton.c to handle '-time' option to 3dNLfim
+  * modified 3dmaskdump.c: to keep -quiet quiet
+
+28 Mar 2006: modified vol2surf.c, plug_vol2surf.c: fixed mode computation
+
+28 Mar 2006: modified model_michaelis_menton.c: added mag(nitude) parameter
+
+04 Apr 2006:
+  * modified cox_render.c
+      - CREN_set_rgbmap(): if ncol>128, still apply 128 colors
+      - in BECLEVER sections, enclose bitwise and operations in
+        parentheses, as '!=' has higher priority than '&'
+  * modified plug_crender.c
+      - RCREND_reload_func_dset(): use 128 instead of NPANE_BIG to set
+          bdelta, and to apply RANGE to bindex (127)
+      - rd_disp_color_info(), don't assume 128 colors, use NPANE_BIG
+
+06 Apr 2006:
+  * modified thd_writenifti.c
+      - in THD_write_nifti, catch populate_nifti_image() failure (crashed)
+      - in populate_nifti_image(), return NULL (not 0) on failure, and give
+          a hint for what to do in case of 'brick factors not consistent'
+
+11 Apr 2006: put 'd' in 3dANOVA* 'Changes have been made' warnings
+
+14 Apr 2006: applied mastery to NIFTI-1 datasets
+  * modified thd_mastery.c:
+      - allow NIfTI suffices in THD_open_dataset()
+      - if NIfTI, init master_bot and master_top
+  * modified thd_load_datablock.c: broke sub-ranging out to
+      THD_apply_master_subrange() for use in THD_load_nifti()
+  * modified 3ddata.h: added prototype for THD_apply_master_subrange()
+  * modified thd_niftiread.c: THD_load_nifti():
+      - if mastered, pass nvals and master_ival to nifti_image_read_bricks()
+      - at end, if mastered and bot <= top, THD_apply_master_subrange()
+
+18 Apr 2006:
+  * modified cs_addto_args.c: addto_args(), terminate empty sin before strcat
+  * modified mri_matrix.c: moved var defn to start of block in DECODE_VALUE
+  * modified SUMA_3dSkull_Strip.c: 'int code[3]' must be defined at block start
+
+19 Apr 2006: nifticlib-0.3 updates (from Kate Fissell)
+  * added Updates.txt
+  * modified Makefile, utils/Makefile: removed $(ARCH) and commented SGI lines
+  * modified real_easy/nifti1_read_write.c : corrected typos
+  * modified 3dcalc.c: fixed typo in 'step(9-(x-20)*...' example
+
+20 Apr 2006:
+  * modified thd_opendset.c: added functions storage_mode_from_filename()
+      and has_known_non_afni_extension() {for 3dcopy}
+  * modified 3ddata.h: added prototypes for those two functions
+
+21 Apr 2006: modified model_michaelis_menton.c: apply AFNI_MM_MODEL_RATE_IN_SECS
+
+24 Apr 2006: nifti_tool.c:act_disp_ci(): removed time series length check
+
+25 Apr 2006: changed ^M to newline in 3dcopy.c (stupid Macs)
+
+28 Apr 2006: 3dhistog.c: fixed min/max range setting kk outside array
+
+08 May 2006: 3drefit.c: added options -shift_tags, -dxtag, -dytag, -dztag
+
+17 May 2006:
+  * modified mri_dicom_hdr.c, rickr/l_mri_dicom_hdr.c
+      - make reading of preamble automatic
+      - do not print any 'illegal odd length' warnings
+
+18 May 2006: allowed for older DICOM files that do not have a preamble
+  * removed rickr/l_mri_dicom_hdr.c
+  * modified mri_dicom_hdr.c
+      - added FOR_DICOM test to compile for Dicom
+      - made g_readpreamble global, set in DCM_OpenFile, used in readFile1
+      - DCM_OpenFile reads 132 bytes to check for "DICM" at end
+  * modified rickr/Makefile to use ../mri_dicom_hdr.c aot l_mri_dicom_hdr.c
+
+23 May 2006: some nifti updates by Hans Johnson (lib ver 1.19)
+  * added Testing/Data, /Testing/niftilib/nifti_test2.c and
+          Testing/Data/ATestReferenceImageForReadingAndWriting.nii.gz
+  * modified CMakeLists.txt, niftilib/CMakeLists.txt, utils/CMakeLists.txt,
+             Testing/niftilib/nifti_test.c
+  * modified utils/nifti_stats.c: added switch for not building unused funcs
+  * modified nifti1_io.c:
+      - nifti_write_ascii_image(): free(hstr)
+      - nifti_copy_extensions(): clear num_ext, ext_list
+  * rickr: use NULL when clearing ext_list
+
+26 May 2006: .niml/.niml.dset preparations
+  * modified 3ddata.h
+      - #define STORAGE_BY_NIML,NI_SURF_DSET, and update LAST_STORAGE_MODE
+      - add nnodes, node_list to THD_datablock struct
+      - define DBLK_IS_NIML, DBLK_IS_NI_SURF_DSET, and similar DSET_*
+  * modified thd_open_dset.c:
+      - THD_open_one_dataset(): added (unfinished) .niml/.niml.dset cases
+      - storage_mode_from_filename(): added .niml/.nim.dset cases
+  * modified thd_info.c: THD_dataset_info(): added the 2 new STORAGE_MODEs
+  * modified thd_loadblk.c: added (unfinished) cases for the new storage modes
+
+30 May 2006:
+  * modified 3dclust.c: get a new ID for an output 3dclust dataset
+  * modified Imon.h, Dimon.c: added -save_file_list option
+
+15 Jun 2006:
+  * modified thd_niftiwrite.c:
+      - in populate_nifti_image(), check for including any adjacent zero offset
+        in the slice timing pattern
+      - added get_slice_timing_pattern() to test for NIFTI_SLICE_* patterns
+
+20 Jun 2006: modified 3drefit.c to handle NIfTI datasets
+
+21 Jun 2006:
+  * modified niml.h, niml_util.c: added NI_strdup_len()
+  * modified @make_stim_file, adding -zero_based option
+
+27 Jun 2006:
+  * modified nifti1_io.c: fixed assign of efirst to match stated logic in
+      nifti_findhdrname() (problem found by Atle Bjørnerud)
+
+28 Jun 2006: many changes to handle NIML and NI_SURF_DSET datasets (incomplete)
+  * added thd_niml.c
+      - top-level THD_open_niml(), THD_load_niml(), THD_write_niml() functions
+      - general read_niml_file(), write_niml_file() functions
+      - processing NI_SURF_DSET datasets, including THD_ni_surf_dset_to_afni()
+  * modified thd_opendset.c
+      - added file_extension_list array and find_filename_extension()
+      - apply THD_open_niml() to NIML and NI_SURF_DSET cases
+  * modified 3ddata.h - added prototypes
+  * modified edt_dset_items.c: added DSET_IS_NIML, DSET_IS_NI_SURF_DSET cases
+      for new_prefix editing
+  * modified thd_3Ddset.c
+      - broke THD_open_3D() into read_niml_file() and THD_niml_3D_to_dataset()
+  * modified thd_fetchdset.c
+      - added NIML and NI_SURF_DSET cases
+  * modified thd_loaddblk.c
+      - opened STORAGE_BY_NIML and BY_NI_SURF_DSET cases
+  * modified thd_nimlatr.c: just for unused variables
+  * modified thd_writedset.c:
+      - added NIML and NI_SURF_DSET write cases using THD_write_niml()
+  * modified Makefile.INCLUDE: to add thd_niml.o to THD_OBJS
+
+30 Jun 2006:
+  * modified SUMA_3dVol2Surf.[ch], vol2surf.[ch], plug_vol2surf.c
+      - added -save_seg_coords option
+
+07 Jul 2006:
+  * modified @auto_tlrc: changed 3dMax to 3dBrickStat
+
+11 Jul 2006:
+  * modified niml_element.c: fixed use of NI_realloc() in NI_search_group_*()
+  * modified 3ddata.h: changed THD_write_niml to Boolean, added prototypes
+        for THD_dset_to_ni_surf_dset() and THD_add_sparse_data()
+  * modified thd_writedset.c:
+      - don't let NI_SURF_DSET get written as 1D
+  * modified thd_niml.c:
+      - added load for NI_SURF_DSET
+      - added basic write for NI_SURF_DSET
+
+12 Jul 2006:
+  * modified edt_emptycopy.c: init nnodes and node_list
+  * modified thd_auxdata.c: for NI_SURF_DSET, copy any nnodes and node_list
+  * modified thd_delete.c: free dblk->node_list
+  * modified thd_niml.c: (maybe good enough for SUMA now)
+      - write out more attributes
+      - use matching XtMalloc for dblk allocation
+  * modified 3ddata.h: added THD_[un]zblock_ch protos
+  * modified thd_zblock.c: added THD_zblock_ch() and THD_unzblock_ch()
+
+14 Jul 2006:
+  * modified 3ddata.h: added IS_VALID_NON_AFNI_DSET() macro
+  * modified 3dNotes.c:
+      - replaced if(DSET_IS_NIFTI()) with if(IS_VALID_NON_AFNI_DSET())
+  * modified 3drefit.c: same change as 3dNotes.c
+  * modified 3dniml.c: pass dset to nsd_add_sparse_data for nx
+  * modified niml_element.c, niml.h
+      - added NI_set_ni_type_atr() and calls to it from NI_add_column() and
+        stride(), so if ni_type is already set, it is adjusted
+
+17 Jul 2006:
+  * modified niml_element.c, niml.h:
+      - fixed NI_set_ni_type_atr() to allow for type name of arbitrary length,
+        not just known types
+      - added NI_free_element_data()
+  * modified thd_niml.c: added nsd_add_colms_type, to add column types for suma
+
+18 Jul 2006:
+  * modified thd_niml.c:
+      - added COLMS_RANGE attribute element
+      - use AFNI_NI_DEBUG as an integer level (as usual)
+
+28 Jul 2006:
+  * modified 3drefit.c: fixed saveatr use, and blocked atr mods with other mods
+
+03 Aug 2006: updates for writing niml files as NI_SURF_DSET
+  * modified thd_niml.c:
+      - added ni_globals struct to deal with debug and write_mode
+      - added and used set_ni_globs_from_env() for assigning those globals
+      - added set_sparse_data_attribs()
+      - added set/get access functions for globals debug and write_mode
+  * modified 3dvol2surf.c
+      - added v2s_write_outfile_NSD(), and use it instead of _niml()
+      - remove unused code in dump_surf_3dt()
+      - added static set_output_labels()
+      - allocate labels array in alloc_output_mem()
+      - free labels and labels array in free_v2s_results()
+  * modified 3dvol2surf.h: added labels and nlab to v2s_results struct
+  * modified SUMA_3dVol2Surf.c: use v2s_write_outfile_NSD, instead of _niml()
+  * modified 3ddata.h
+      - added protos for ni_globs functions and set_sparse_data_attribs()
+
+04 Aug 2006: auto-convert NI_SURF_DSET to floats
+  * modified thd_niml.c:
+      - added to_float to ni_globals struct, for blocking conversion to floats
+      - changed  LOC_GET_MIN_MAX_POSN to NOTYPE_GET_MIN_MAX_POSN
+      - added get_blk_min_max_posn(), to deal with varrying input types
+      - fixed missing output column type when no node_list
+      - nsd_add_colms_range(): do not require input type to be float
+      - nsd_add_sparse_data(): convert output to floats, if necessary
+      - add gni.to_float accessor funcs and in set_ni_globs_from_env()
+  * modified vol2surf.c: changed set_ni_debug() to set_gni_debug()
+  * modified 3ddata.h: changed prototype names, and added to_float protos
+
+08 Aug 2006: C++ compilation changes from Greg Balls
+  * modified niml/niml.h rickr/r_idisp.h rickr/r_new_resam_dset.h 3ddata.h
+        afni_environ.h afni_graph.h afni.h afni_pcor.h afni_setup.h afni_suma.h
+        afni_warp.h bbox.h cdflib.h coxplot.h cox_render.h cs.h debugtrace.h
+        display.h editvol.h imseq.h machdep.c machdep.h maxima.h mcw_glob.h
+        mcw_graf.h mcw_malloc.h mrilib.h mri_render.h multivector.h parser.h
+        pbar.h plug_permtest.c plug_retroicor.c retroicor.h thd_compress.h
+        thd_iochan.h thd_maker.h vol2surf.h xim.h xutil.h
+    (mostly adding #ifdef __cplusplus extern "C" { #endif, and closing set)
+  * modified rickr/Makefile: removed ../ge4_header.o from file_tool dep list
+
+09 Aug 2006: vol2surf creation of command history
+  * modified vol2surf.c:
+      - create argc, argv from options in v2s_make_command()
+      - added loc_add_2_list() and v2s_free_cmd() for v2s_make_command()
+      - added labels, thres index/value and surf vol dset to gv2s_plug_opts
+  * modified vol2surf.h:
+      - added v2s_cmt_t sturct, and into v2s_opts_t
+      - added gpt_index/thresh, label adn sv_dset to v2s_plugin_opts
+  * modified afni_niml.c: receive spec file name via surface_specfile_name atr
+  * modified afni_suma.h: added spec_file to SUMA_surface
+  * modified afni_vol2surf.c:
+      - store the surface volume dataset in the v2s_plugin_opts struct
+      - also store the index and threshold value of the threshold sub-brick
+  * modified plug_vol2surf.c:
+      - init surface labels, and set them given the user options
+  * modified SUMA_3dVol2Surf.c:
+      - store command-line arguments for history note
+      - added -skip_col_NSD_format option
+  * modified SUMA_3dVol2Surf.h:
+      - added argc, argv to set_smap_opts parameters
+  * modified edt_empty_copy.c: if they exist, let okay_to_add_markers() return 1
+
+14 Aug 2006:
+  * modified mri_dicom_hdr.c, setting the type for g_readpreamble
+  * modified rickr/Makefile: remove dependancies on an ../*.o, so they are
+        not removed by the build process (they should not be made from rickr)
+
+15 Aug 2006: added Makefile.linux_xorg7
+
+17 Aug 2006:
+  * modified thd_niml.c: fixed str in loc_append_vals()
+  * modified Makefile.linux_xorg7: set SUMA_GLIB_VER = -2.0
+  * modified Makefile.INCLUDE, passed any SUMA_GLIB_VER to SUMA builds
+  * modified SUMA_Makefile_NoDev, link glib via -lglib${SUMA_GLIB_VER}
+  * modified Vecwarp.c: fixed matrix-vector screen output (req. by Tom Holroyd)
+
+18 Aug 2006: modified 3dmaxima.c, maxima.[ch]: added -coords_only option
+
+23 Aug 2006:
+  * modified thd_niml.c:
+      - added sorted_node_def attr to SPARSE_DATA
+      - if set_sparse_data_attribs(), if nodes_from_dset, the set
+          sorted_node_def based on node_list in dset via has_sorted_node_list()
+  * modified vol2surf.c:
+      - use -outcols_afni_NSD in v2s_make_command
+      - in v2s_write_outfile_NSD(), only output node list if it exists
+      - pass 0 as nodes_from_dset to has_sorted_node_list()
+  * modified SUMA_3dVol2Surf.c (-> v6.7)
+      - changed -skip_col_* options to -outcols_* options
+      - added -outcols_afni_NSD option
+  * modified 3ddata.h: added nodes_from_dset to set_sparse_data_attribs()
+
+23 Aug 2006: do not assume node index column is #0 in NI_SURF_DSET
+  * modified thd_niml.c:
+      - added sum_ngr_get_node_column()
+      - apply in process_ni_sd_sparse_data(), process_ni_sd_attrs() and
+          THD_add_sparse_data
+  * modified vol2surf.c: possibly free nodes during write_NSD
+  * modified 3ddata.h: added suma_ngr_get_node_column() prototype
+
+25 Aug 2006:
+  * modified thd_niml.c
+      - added node_col to ni_globals, and hold the niml node column index
+      - modified nsd_string_atr_to_slist() to skip a given index
+      - apply node_col to process_ni_sparse_data() and process_ni_sd_attrs()
+      - modifed THD_add_sparse_data() to omit gni.node_col, not col 0
+
+30 Aug 2006: INDEX_LIST is now a separate attribute element in the group
+  * modified thd_niml.c:
+      - updated nsd_string_atr_to_slist(), THD_ni_surf_dset_to_afni(),
+          process_NSD_sparse_data(), process_NSD_attrs(), THD_add_sparse_data(),
+          THD_dset_to_ni_surf_dset(), nsd_add_colms_type(),
+          nsd_add_str_atr_to_group(), nsd_add_colms_range(),
+          nsd_add_sparse_data(), set_sparse_data_attribs()
+      - added process_NSD_index_list(), to read INDEX_LIST attribute element
+      - added nsd_fill_index_list(), to create the INDEX_LIST element
+      - added NI_get_byte_order(), to process "ni_form" attribute
+      - removed suma_ngr_get_node_column()
+      - removed node_col from ni_globals
+      - modified new nsd_fill_index_list():
+          add default list when AFNI_NSD_ADD_NODES is set
+  * modified 3ddata.h: lose suma_ngr_get_node_column(), add NI_get_byte_order()
+  * added Makefile.linux_xorg7_64 (compiled on radagast)
+
+05 Sep 2006:
+  * modified nifti1_io.c, added nifti_set_skip_blank_ext
+  * merged many fslio NIfTI changes by Kate Fissell for niftilib-0.4
+  * modified thd_niml.c: removed warning about missing Node_Index column type
+
+06 Sep 2006:
+  * modified vol2surf.c: use NI_free after NI_search_group_shallow
+  * modified thd_niml.c: in nsd_add_str_atr_to_group() swap out nul chars
+  * merged small nifti/README change
+
+12 Sep 2006: modified thd_niml.c:THD_open_niml(): set brick_name to fname
+15 Sep 2006: modified 3ddata.h: added AFNI_vedit_clear proto (for Greg Balls)
+28 Sep 2006:
+  * modified thd_niml.c:close niml stream in write_niml_file()
+  * modified afni_niml.c:no AFNI_finalize_dataset_CB from process_NIML_SUMA_ixyz
+
+12 Oct 2006: added serial_writer.c program for rasmus
+16 Oct 2006: modified serial_writer.c: added -ms_sleep, -nblocks and -swap
+22 Oct 2006: added model_demri_3.c
+23 Oct 2006: modified model_demri_3.c with DGlen, 2 speed-ups, 1 negation fix
+24 Oct 2006: modified model_demri_3.c: mpc was not stored across iterations
+25 Oct 2006:
+  * modified 3dNLfim.c:
+      - updated check of proc_shmptr
+      - change on of the TR uses to TF (computing ct from cp)
+      - expanded help, and added a sample script
+26 Oct 2006:
+  * modified Makefile.INCLUDE: added $(LFLAGS) to 3dNLfim target
+  * modified 3dNLfim.c: limit g_voxel_count output to every 10th voxel
+                      : RIB and RIT replace single R
+
+30 Oct 2006: modified afni_base.py: added comopt.required, show(), print mods
+31 Oct 2006: modified model_demri_3.c: allow ve param, instead of k_ep
+02 Nov 2006: modified model_demri_3.c: change init, so Ve is reported as output
+
+13 Nov 2006: changes to send ROI means to serial_helper (from Tom Ross)
+  * modified plug_realtime.c:
+      - added Mask dataset input to plugin interface
+      - if Mask, send averages over each ROI to AFNI_REALTIME_MP_HOST_PORT
+  * modified serial_helper.c:
+      - added -num_extras option to process extra floats per TR (ROI aves)
+  * modified thd_makemask.c:
+      - added thd_mask_from_brick() from vol2surf.c
+      - added new thd_multi_mask_from_brick()
+  * modified 3dvol2surf.c: moved thd_mask_from_brick() to thd_makemask.c
+  * modified 3ddata.h: added protos for mask functions
+
+15 Nov 2006: modified serial_helper.c: encode nex into handshake byte
+
+17 Nov 2006:
+  * modifed model_demri_3.c:
+      - do not exit on fatal errors, complain and return zero'd data
+      - if model parameters are bad (esp. computed), zero data and return
+      - if thd_floatscan() on results shows bad floats, zero data and return
+      - require AFNI_MODEL_D3_R1I_DSET to be float
+      - removed R1I_data_im
+  * added afni_util.py, afni_proc.py, make.stim.times.py,
+        and option_list.py to python_scripts
+  * modified afni_base.py
+
+18 Nov 2006: small mods to afni_base.py, afni_proc.py, option_list.py
+
+20 Nov 2006:
+  * modified Dimon.c, dimon_afni.c, Imon.h:
+      - added -epsilon option for difference tests, including in dimon_afni.c
+
+01 Dec 2006: python updates
+  * added db_mod.py: contains datablock modification functions (may disappear)
+  * modified afni_base.py:
+      - added afni_name:rpv() - to return the relative path, if possible
+      - added read_attribute(), which calls 3dAttribute on a dataset
+  * modified afni_proc.py: now does most of the pre-processing
+  * modified option_list.py:
+      - added setpar parameter to OptionList:add_opt()
+      - updated comments
+
+02 Dec 2006: modified suma_datasets.c:
+      - SUMA_iswordin -> strstr, MAXPATHLEN -> SUMA_MAX_DIR_LENGTH
+
+07 Dec 2006: minor mods to afni_util.py, db_mod.py, make.stim.times.py
+
+09 Dec 2006: 3dDeconvolve command in afni_proc.py
+  * modified make.stim.times.py, afni_util.py, afni_proc.py, db_mod.py
+
+10 Dec 2006: modified afni_proc.py, db_mod.py: help and other updates
+
+11 Dec 2006: more uber-script updates
+  * modified afni_proc.py: added version, history and complete help
+  * modified db_mod.py: volreg_base_ind now takes run number, not dset index
+  * modified make_stim_times.py:
+      - renamed from make.stim.times.py
+      - more help
+      - per output file, append '*' if first stim row has only 1 stim 
+  * modified vol2surf.[ch]: if plug_v2s:debug > 2, print 3dV2S command
+
+12 Dec 2006:
+  * modified afni_proc.py, db_mod.py, option_list.py:
+      - added fitts and iresp options, fixed scale limit
+
+13 Dec 2006:
+  * modified afni_proc.py, db_mod.py
+      - added -regress_stim_times_offset and -no_proc_command
+        (afni_proc commands are stored by default)
+  * modified make_stim_times.py: added -offset option
+
+14 Dec 2006:
+  * modified afni_proc.py, db_mod.py
+      - added -copy_anat, -regress_make_1D_ideal and -regress_opts_3dD
+  * modified make_stim_times.py: added required -nt option
+
+15 Dec 2006: modified SUMA_3dVol2surf: help for niml.dest and EPI -> surface
+17 Dec 2006: modified afni_proc.py, db_mod.py:
+      - added options -tshift_opts_ts, -volreg_opts_vr, -blur_opts_merge
+18 Dec 2006: small mods to afni_proc.py, db_mod.py, make_stim_times.py
+19 Dec 2006:
+  * modified afni_proc.py, db_mod.py: help update, use quotize_list
+  * modified afni_util.py: added quotist_list
+  * modified make_stim_times.py: use str(%f) for printing
+
+20 Dec 2006: afni_proc.py (version 1.0 - initial release)
+  * modified afni_proc.py
+      - changed -regress_make_1D_ideal to -regress_make_ideal_sum
+      - added output of stim ideals (default) and option -regress_no_ideals
+      - verify that AFNI datasets are unique
+      - added -regress_no_stim_times
+  * modified afni_base.py: added afni_name.pve()
+  * modified afni_util.py: added uniq_list_as_dsets, basis_has_known_response
+  * modified db_mod.py: for change in 'ideal' options & -regress_no_stim_times
+  * added ask_me.py: basically empty, to prompt users for options
+
+21 Dec 2006: afni_proc.py (v1.2)
+      - help, start -ask_me, updated when to use -iresp/ideal
+22 Dec 2006: modified afni_proc.py, make_stim_times.py for AFNI_data2 times
+
+25 Dec 2006:
+  * modified afni_proc.py (v1.4): updates for -ask_me
+  * modified ask_me.py: first pass, result matches ED_process
+  * modified afni_util.py: added list_to_datasets() and float test
+  * small mods to db_mod.py, option_list
+
+27 Dec 2006: afni_proc.py (1.5): ask_me help
+
+28 Dec 2006: afni_proc.py (1.6)
+  * modified afni_proc.py: added -gltsym examples
+  * modified afni_util.py: added an opt_prefix parameter to quotize_list()
+  * modified db_mod.py   : used min(200,a/b*100) in scale block
+
+03 Jan 2007: afni_proc.py (1.7)
+  * modified afni_proc.py, afni_util.py, db_mod.py:
+      - help updates, no blank '\' line from -gltsym, -copy_anat in examples
+  * modified 3dTshift.c: added -no_detrend
+
+04 Jan 2007: modified 3dTshift.c: added warning for -no_detrend and MRI_FOURIER
+
+08 Jan 2007: afni_proc.py (1.8)
+  * modified afni_proc.py, db_mod.py:
+      - changed default script name to proc.SUBJ_ID, and removed -script from
+          most examples
+      - added options '-bash', '-copy_files', '-volreg_zpad', '-tlrc_anat',
+          '-tlrc_base', '-tlrc_no_ss', '-tlrc_rmode', '-tlrc_suffix'
+
+10 Jan 2007: afni_proc.py (1.9) added aligned line wrapping
+  * modified afni_proc.py, afni_util.py
+      - new functions add_line_wrappers, align_wrappers, insert_wrappers,
+                      get_next_indentation, needs_wrapper, find_command_end,
+                      num_leading_line_spaces, find_next_space, find_last_space
+
+11 Jan 2007: modified afni_proc.py:
+      - subj = $argv[1], added index to -glt_label in -help
+      - rename glt contrast files to gltN.txt (so change AFNI_data2 files)
+
+12 Jan 2007: modified afni_proc.py (1.11), db_mod.py:
+      - added options -move_preproc_files, -regress_no_motion
+      - use $output_dir var in script, and echo version at run-time
+      - append .$subj to more output files
+
+16 Jan 2007:
+  * modified plug_crender.c: fixed use of Pos with bigmode
+  * modified db_mod.py to allow -tlrc_anat without a +view in -copy_anat
+
+17 Jan 2007: modified db_mod.py: -tlrc_anat ==> default of '-tlrc_suffix NONE'
+
+26 Jan 2007: modified afni_base.py, afni_proc.py, afni_util.py, ask_me.py
+             db_mod.py, make_stim_times.py, option_list.py
+      - changed all True/False uses to 1/0 (for older python versions)
+      - afni_proc.py: if only 1 run, warn user, do not use 3dMean
+
+02 Feb 2007:
+      - afni_proc.py: put execution command at top of script
+      - modified db_mod.py: print blur_size as float
+      - modified make_stim_times.py: added -ver, -hist, extra '*' run 1 only
+
+06 Feb 2007: added TTatlas example to 3dcalc help
+
+20 Feb 2007:
+  * modified -help of make_stim_times.c (fixing old make.stim.times)
+  * modified thd_opendset.c: made fsize unsigned (handles 4.2 GB files, now)
+
+21 Feb 2007: modified afni_proc.py (1.16), db_mod.py
+      - added optional 'despike' block
+      - added options -do_block and -despike_opts_3dDes
+  * updated nifti tree to match that of sourceforge
+      - minor changes to CMakeLists.txt DartConfig.cmake
+        examples/CMakeLists.txt niftilib/CMakeLists.txt niftilib/nifti1_io.c
+        real_easy/nifti1_read_write.c Testing/niftilib/nifti_test.c
+        utils/CMakeLists.txt znzlib/CMakeLists.txt znzlib/znzlib.h
+  * updated nifti/fsliolib/fslio.c: NULL check from David Akers
+
+23 Feb 2007:
+  * modified imseq.c to do tick div in mm for Binder
+  * modified README.environment: added AFNI_IMAGE_TICK_DIV_IN_MM variable
+
+27 Feb 2007: afni_proc.py (v 1.17)
+  * modified afni_proc.py, db_mod.py, option_list.py:
+      -volreg_align_to defaults to 'third' (was 'first')
+      -added +orig to despike input
+      -added 'empty' block type, for a placeholder
+
+28 Feb 2007: fixed fsize problem in thd_opendset.c (from change to unsigned)
+
+01 Mar 2007:
+  * modified README.environment
+      - added variables AFNI_NIML_DEBUG, AFNI_NSD_ADD_NODES,
+        AFNI_NSD_TO_FLOAT and AFNI_NIML_TEXT_DATA
+  * modified thd_niml.c: allowed sub-brick selection via thd_mastery
+  * modified thd_mastery.c: init master_bot/top for .niml.dset files
+
+02 Mar 2007:
+  * modified count.c
+      - added '-sep', same as '-suffix'
+      - extended number of strncmp() characters for many options
+  * modified option_list.py: if n_exp = -N, then at least N opts are required
+
+05 Mar 2007: per Jason Bacon and Michael Hanke:
+  * JB: modified @escape-: added '!' in #!/bin/tcsh
+  * JB: modified ask_me.py, db_mod.py, added 'env python', for crazy users
+  * MH: added nifti/nifticdf: CMakeLists.txt, Makefile, nifticdf.c, nifticdf.h
+        (separating nifti_stats.c into nifticdf.[ch])
+  * MH: modified CMakeLists.txt and utils/CMakeLists.txt for cmake
+  * MH: modified nifti_stats.c (removed all functions but main)
+  * rr: modified Makefile, README, utils/Makefile (to build without cmake)
+  * rr: modified Makefile.INCLUDE
+        - replace nifti_stats.o with nifticdf.o in CS_OBJS
+        - add nifticdf.o target and link to nifti_stats
+        - modified nifticdf.[ch]: reverted back closer to nifti_stats.c
+          (moving 7 protos to nifticdf.h, and all but main to nifticdf.c)
+          (keep all static and __COMPILE_UNUSED_FUNCTIONS__ use)
+
+15 Mar 2007: mod afni_proc.py, db_mod.py: use x1D suffix, removed -full_first
+19 Mar 2007: modified afni_proc.py: allow dataset TR stored in depreciated ms
+25 Mar 2007: afni_proc.py: added -help for long-existing -regress_no_stim_times
+19 Apr 2007: afni_proc.py (v1.21): apply +orig in 1-run mean using 3dcopy
+01 May 2007: included Hans' updates: CMakeLists.txt, nifticdf/CMakeLists.txt
+03 May 2007:
+  * added 3dPAR2AFNI.pl, from Colm G. Connolly
+  * modified Makefile.INCLUDE: added 3dPAR2AFNI.pl to SCRIPTS
+  * modified afni_proc.py: added BLOCK(5) to the examples
+08 May 2007:
+  * w/dglen, mod 3dcalc.c, thd_mastery.c to handle long sub-brick lists
+  * modified afni_proc.py, db_mod.py, option_list.py (v 1.22)
+        - change read_options() to be compatible with python version 2.2
+        - '-basis_normall 1' is no longer used by default
+        - rename -regress_no_stim_times to -regress_use_stim_files
+
+10 May 2007:
+  * modified nifticdf.[ch], mrilib.h, Makefile.INCLUDE, SUMA_Makefile_NoDev
+        - use cdflib functions from nifticdf, not from cdflib directory
+  * removed cdflib directory and cdflib.h
+
+16 May 2007:
+  * modified nifti/Updates.txt in preparation of nifticlib-0.5 release
+  * modified nifti1_read_write.c for Kate, to fix comment typo
+
+17 May 2007: nifti update for release 0.5
+  * modified Clibs/CMakeLists.txt, set MINOR to 5
+  * modified Makefile, examples/Makefile, utils/Makefile to apply ARCH
+      variable for easier building
+
+30 May 2007: nifti CMakeList updates from Michael Hanke
+01 Jun 2007:
+  * modified afni_proc.py, db_mod.py:
+        - changed Xmat.1D to X.xmat.1D, apply -xjpeg in 3dDeconvolve
+  * modified nifti/Makefile, README for nifticlib-0.5 release
+
+04 Jun 2007:
+  * modified nifti1_io.c: noted release 0.5 in history
+  * modified nifti_tool.c: added free_opts_mem() to appease valgrind
+  * modified afni_proc.py, db_mod.py: added -scale_no_max
+
+05 Jun 2007:
+  * modified nifti1_io.c: nifti_add_exten_to_list:
+        - revert on failure, free old list
+  * modified nifti_tool.c: act_check_hdrs: free(nim)->nifti_image_free()
+
+06 Jun 2007:
+  * modified thd_makemask.c: THD_makemask() and THD_makedsetmask()
+        - for short and byte datasets, check for empty mask
+07 Jun 2007:
+  * modified nifti1_io.c: nifti_copy_extensions: use esize-8 for data size
+  * modified nifti1.h: note that edata is of length esize-8
+
+08 Jun 2007:
+  * modified file_tool.[ch]: added -show_bad_backslash and -show_file_type
+
+11 Jun 2007: updates for new image creation
+  * modified nifti1_io.[ch]:
+        - added nifti_make_new_header() - to create from dims/dtype
+        - added nifti_make_new_nim() - to create from dims/dtype/fill
+        - added nifti_is_valid_datatype(), and more debug info
+  * modified nifti_tool.[ch]:
+        - added nt_image_read, nt_read_header and nt_read_bricks
+          to wrap nifti read functions, allowing creation of new datasets
+        - added -make_im, -new_dim, -new_datatype and -copy_im
+  * modified nifti1_test.c: added trailing nifti_image_free(nim)
+  * modified thd_niftiread.c: to allow nx = ny = 1
+
+13 Jun 2007: nifti_tool.c help update, file_tool.c help update
+22 Jun 2007: modified linux_xorg7 and _64 Makefiles to link motif statically
+
+27 Jun 2007:
+  * modified afni_base.py, afni_proc.py, afni_util.py, db_mod.py:
+        - on error, display failed command
+  * modifed Makefile_linux_xorg7 and xorg7_64 for static linking in SUMA
+
+28 Jun 2007: minor changes from HJ
+  * modified CMakeLists.txt, niftilib/CMakeLists.txt, nifti1_io.c
+
+29 Jun 2007: file_tool can work with ANALYZE headers
+  * added fields.[ch], incorportating field lists from nifti_tool
+  * modified file_tool.[ch]:
+        - added options -def_ana_hdr, -diff_ana_hdrs, -disp_ana_hdr, -hex
+  * modified rickr/Makefile: file_tool depends on fields.[ch]
+  * modified 3dANOVA.h: set MAX_OBS to 300, for T. Holroyd
+
+30 Jun 2007: modified Makefile.INCLUDE: added svm to afni_src.tgz target
+
+01 Jul 2007:
+  * modified fields.[ch]: added add_string (from nifti_tool.c)
+  * modified file_tool.[ch]: added ability to modify fields of an ANALYZE file
+
+02 Jul 2007:
+  * modified thd_niftiread.c: changed missing xform error to warning
+  * modified model_demri_3.c: return on first_time errors
+  * modified 3dcopy.c: complain and exit on unknown option
+
+03 Jul 2007: modified model_demri_3.c: allow MP file as row
+10 Jul 2007: modified thd_coords.c: moved verbose under fabs(ang_merit)
+17 Jul 2007: modified 3dmaxima.c: fixed -n_style_sort option use
+
+18 Jul 2007: first GIFTI files added (v 0.0)
+  * added gifti directory and simple Makefile
+  * added gifti.[ch]     : main programmer library functions
+  * added gifti_xml.[ch] : XML functions, to be called from gifti.c
+  * added gtest.[ch]     : a sample test of the library files
+  * added get.times      : a script to time reading of gifti images
+  * added test.io        : a script to test GIFTI->GIFTI I/O
+  * modified Makefile.INCLUDE : to copy gifti directory for afni_src.tgz
+
+19 Jul 2007: modified model_demri_3.c: minor tweak to ct(t) equation
+20 Jul 2007: modifed Makefile.INCLUDE, gifti/Makefile, for building gtest
+
+24 Jul 2007:
+  * modified rickr/r_new_resam_dset.[ch] rickr/3dresample.c
+             SUMA/SUMA_3dSkullStrip.c 3dSpatNorm.c plug_crender.c whereami.c
+             rickr/Makefile Makefile.INCLUDE SUMA/SUMA_Makefile_NoDev
+        - removed librickr.a (objects go into libmri.a)
+        - added get_data param to r_new_resam_dset()
+
+25 Jul 2007:
+  * modified svm/3dsvm_common.c to use rint (aot rintf (re: solaris))
+  * modified model_demri_3.c: help update
+
+26 Jul 2007:
+  * modified Makefile.INCLUDE to not use $< variable
+  * modified 3dDeconvolve.c: -stim_times with exactly 0 good times is okay
+  * modified svm/plug_3dsvm.c: moved variable definitions to block tops
+  * modified Dimon.c, Imon.c: help typos
+
+27 Jul 2007:
+  * modified nifti1_io.[ch]: handle 1 vol > 2^31 bytes
+  * modified nifti_tool.c: return 0 on -help, -hist, -ver
+  * modified thd_niftiwrite.c: replace some all-caps prints
+
+28 Jul 2007:
+  * modified nifti1_io.[ch]: handle multiple volumes > 2^32 bytes
+  * modified: 1dSEM.c 2dImReg.c 3dDTtoDWI.c  3dDWItoDT.c 3dNLfim.c
+              3dStatClust.c 3dTSgen.c 3dUniformize.c RSFgen.c RegAna.c
+              plug_nlfit.c matrix.[ch] Makefile.INCLUDE SUMA/SUMA_MiscFunc.c
+        - moved matrix.c to libmri.a
+
+30 Jul 2007: nifti updates for regression testing
+  * modified Makefile, README, Updates.txt
+  * added Testing/Makefile, and under new Testing/nifti.regress_test directory:
+        README, @test, @show.diffs, and under new commands directory:
+            c01.versions, c02.nt.help, c03.hist, c04.disp.anat0.info,
+            c05.mod.hdr, c06.add.ext, c07.cbl.4bricks, c08.dts.19.36.11,
+            c09.dts4.compare, c10a.dci.run.210, c10.dci.ts4, c11.add.comment,
+            c12.check.comments, c13.check.hdrs, c14.make.dsets, c15.new.files 
+  * modified gifti/gtest.c, Makefile: init gfile, add CFLAGS
+
+31 Jul 2007:
+  * modified 3dAllineate.c, 3dresample.c, 3dSegment.c, 3dSpatNorm.c,
+             afni_plugin.c, Makefile.INCLUDE, mrilib.h, plug_crender.c,
+             rickr/3dresample.c, rickr/r_new_resam_dset.c,
+             SUMA/SUMA_3dSkullStrip.c, whereami.c
+        - included r_new_resam_dset, r_hex_str_to_long, r_idisp_fd_brick
+          in forced_loads[]
+  * modified r_idisp.[ch]: nuked unused r_idisp_cren_stuff
+  * modified nifti/Makefile, Testing/Makefile, Testing/README_regress, and
+        renamed to nifti_regress_test, all to remove '.' from dir names
+  * modified afni_func.c: watch for overflow in jj if ar_fim is garbage
+
+01 Aug 2007:
+  * modified gifti.[ch], gifti_xml.c, gtest.[ch]
+        - changed dim0..dim5 to dims[], and nvals to size_t
+        - added gifti_init_darray_from_attrs and some validation functions
+
+02 Aug 2007: modified file_tool.[ch]: added -disp_hex, -disp_hex{1,2,4}
+06 Aug 2007:
+  * modified Makefile.INCLUDE: added targets libmri.so, libmrix.so
+  * modified afni_vol2surf.c, afni_func.c: better overflow guards
+07 Aug 2007: help update to 3dresample
+08 Aug 2007:
+  * modified RegAna.c: changed the 4 EPSILON values to 10e-12 (from 10e-5),
+        to allow division by smaller sums of errors, to prevent setting
+        valid output to zero
+  * modified nifti1_io.c: for list, valid_nifti_brick_list requires 3 dims
+
+24 Aug 2007:
+  * removed znzlib/config.h
+  * incorporated Hans Johnson's changes into nifti tree
+27 Aug 2007:
+  * modified afni_vol2surf.c, for non-big, include ovc[npanes], Mike B reported
+31 Aug 2007:
+  * added model_conv_diffgamma.c, for Rasmus
+  * modified Makefile.INCLUDE: add model_conv_diffgamma.so to the model list
+  * modified mri_read_dicom.c: no more AFNI_DICOM_WINDOW warnings
+07 Sep 2007:
+  * modified Makefile.linux_xorg7/_64 to work on Fedora7
+  * modified model_conv_diffgamma.c: fix diff, never set ts[0] to 1
+17 Sep 2007:
+  * modified 3dDeconvolve.c: show voxel loop when numjobs > 1
+  * modified model_conv_diffgamma.c: allow no scaling, add more debug
+
+20 Sep 2007: modified thd_opendset.c: THD_deconflict_nifti needs to use path
+
+24 Sep 2007:
+  * modified 3dbucket.c 3dCM.c 3dnewid.c 3dNotes.c 3drefit.c 3dTcat.c adwarp.c
+             afni.c plug_notes.c plug_tag.c readme_env.h thd_writedset.c:
+        - changed AFNI_DONT_DECONFLICT to AFNI_DECONFLICT
+        - modified default behavior to failure (from deconflict)
+  * modified 3dTshift.c: help fix for seqplus/seqminus
+  * modified AFNI.afnirc: set hints to YES as default
+
+27 Sep 2007: modified Makefile.INCLUDE: added @DriveAfni/Suma to SCRIPTS
+02 Oct 2007: modified AlphaSim.c: added -seed option
+03 Oct 2007:
+  * modified 3dDeconvolve: use default polort of just 1+floor(rtime/150)
+  * modified afni_proc.py, db_mod.py: apply same default polort
+04 Oct 2007: modified ccalc.c: quit on ctrl-D, no error on empty line
+10 Oct 2007:
+  * modified db_mod.py: need math for floor()
+  * modified 3dDeconvolve.c: set AFNI_DECONFLICT=OVERWRITE in do_xrestore_stuff
+12 Oct 2007: modified thd_niftiread/write.c: get/set nim->toffset
+19 Oct 2007: modified mbig.c to handle mallocs above 2 GB
+22 Oct 2007:
+  * modified Makefile.INCLUDE: added R_scripts dir
+  * checked in Gang's current 3dLME.R and io.R scripts
+23 Oct 2007:
+  * added afni_run_R script, to set AFNI_R_DIR and invoke R
+  * modified Makefile.INCLUDE, added afni_run_R to SCRIPTS
+  * modified 3dLME.R, to use the AFNI_R_DIR environment variable
+
+25 Oct 2007: modified 3dfractionize.c: added another help example
+26 Oct 2007: gifti 0.2
+  * renamed gifti.? to gifti_io.?, gtest to gifti_test
+  * modified get.times, test.io: applied gifti_test name
+  * modified Makefile: applied name changes, added clean: target
+  * modified gifti_io.[ch]: prepended 'gifti_' to main data structures
+        - MetaData    -> gifti_MetaData,    LabelTable -> gifti_LabelTable,
+          CoordSystem -> gifti_CoordSystem, DataArray  -> gifti_DataArray
+  * modified gifti_xml.c:
+        - added indent level to control structure and fixed logic
+        - allowed more CDATA parents (any PCDATA)
+        - added ewrite_text_ele and applied ewrite_cdata_ele
+  * modified gifti_test.c: changed option to -gifti_ver
+29 Oct 2007:
+  * modified gifti*.[ch]: changed gifti datastruct prefixes from gifti_ to gii
+  * modified test.io: added -nots option, to skip time series
+  * added README.gifti
+30 Oct 2007: sync nifti from sourceforge (from Michael Hanke)
+  * added LICENSE, Makefile.cross_mingw32, packaging/DevPackage.template
+  * modified CMakeLists.txt, Updates.txt
+08 Nov 2007:
+  * modified fslio.c: applied Henke fix for FslFileType
+  * modified nifti_io.c: applied Yaroslav fix for ARM alignment problem
+  * modified model_demri_3.c: allow for nfirst == 0
+09 Nov 2007: modified model_demri_3.c: added AFNI_MODEL_D3_PER_MIN
+13 Nov 2007:
+  * modified adwarp.c: applied AFNI_DECONFLICT for both overwrite and decon
+  * modified SUMA_Load_Surface_Object.c:
+        - apply SUMA_SurfaceTypeCode in SUMA_coord_file
+14 Nov 2007: modified Makefile.cygwin, Makefile.INCLUDE for cygwin build
+  * modified adwarp.c: aside from -force, let user's AFNI_DECONFLICT decide
+21 Nov 2007: gifti base64 I/O: lib version 0.3
+  * modified giftio_io.[ch], gifti_xml.[ch], gifti_test.c, test.io
+        - added I/O routines for base64 via b64_encode_table/b64_decode_table
+        - append_to_data_b64(), decode_b64(), copy_b64_data
+        - added b64_check/b64_errors to global struct
+        - pop_darray: check for b64_errors and  byte-swapping
+        - dind is size_t
+        - notable functions: gifti_list_index2string, gifti_disp_hex_data
+            gifti_check_swap, gifti_swap_Nbytes
+26 Nov 2007: modified afni_proc.py, db_mod.py: volreg defaults to cubic interp.
+28 Nov 2007: nifti updates for GIFTI and datatype_to/from_string
+  * modified nifti1.h: added 5 new INTENTs for GIFTI, plus RGBA32 types
+  * modified nifti1.[ch]:
+        - added NIFTI_ECODE_FREESURFER
+        - added nifti_type_list, an array of nifti_type_ele structs
+  * modified nifti_tool.[ch]: added -help_datatypes, to list or test types
+  * modified nifti_regress_test/commands/c02.nt.help: added -help_datatypes
+  * modified Updates.txt: for these changes
+29 Nov 2007:
+  * modified nifti1.h, nifti1_io.c: use 2304 for RGBA32 types
+  * modified gifti_io.c, gifti_xml.c: fixed nvpair value alloc
+02 Dec 2007:
+  * modified Makefile.linux_xorg7: added -D_FILE_OFFSET_BITS=64 for LFS
+    (will probably do that in other Makefiles)
+03 Dec 2007: applied changes for GIFTI Format 1.0 (11/21)
+  * replaced Category with Intent
+  * replaced Location attribute with ExternalFileName/Offset
+  * added NumberOfDataArrays attribute to GIFTI element
+  * applied new index_order strings
+05 Dec 2007: applied changes for NIfTI release 1.0
+  * modified Updates.txt, Makefile, README, CMakeLists.txt
+             fsliolib/CMakeLists.txt nifticdf/CMakeLists.txt
+             niftilib/CMakeLists.txt znzlib/CMakeLists.txt
+06 Dec 2007: applied more NIfTI updates: release 1.0.0 (extra 0 :)
+  * modified Makefile README packaging/nifticlib.spec
+08 Dec 2007: allowed ANALYZE headers in nifti_hdr_looks_good
+10 Dec 2007: gifticlib 0.6
+  * modified gifti_io.[ch], gifti_test.[ch], gifti_xml.[ch],
+             Makefile, README.gifti
+        - can read/write Base64Binary datasets (can set compress level)
+        - removed datatype lists (have gifti_type_list)
+        - added gifti_read_da_list(), with only partial ability
+        - added GIFTI numDA attribute
+        - change size_t to long long
+  * modified 3dresample.c: allowed for AFNI_DECONFLICT
+11 Dec 2007: gifticlib 0.7
+  * modified gifti_io.[ch], gifti_xml.c, gifti_test.c, README.gifti:
+        - added GIFTI_B64_CHECK defines and disp_gxml_data()
+        - set b64_check default to SKIPNCOUNT
+12 Dec 2007: gifticlib 0.8
+  * modified gifti_io.[ch], gifti_xml.c:
+        - added sub-surface selection, via dalist in gifti_read_da_list()
+        - added gifti_copy_DataArray, and other structures
+13 Dec 2007: modified thd_brainnormalize.h: replace unsetenv with putenv(NO)
+14 Dec 2007: modified Makefile.linux_gcc33_64 for building on FC3 (was 2)
+27 Dec 2007: added Makefile.macosx_10.5_G5, Makefile.macosx_10.5_Intel
+        - contain -dylib_file option, for resolving 10.5 problem with libGL
+
+28 Dec 2007: gifti_io v0.9 (now, with gifti_tool)
+  * added gifti_tool.[ch]: replacing gifti_test, with added fucntionality
+  * modified gifti_test.[ch]: simplifying the program as a sample
+  * modified gifti.get.times, gifti.test.io, Makefile: use tifti_tool
+  * modified gifti_io.[ch], gifti_xml.[ch]:
+        - made zlib optional, via -DHAVE_ZLIB in compile
+          (without zlib, the user will get warnings)
+        - now users only #include gifti_io.h, not gifti_xml, expat or zlib
+        - added more comments and made tables more readable
+        - added all user-variable access functions and reset_user_vars()
+        - added gifti_free_image_contents(), gifti_disp_raw_data(),
+                gifti_clear_float_zeros() and gifti_set_all_DA_attribs()
+        - changed gifti_gim_DA_size to long long
+        - added GIFTI_B64_CHECK_UNDEF as 0
+        - fixed 0-width indenting and accumulating base64 errors
+
+03 Jan 2008:
+  * modified gifti_io.[ch], gifti_xml.[ch] (v0.10)
+        - added top-level gifti_create_image() interface
+        - must now link libniftiio
+        - gifti_add_empty_darray() now takes num_to_add
+        - if data was expected but not read, free it
+          (can add via gifti_alloc_all_data())
+        - many minor changes
+  * modified gifti_tool.[ch] (v0.1)
+        - can do one of display, write or test (more to come)
+        - added dset creation ability and options, via -new_dset or MAKE_IM
+          (options -new_*, for numDA, intent, dtype, ndim, dims, data)
+        - added AFNI-style DA selection, for input datasets
+  * modified README.gifti, gifti/Makefile
+
+11 Jan 2008:
+  * modified mri_to_byte.c afni_vol2surf.c mrilib.h:
+        - added mri_to_bytemask() and a call to it in afni_vol2surf, for
+          using the clustered result in vol2surf
+  * modified gifti_io.[ch], gifti_xml.c, Makefile, README.gifti
+        - attribute/data setting functions are more flexible
+        - added gifti_disp_dtd_url, gifti_set_DA_meta, gifti_valid_int_list,
+          DA_data_exists, gifti_add_to_meta 
+  * modified gifti_tool.[ch]
+        - added option -gifti_dtd_url
+        - added options -mod_DAs and -read_DAs (replaced -dalist)
+        - added options -mod_add_data, -mod_DA_attr, -mod_DA_meta,
+                        -mod_gim_attr, -mod_gim_meta
+          (modification takes place at dataset read time)
+        - reformatted help output
+16 Jan 2008: giftilib 0.12, gifti_tool 0.3
+  * modified gifti.test.io: added new -no_updates option
+  * modified gifti_io.[ch], gifti_xml.[ch], README.gifti:
+       - added gifti_copy_gifti_image() and gifti_convert_to_float()
+       - added gifti_valid_LabelTable(), gifticlib_version(),
+               gifti_copy_LabelTable(), gifti_updaet_nbyper() and
+               gifti_valid_gifti_image()
+       - added control over library updates to metadata
+       - expanded checks in gifti_valid_dims
+  * modified gifti_tool.[ch]:
+       - added options -gifti_zlib, -gifti_test, -mod_to_float, -no_updates
+  * modified gifti/Makefile: in clean_all, rm gifti*.lo*
+  * modified Makefile.INCLUDE: added gifti_tool target
+
+18 Jan 2008: modified 3dclust.c: fixed "MI RL" description in -help
+22 Jan 2008: afni_proc.py updates for estimating smoothness
+  * modified afni_base.py: added 'short' to comopt.show()
+  * modified option_list.py: added 'short' to OptionList.show()
+  * modified afni_proc.py:
+      - added -show_valid_opts to simply print options
+      - added -regress_est_blur_epits, -regress_est_blur_errts,
+              -regress_no_mask and -regress_errts_prefix options
+      - creation of all_runs always happens now
+
+23 Jan 2008: added useless statements to fix suma crashes on FC7 (compiler?)
+  * modified SUMA_Load_Surface_Object.c: added optimization appease message
+25 Jan 2008: fixed Makefile.linux_gcc32 to linux motif statically
+
+05 Feb 2008: nifti updates for hans johnson to remove nia.gz functionality
+  * modified cmake_testscripts/newfiles_test.sh, commands/c15.new.files,
+             utils/nifti1_test.c, niftilib/nifti1_io.c
+06 Feb 2008: modified 3dbucket.c to copy fdr curves
+
+13 Feb 2008: beginning GIFTI support in AFNI
+  * added gifti_choice.c, thd_gifti.c
+  * modified: 3ddata.h, thd_auxdata.c, thd_info.c, thd_opendset.c,
+    edt_dsetitems.c, thd_delete.c, thd_loaddblk.c, thd_writedset.c,
+    thd_fetchdset.c, thd_mastery.c, thd_niml.c, Makefile.INCLUDE
+
+20 Feb 2008: GIFTI to AFNI
+  * modified 3ddata.h: added dtype_nifti_to_niml prototype
+  * modified thd_niml.c: added dtype_nifti_to_niml(), plus 2 stupid changes
+  * modified thd_gifti.c: added functionality to convert GIFTI to NIML/AFNI
+  * modified gifti_io.[ch]: added gifti_get_meta_value and gifti_image_has_data
+  * modified Makefile.linux_xorg7_64: to have the option of GIFTI support
+
+21 Feb 2008: GIFTI I/O mostly working
+  * modified 3ddata.h: added NI_write_gifti(), NI_find_element_by_aname(),
+                             dtype_niml_to_nifti(), nsd_string_atr_to_slist()
+  * modified gifti_choice.c: changed NI_write_gifti() prototype
+  * modified thd_niml.c:
+      - exported nsd_string_atr_to_slist()
+      - added dtype_niml_to_nifti(), NI_find_element_by_aname()
+  * modified thd_gifti.c: added functions to convert AFNI->GIFTI
+  * modified Makefiles: added USE_GIFTI and LGIFTI to uncomment for application
+        linux_gcc32 linux_gcc33_64 linux_xorg7 macosx_10.4 macosx_10.4_G5
+        macosx_10.4_Intel macosx_10.5_G5 macosx_10.5_Intel solaris28_gcc
+        solaris29_suncc solaris29_suncc_64 solaris28_suncc
+24 Feb 2008: minor fixes to thd_gifti.c
+25 Feb 2008:
+  * modified gifti_io.c: metadata element without data is valid
+  * modified afni_vol2surf.c: VEDIT_IVAL against fim_index (not thr_index)
+

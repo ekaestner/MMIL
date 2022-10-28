@@ -1,0 +1,350 @@
+#!/bin/tcsh -fe
+
+@global_parse `basename $0` "$*" ; if ($status) exit 0
+
+PARSE: 
+   set Narg = $#
+   set cnt = 1
+   set p0 = 2
+   set p1 = 98
+   set min = 0
+   set max = 255
+   set invol = ""
+   set opref = ""
+   set mask = ""
+   set maskopt = ""
+   set scale = range
+   if ("$1" == '') goto HELP
+   set ss = 'SV.'
+   while ($cnt <= $Narg)
+      set donext = 1;
+      
+      if ($donext && "$argv[$cnt]" == "-help" || "$argv[$cnt]" == "-h") then
+         goto HELP
+      endif
+
+      if ($donext && "$argv[$cnt]" == "-echo") then
+         set echo
+         set donext = 0     
+      endif
+      if ($donext && "$argv[$cnt]" == "-scale_by_mean") then
+         set pLoc = $cnt 
+         set scale = 'mean'
+         set ss = 'mea.'
+         set donext = 0     
+      endif
+      if ($donext && "$argv[$cnt]" == "-scale_by_median") then
+         set pLoc = $cnt 
+         set scale = 'median'
+         set ss = 'med.'
+         set donext = 0     
+      endif
+      if ($donext && "$argv[$cnt]" == "-norm") then
+         set pLoc = $cnt 
+         set scale = 'norm'
+         set ss = 'tz.'
+         set donext = 0     
+      endif
+      if ($donext && "$argv[$cnt]" == "-feat_norm") then
+         set pLoc = $cnt 
+         set scale = 'feat_norm'
+         set ss = 'r.'
+         set donext = 0     
+      endif
+      if ($donext && "$argv[$cnt]" == "-feat_znorm") then
+         set pLoc = $cnt 
+         set scale = 'feat_znorm'
+         set ss = 'z.'
+         set donext = 0     
+      endif
+      
+      if ($donext && "$argv[$cnt]" == "-perc_clip") then
+         set pLoc = $cnt      
+         if ($pLoc == $Narg) then
+            echo "Need 2 values between 0 and 100 after -perc_clip"
+            goto END
+         else
+            @ cnt ++
+            set p0 = "$argv[$cnt]"
+            if ($cnt == $Narg) then
+               echo "Need 2 values between 0 and 100 after -perc_clip"
+               goto END
+            endif
+            @ cnt ++
+            set p1 = "$argv[$cnt]"
+            set donext = 0   
+         endif   
+      endif
+      
+      if ($donext && "$argv[$cnt]" == "-val_clip") then
+         set pLoc = $cnt      
+         if ($pLoc == $Narg) then
+            echo "Need 2 values after -val_clip"
+            goto END
+         else
+            @ cnt ++
+            set min = "$argv[$cnt]"
+            if ($cnt == $Narg) then
+               echo "Need min and max after -val_clip"
+               goto END
+            endif
+            @ cnt ++
+            set max = "$argv[$cnt]"
+            set donext = 0   
+         endif   
+      endif
+      
+      if ($donext && "$argv[$cnt]" == "-input") then
+         set pLoc = $cnt      
+         if ($pLoc == $Narg) then
+            echo "Need 1 dset after -input"
+            goto END
+         else
+            @ cnt ++
+            set invol = "$argv[$cnt]"
+            set donext = 0   
+         endif
+      endif
+      
+      if ($donext && "$argv[$cnt]" == "-prefix") then
+         set pLoc = $cnt      
+         if ($pLoc == $Narg) then
+            echo "Need a prefix after -prefix"
+            goto END
+         else
+            @ cnt ++
+            set opref = "$argv[$cnt]"
+            set donext = 0   
+         endif
+      endif
+      
+      if ($donext && "$argv[$cnt]" == "-mask") then
+         set pLoc = $cnt      
+         if ($pLoc == $Narg) then
+            echo "Need a mask volume after -mask"
+            goto END
+         else
+            @ cnt ++
+            set mask = "$argv[$cnt]"
+            set donext = 0   
+         endif
+      endif
+      
+      if ($donext == 1) then
+         echo "Error: Option or parameter '$argv[$cnt]' not understood"
+         apsearch -popt `basename $0` -word $argv[$cnt]
+         goto END
+      endif
+      @ cnt ++
+   end
+ 
+if ("$mask" != '') then
+   set maskopt = "-mask $mask"
+endif 
+      
+set ps = `ccalc -i  -expr "($p1 - $p0)"` 
+set ipref = `@GetAfniPrefix $invol`
+if ($opref == "") then
+   set opref = $ipref.sc
+endif
+if ($invol == "") then
+   echo "Error: No input volume"
+   echo ""
+   goto END
+endif
+
+if (`3dnvals $invol` > 1 && "$scale" == 'range') then
+   echo "Error `basename $0`"
+   echo "Script operates on datasets with one input only"
+   echo ""
+   goto END
+endif
+
+if ($scale == 'range') then
+   goto DOIT
+else if ($scale == 'median' || $scale == 'mean') then
+   goto DOIT_DIV
+else if ($scale == 'norm') then
+   goto DOIT_NORM
+else if ($scale == 'feat_norm') then
+   goto DOIT_FEAT_NORM
+else if ($scale == 'feat_znorm') then
+   goto DOIT_FEAT_ZNORM
+else
+   echo "Don't know how to scale by $scale"
+   goto END
+endif
+
+DOIT:
+   set vvv = (`@parse_afni_name $invol` '')
+   set vvv = $vvv[3]
+   set nvals = `3dnvals -all $invol`
+   if ($nvals[4] > 1) then
+      echo "Not ready to deal with multiple sub-bricks"
+      goto END
+   endif
+   set perc = `3dBrickStat ${maskopt} -non-zero -percentile $p0 $ps $p1 $invol`
+   echo $perc
+   set v0 = $perc[2]
+   set v1 = $perc[4]
+
+   #In one step
+   3dcalc   -a $invol -prefix $opref  \
+            -expr "bool(a) * \
+                   ( \
+                     ( ($v0 * (1-step(a-$v0)) + \
+                        $v1 * (  step(a-$v1)) + \
+                        step(a-$v0)*(1-step(a-$v1))*a) - $v0 ) / \
+                     ($v1-$v0)*($max-$min)+$min \
+                   )    "
+
+   goto END
+
+   #Two steps would be
+   3dcalc   -a $invol -prefix sss  \
+            -expr "bool(a) * \
+                   ( $v0 * (step($v0-a)) + \
+                     $v1 * (step(a-$v1)) + \
+                     step(a-$v0)*step($v1-a)*a )"  
+   3dcalc   -a sss+orig  \
+            -expr "bool(a) * \
+                   ( (a - $v0)/($v1-$v0)*($max-$min)+$min )"   \
+            -overwrite -prefix sss
+   3drefit -sublabel_prefix $ss $opref$vvv
+   3dNotes -h "`basename $0` $*" $opref$vvv
+   goto END
+
+DOIT_FEAT_NORM:
+   set vvv = (`@parse_afni_name $invol` '')
+   set vvv = $vvv[3]
+   set nvals = `3dinfo -nv $invol`
+   set v0 = 1
+   set v1 = 99
+   set nid = __tt.`3dnewid -fun`
+   set sbm = `ccalc -i $nvals - 1`
+   foreach sb (`count -digits 1 0 $sbm `)
+      set op = `printf %03d $sb`
+      set rng = `3dBrickStat ${maskopt} -non-zero -min -max $invol"[$sb]"`
+      3dcalc   -a $invol"[$sb]" \
+               -expr "bool(a)*((a-$rng[1])/($rng[2]-$rng[1])*($v1-$v0)+$v0)"  \
+               -prefix ${nid}.${op}
+   end
+   3dTcat -prefix $opref ${nid}.???+????.HEAD
+   \rm -f ${nid}.???+????.*
+   3drefit -sublabel_prefix $ss $opref$vvv
+   3dNotes -h "`basename $0` $*" $opref$vvv
+   goto END
+
+DOIT_FEAT_ZNORM:
+   set vvv = (`@parse_afni_name $invol` '')
+   set vvv = $vvv[3]
+   set nvals = `3dinfo -nv $invol`
+   set v0 = 1
+   set v1 = 99
+   set nid = __tt.`3dnewid -fun`
+   set sbm = `ccalc -i $nvals - 1`
+   foreach sb (`count -digits 1 0 $sbm `)
+      set op = `printf %03d $sb`
+      set rng = `3dBrickStat ${maskopt} -non-zero -mean -var $invol"[$sb]"`
+      3dcalc   -a $invol"[$sb]" \
+               -expr "bool(a)*((a-$rng[1])/(sqrt($rng[2])))"  \
+               -prefix ${nid}.${op}
+   end
+   3dTcat -prefix $opref ${nid}.???+????.HEAD
+   \rm -f ${nid}.???+????.*
+   3drefit -sublabel_prefix $ss $opref$vvv
+   3dNotes -h "`basename $0` $*" $opref$vvv
+   goto END
+   
+   
+DOIT_NORM:
+   set nvals = `3dnvals -all $invol`
+   set vvv = (`@parse_afni_name $invol` '')
+   set vvv = $vvv[3]
+   3dTstat $maskopt -mean -stdev -prefix ___ts $invol
+   3dcalc -a $invol -b ___ts$vvv"[0]" -c ___ts$vvv"[1]" \
+            -expr '(a-b)/c' -prefix $opref
+   rm -f ___ts$vvv.*
+   3drefit -sublabel_prefix $ss $opref$vvv
+   3dNotes -h "`basename $0` $*" $opref$vvv
+   goto END
+   
+DOIT_DIV:
+   set vvv = (`@parse_afni_name $invol` '')
+   set vvv = $vvv[3]
+   set nvals = `3dnvals -all $invol`
+   set cnt = 0
+   rm -f scl.$opref.1D >& /dev/null &
+   if ("$scale" == "mean") then
+      while ($cnt < $nvals[4])
+       set scl = `3dBrickStat ${maskopt} -non-zero -mean $invol"[$cnt]"`
+       echo $scl
+       if ($scl[1] =~ 'nan') then
+         echo 0 >> scl.$opref.1D
+       else
+        echo $scl[1] >> scl.$opref.1D 
+       endif
+       @ cnt ++
+      end
+   else
+      while ($cnt < $nvals[4])
+       set scl = `3dBrickStat ${maskopt} -non-zero -median $invol"[$cnt]"`
+       echo $scl
+       if ($scl[2] =~ 'nan') then
+         echo 0 >> scl.$opref.1D
+       else
+         echo $scl[2] >> scl.$opref.1D
+       endif
+       @ cnt ++
+      end
+   endif
+   3dcalc   -a $invol -prefix $opref  \
+            -b scl.$opref.1D   \
+            -expr "bool(b)*a/b"
+   3drefit -sublabel_prefix $ss $opref$vvv
+   3dNotes -h "`basename $0` $*" $opref$vvv
+   goto END
+   
+HELP:
+   echo ""
+   echo "Usage: `basename $0` <-input DSET> <-prefix PREFIX>"
+   echo "                     [-perc_clip P0 P1] [-val_clip V0 V1]"
+   echo "                     [-scale_by_mean] [-scale_by_median]"
+   echo "                     [-norm] [-mask MSET]"    
+   echo ""
+   echo "-input DSET: Dset to scale"
+   echo "-prefix PREFIX: Prefix of output"
+   echo "-mask MSET: Restrict to non-zero values of MSET"
+   echo "Method 1: (default)"
+   echo "Scale a volume so that its values range between V0 and V1"
+   echo "-val_clip V0 V1: Min and Max of output dset"
+   echo "                 Default V0 = $min and V1 = $max"
+   echo "-perc_clip P0 P1: Set lowest P0 percentile to Min "
+   echo "                  and highest P1 percentile to Max"
+   echo "                  Default P0 = $p0 and P1 = $p1"
+   echo "Output sub-brick labels are prefixed with SV."
+   echo ""
+   echo "At the moment, Method 1 only operates on volumes with one sub-brick"
+   echo ""
+   echo "Method 2:"
+   echo "-scale_by_mean: Divide each sub-brick by mean of non-zero voxels"
+   echo "Output sub-brick labels are prefixed with mea."
+   echo "-scale_by_median: Divide each sub-brick by median of non-zero voxels"
+   echo "Output sub-brick labels are prefixed with med."
+   echo ""
+   echo "Method 3:"
+   echo "-norm: For each time series T, Tnorm= (T-mean(T))/stdev(T)"
+   echo "Output sub-brick labels are prefixed with tz."
+   echo ""
+   echo "Method 4:"
+echo "-feat_norm: For each sub-brick B, Bnorm= (B-min(B))/(max(B)-min(B))*99+1"
+   echo "Output sub-brick labels are prefixed with r."
+   echo ""
+   echo "Method 5:"
+   echo "-feat_znorm: For each sub-brick B, Bnorm= (B-mean(B))/stdev(B)"
+   echo "Output sub-brick labels are prefixed with z."
+   echo ""
+   @global_parse -gopts_help
+   goto END
+         
+END:

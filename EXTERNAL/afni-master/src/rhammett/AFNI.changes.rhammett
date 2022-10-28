@@ -1,0 +1,72 @@
+04 Aug 2005
+   * modified 3dTstat.c to add -argmax, -argmin, and
+     -argabsmax functionality
+
+25 Jul 2005
+   * modified thd_niftiwrite.c to mark AFNI +tlrc files
+     as NIfTI talairach view files when writing
+
+18 Jul 2005
+   * modified thd_niftiwrite.c and thd_niftiread.c to allow
+       better interoperability with FSL
+
+13 Apr 2005
+   * deprecated quite LOUDLY usage of 3dANALYZEtoAFNI
+05 Apr 2005
+   * created framework for AFNI to read and write NIFTI1 format files:
+   * modified thd_initsess.c to list files in the session tree with
+       a .nii extension
+   * added thd_niftiwrite.c to write out NIFTI1 files
+   * added thd_niftiwrite.h
+   * added 3dAFNItoNIFTI.c to read in AFNI file and write out
+       NIFTI1 file using the above code
+   * modified Makefile.INCLUDE to build thd_niftiwrite.o and
+      3dAFNItoNIFTI executable target
+10 Aug 2004
+   * modified mri_read.c to check input files for the dicom magic number
+     before processing based on file name.
+16 Jun 2004
+   * modified 3dTstat.c to allow a statistical method to return
+     multiple values (that is, multiple sub-BRIKS in the output
+     data set).
+   * modified 3dTstat.c to generate an arbitrary-length autocorrelation
+     vector
+   * modified 3dTstat.c to generate an arbitrary-order autoregression
+     coefficient vector
+11 Mar 2004
+   * modified several files to allow proper reading and writing of
+     the SPM Analyze coordinate space origin field
+28 Jul 2003
+   * modified mri_read_dicom.c to allow to3d to read and process 
+     Siemens mosaic files while ignoring seemingly meaningful
+     garbage text.  This was for a new case with even more
+     extensive garbage than the 4 March 2003 case.
+
+05 May 2003
+   * modified mri_read.c to allow a switch to choose to try DICOM
+     processing last on unknown files.  Set the environment variable
+     AFNI_TRY_DICOM_LAST to YES.
+
+04 Mar 2003
+   * modified mri_read_dicom.c to allow to3d to read and process 
+     Siemens mosaic files while ignoring seemingly meaningful
+     garbage text.
+
+25 Feb 2003
+   * modified mri_read_dicom.c to allow to3d to read and process 
+     Siemens mosaic files with less information than previous versions.
+
+XX Feb 2003
+   * modified 3dTsmooth.c to allow specification of an arbitrary (odd-order)
+     filter in a text file for the smoothing operation.
+
+XX Jan 2003
+   * modified 3dTstat.c to allow specification of multiple statistics in
+     a single command.
+   * modified 3dTstat.c to output bucket datasets instead of single volume
+     datasets.
+
+XX Dec 2003
+   * modified 3dTstat.c to add option to calculate the Durbin-Watson
+     statistic (which measures first-order autocorrelation of data
+     in time).

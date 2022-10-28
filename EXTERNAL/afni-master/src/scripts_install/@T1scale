@@ -1,0 +1,406 @@
+#!/bin/tcsh -f
+
+@global_parse `basename $0` "$*" ; if ($status) exit 0
+set stat = 0
+set stdir = "$PWD"
+
+goto PARSE
+RET_PARSE:
+
+COPY_DATA:
+      if ( ! -f "$odir/amask+orig.HEAD" ||   \
+           ! -f "$odir/T1+orig.HEAD" ||  \
+           ! -f "$odir/PD+orig.HEAD"   ) then
+   3dcalc ${overW} -datum short -a $T1 -expr 'a' -prefix "$odir/T1"
+   if ( $do_align == 1) then
+      3dAllineate -base $T1 -input $PD -nmi -onepass -warp shr \
+                  -prefix "$odir/PD"
+   else
+      3dcalc ${overW} -datum short -a $PD -expr 'a' -prefix "$odir/PD"
+   endif
+   set afh = ($afh "$odir/T1+orig.HEAD" "$odir/PD+orig.HEAD")
+   if ($imask != '') then
+      3dcalc ${overW} -datum byte -a $imask -expr 'a' -prefix "$odir/umask"
+      set afh = ($afh umask+orig.HEAD)
+   else
+      3dmerge ${overW} -1blur_fwhm 25 -prefix "$odir/PDsm" "$odir/PD+orig"
+      3dAutomask ${overW} -prefix "$odir/amask" "$odir/PDsm+orig"
+      \rm -f "$odir"/PDsm+orig.* 
+      set afh = ($afh amask+orig.HEAD)
+   endif
+      else
+         echo "Reusing input data"
+      endif
+   
+NEWMASK:
+   cd "$odir"
+   if ( "$menh" != "0.0" && ! -f hmask+orig.HEAD) then
+      3dSkullStrip -head -input T1+orig -prefix SS
+      3dcalc -a SS_head+orig -datum byte -expr 'step(a-1)' -prefix hmask
+      set afh = ($afh hmask+orig.HEAD)
+   else
+      if ( "$menh" != "0.0" ) echo "Reusing hmask+orig.HEAD"
+   endif
+   cd "$idir"
+
+STMASK:
+   cd "$odir"
+   if ( $STmask != 0 && ! -f T1PD.ns.dmsk+orig.HEAD ) then
+      3dcalc -a T1+orig -b PD+orig -expr "sqrt(a*b)"  \
+             -prefix T1PD
+      3dSkullStrip -input T1PD+orig -prefix T1PD.ns
+      3dAutomask -prefix T1PD.ns.msk -dilate 3 T1PD.ns+orig
+      3dAutomask -prefix T1PD.msk -dilate 3 T1PD+orig
+   endif
+   
+STATIT:
+   cd "$odir"
+   set LSmopt = ''
+   if ($PDmask != '') then
+      set LSmopt = "-mask ../$PDmask"
+   endif
+      if ( ! -f PD.ls+orig.HEAD ) then
+   3dLocalstat -nbhd "SPHERE($rad)" -stat perc:65:95:5 \
+            -datum short -reduce_max_vox 5 \
+            ${overW} ${LSmopt} -prefix PD.ls PD+orig.
+         set afh = ($afh PD.ls+orig.HEAD)
+      else
+         echo "Reusing PD.ls"
+      endif
+   cd "$idir"
+   
+      
+SCALEIT:
+   cd "$odir"
+   if ("$menh" == 0.0) then
+      if ( $imask != '') then
+         set mm = umask+orig.HEAD
+      else
+         set mm = amask+orig.HEAD
+      endif
+      set meq = 'step(c)'
+   else 
+      set mm = hmask+orig.HEAD
+      set meq = 'step(c)'
+   endif
+   set med = `3dBrickStat -non-zero -median -mask $mm T1+orig.`
+   if ($unmasked_output == 1) then
+      set meq = '1'
+   endif
+   
+   if ( ! -f T1.uni+orig.HEAD) then
+      3dcalc   -a T1+orig. -b PD.ls+orig'[perc:75.00]' \
+                  -c $mm -datum short ${overW} \
+                  -expr "$meq*a/b*$med[2]" \
+                  -prefix T1.uni+orig.
+      set afh = ($afh T1.uni+orig.HEAD)
+   else
+      echo "Reusing T1.uni+orig.HEAD"
+   endif
+   
+   DIVUNI:
+   if ( $PD != $T1 && $divuni > 0) then
+      if ( ! -f T1.divuni+orig.HEAD) then
+         #Create straight division 
+         if ( ! -f T1.div+orig.HEAD) then
+            3dcalc   -a T1+orig. -b PD+orig \
+                     -c $mm -datum short ${overW} \
+                     -expr "$meq*a/b*$med[2]" \
+                     -prefix T1.div+orig.
+            set afh = ($afh T1.div+orig.HEAD)
+         else
+            echo "Reusing T1.div"
+         endif
+         
+         #Compute change in rankings between two corrected volumes
+         3dRank -prefix T1.div.r -input T1.div+orig
+         set mra = `3dinfo -max T1.div.r+orig`
+         3dRank -prefix T1.uni.r -input T1.uni+orig
+         set mrb = `3dinfo -max T1.uni.r+orig`
+         
+         #Create composite image, with a logistic function weighting
+         #  1dRplot -x 'R:r=seq(from=0, to=6, by=0.2)'  \
+         #       -input 'R:r=seq(from=0, to=6, by=0.2); 1-1/(1+exp(-2*5*(r-2)))'
+
+         set k = 5; #steepness of logistic function
+         set rth = 2; #Threshold for rank enhancement
+         3dcalc -a T1.div.r+orig -b T1.uni.r+orig -c T1.div+orig -d T1.uni+orig \
+                  -expr "(1-1/(1+exp(-2*$k*((a/$mra)/(b/$mrb)-$rth))))*c + \
+                            1/(1+exp(-2*$k*((a/$mra)/(b/$mrb)-$rth))) *d " \
+                  -prefix T1.divuni
+         #Get estimate of PD.ls threshold from values at locations with 
+         #very high enhancement
+         #Threshold at 25%, don't want to be too aggressive
+         set pdth = `3dHist -input PD.ls+orig'[perc:75.00]' \
+                  -cmask '-a T1.div.r+orig -b T1.uni.r+orig -expr step(a/b-10)'\
+                            -val_at ncdf 0.25 -quiet`
+         #Now provide division mask
+         3dcalc -a PD.ls+orig'[perc:75.00]' \
+                -expr "step(a-$pdth)" -prefix smask
+         if ( $unmasked_output == 0 ) then
+            3dcalc -a T1.divuni+orig -b smask+orig \
+                   -expr 'step(b)*a' -prefix T1.divuni \
+                   -overwrite
+         endif      
+         set afh = ($afh T1.divuni+orig.HEAD smask+orig.HEAD)
+      else
+         echo "Reusing T1.divuni"
+      endif    
+   endif   
+   
+   
+   cd "$idir"
+
+HISTORY:
+   cd "$odir"
+   foreach ff ($afh)
+      3dinfo -history $ff | grep -q @T1scale
+      if ($status) then
+         3dNotes -h "`basename $0` $argv" $ff
+      endif
+   end
+   cd "$idir"
+   
+goto END
+
+PARSE:
+set Narg = $#
+set cnt = 1
+set starttime=`date`
+set cleanafter = 1
+set odir = ""
+set olabel = 'loc_st'
+set sigset = 'sigset'
+set suff = 'nosuf'
+set imask = ''
+set idir = "$PWD"
+set T1 = ''
+set PD = ''
+set menh = 0.0
+set unmasked_output = 1
+set afh = ()
+set overW = ''
+set do_align = 0
+set PDmask=''
+set rad = 25
+set STmask = 0 #Not ready for primetime
+set divuni = 0 #Not ready for primetime
+
+if ("$1" == '') goto HELP
+while ($cnt <= $Narg)
+   set donext = 1
+
+   if ($donext && "$argv[$cnt]" == "-help" || "$argv[$cnt]" == "-h") then
+      goto HELP
+   endif
+   
+   if ($donext && ("$argv[$cnt]" == "-d" || "$argv[$cnt]" == "-echo")) then
+      set echo
+      set donext = 0   
+   endif
+ 
+   if ($donext && ("$argv[$cnt]" == "-align")) then
+      set do_align = 1
+      set donext = 0   
+   endif
+
+   if ($donext && ("$argv[$cnt]" == "-divuni")) then
+      set divuni = 1
+      set donext = 0   
+   endif
+
+   if ($donext && ("$argv[$cnt]" == "-STmask")) then
+      set STmask = 1 #Mask tested on Sam Torrsi's data
+      set donext = 0   
+   endif
+
+   if ($donext && "$argv[$cnt]" == "-overwrite") then
+      set overW = '-overwrite'
+      set donext = 0   
+   endif
+   
+
+   if ($donext && "$argv[$cnt]" == "-odir") then
+      if ($cnt == $Narg) then
+         echo "Need directory after -odir"
+         goto END
+      else
+         @ cnt ++
+         set odir = "$argv[$cnt]"
+         set donext = 0   
+      endif
+   endif
+
+
+   if ($donext && "$argv[$cnt]" == "-suffix") then
+      if ($cnt == $Narg) then
+         echo "Need a output suffix after -suffix"
+         goto END
+      else
+         @ cnt ++
+         set suff = "$argv[$cnt]"
+         set donext = 0   
+      endif
+   endif
+   
+   if ($donext && "$argv[$cnt]" == "-mask") then
+      if ($cnt == $Narg) then
+         echo "Need a dataset suffix after -mask"
+         goto END
+      else
+         @ cnt ++
+         set imask = "$argv[$cnt]"
+         set donext = 0   
+      endif
+   endif
+
+   if ($donext && "$argv[$cnt]" == "-PDmask") then
+      if ($cnt == $Narg) then
+         echo "Need a dataset suffix after -PDmask"
+         goto END
+      else
+         @ cnt ++
+         set PDmask = "$argv[$cnt]"
+         set donext = 0   
+      endif
+   endif
+
+
+   if ($donext && ("$argv[$cnt]" == "-head_mask")) then
+      set menh = 1
+      set donext = 0   
+   endif
+
+   if ($donext && ("$argv[$cnt]" == "-unmasked_uni")) then
+      set unmasked_output = 1
+      set donext = 0   
+   endif
+   
+   if ($donext && ("$argv[$cnt]" == "-masked_uni")) then
+      set unmasked_output = 0
+      set donext = 0   
+   endif
+   
+   if ($donext && "$argv[$cnt]" == "-T1") then
+      if ($cnt == $Narg) then
+         echo "Need a dataset suffix after -T1"
+         goto END
+      else
+         @ cnt ++
+         set T1 = "$argv[$cnt]"
+         set donext = 0   
+      endif
+   endif
+   
+   if ($donext && "$argv[$cnt]" == "-PD") then
+      if ($cnt == $Narg) then
+         echo "Need a dataset suffix after -PD"
+         goto END
+      else
+         @ cnt ++
+         set PD = "$argv[$cnt]"
+         set donext = 0   
+      endif
+   endif
+
+   if ($donext && "$argv[$cnt]" == "-rad") then
+      if ($cnt == $Narg) then
+         echo "Need a radius after -rad"
+         goto END
+      else
+         @ cnt ++
+         set rad = "$argv[$cnt]"
+         set donext = 0   
+      endif
+   endif
+   
+  if ($donext) then
+      if (1) then
+         echo "Parameter $argv[$cnt] not understood"
+         apsearch -popt `basename $0` -word $argv[$cnt]
+         goto END
+      endif
+   else 
+      @ cnt ++
+   endif 
+
+end
+
+
+#output directory
+if ("$odir" == '') then
+   set odir = "T1scale"
+endif
+if (! -d "$odir") mkdir -p "$odir"
+if (! -d "$odir") then
+   echo "Failed to create $odir"
+   goto BEND
+endif
+cd "$odir"
+set odir = "$PWD"
+cd -
+         
+if ($T1 == '') then
+   echo "No T1 volume"
+   goto BEND
+endif
+
+if ($PD == '') then
+   set PD = $T1
+   echo "Setting PD to be same as T1"
+endif
+
+
+
+goto RET_PARSE
+
+HELP:
+   echo ""
+   echo "Usage: `basename $0` <-T1 T1vol> <-PD PDvol> "
+   echo ""
+   echo "Fix bias field shading in T1 by scaling it with PD image."
+   echo "You can also get a decent result even without the PD volume."
+   echo ""
+   echo "   -T1 T1vol: The T1 volume"
+   echo "   -PD PDvol: The PD volume (aligned to T1)"
+   echo "   -odir ODIR: Directory where output gets dumped. "
+   echo "              Default is T1scale/ "
+   echo "              ODIR will contain multiple volumes with the one"
+   echo "              of most interest being T1.uni+orig" 
+   echo ""
+   echo "         Script will reuse existing  volumes"
+   echo ""
+   echo "   -align: Align PD volume to T1. Script assumes volumes are in"
+   echo "           close alignment. With this option, output PD+orig volume"
+   echo "           will be in alignment with T1+orig."
+   echo "        Without this option, PDvol is assumed in alignment with T1vol"
+   echo "   -mask MVOL: Create mask for the output"
+   echo "         If not specified, the script will generate one with"
+   echo "         3dAutomask on fattened PDvol."
+   echo "   -head_mask: Create mask using 3dSkullStrip's -head option."
+   echo "   -unmasked_uni: Do not apply masking to uniformized volume (default)"
+   echo "                  You can mask the output after you decide which mask"
+   echo "                  is best. Here is an example with smask:\n"
+   echo "                  3dcalc -a T1.uni+orig. -b smask+orig. \\"
+   echo "                         -expr 'step(b)*a' -prefix T1.uni.m"
+   echo "   -masked_uni: Apply masking to uniformized volume"
+   echo ""
+   echo "   -echo: Set echo"
+   echo "   -help: this message" 
+   echo ""
+   @global_parse -gopts_help
+   goto END
+
+goto END
+
+BEND:
+set stat = 1
+goto END
+
+END:
+cd "$idir"
+exit $stat
+
+
+
+

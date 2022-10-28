@@ -1,0 +1,116 @@
+#!/bin/tcsh
+
+# Shell script to put faces into a Web page - RWCox
+
+# Usage: distface
+# -- to be run inside the AFNI/src/faces directory
+
+echo "===== Making afni_faces.html ====="
+
+echo  '<html><head><title>AFNI User Images</title></head>'                        > afni_faces.html
+echo  '<body><center><h1><i>AFNI</i> User Images</h1>'                           >> afni_faces.html
+echo  '<h2>Contributed by each user</h2>'                                        >> afni_faces.html
+echo  'To contribute your personal image, send a JPEG (.jpg) file'               >> afni_faces.html
+echo  'no larger than 128x128 to'                                                >> afni_faces.html
+echo  '<a href="mailto:rwcox@nih.gov">rwcox@nih.gov</a>.<br />'                  >> afni_faces.html
+echo  'These images are also shown randomly in the <i>AFNI</i> splash screen.'   >> afni_faces.html
+# echo  '<p>[<b><a href="afni_faces.gif">GIF Animation of all faces</a></b>]'      >> afni_faces.html
+echo  '<p>[<b><a href="afni_faces_scroll.html">Scrolling Animation Page</a></b>]'  >> afni_faces.html
+echo  '<hr />'                                                                   >> afni_faces.html
+echo  '<table cellpadding=2 cellspacing=0 border=0><tr><td bgcolor="#eecc00">'   >> afni_faces.html
+echo  '<table cellpadding=2 cellspacing=0 border=0><tr><td bgcolor="#cc9900">'   >> afni_faces.html
+echo  '<table cellpadding=2 cellspacing=0 border=0><tr><td bgcolor="#aa6600">'   >> afni_faces.html
+echo  '<table cellpadding=2 cellspacing=0 border=0><tr><td bgcolor="#883300">'   >> afni_faces.html
+echo  '<table cellpadding=2 cellspacing=0 border=0><tr><td bgcolor="#ffdddd">'   >> afni_faces.html
+echo  '<table cellpadding=3 cellspacing=1 border=1>'                             >> afni_faces.html
+echo  '<tr>'                                                                     >> afni_faces.html
+
+set nn = 0
+
+foreach face ( face_*.jpg )
+
+  if( $nn == 0 ) then
+    echo '</tr>'                                          >>   afni_faces.html
+    echo '<tr>'                                           >>   afni_faces.html
+  endif
+
+  if( "$face" == "face_rwcox2.jpg" ) continue ;
+  if( "$face" == "face_rwcox3.jpg" ) continue ;
+
+  echo '<td align="center"> <img src="'${face}'" /></td>' >>   afni_faces.html
+
+  @ nn = ($nn + 1) % 7
+end
+
+echo '</tr></table>'                                      >>   afni_faces.html
+echo '</td></tr></table>'                                 >>   afni_faces.html
+echo '</td></tr></table>'                                 >>   afni_faces.html
+echo '</td></tr></table>'                                 >>   afni_faces.html
+echo '</td></tr></table>'                                 >>   afni_faces.html
+echo '</td></tr></table>'                                 >>   afni_faces.html
+echo '<hr /><b>This page generated on'                    >>   afni_faces.html
+date                                                      >>   afni_faces.html
+echo '</b><p>'                                            >>   afni_faces.html
+echo '<a href="https://afni.nimh.nih.gov/afni">'          >>   afni_faces.html
+echo '<i>AFNI</i> main page</a>'                          >>   afni_faces.html
+echo '</center></body></html>'                            >>   afni_faces.html
+
+#### Make face animation
+
+# echo "===== Making face animation ====="
+# 
+# foreach face ( face_*.jpg )
+#   set z = `basename $face .jpg`
+#   djpeg $face | pnmpad -height 128 -width 128 -black > ${z}.ppm
+# end
+# 
+# set zz = ( face_*.ppm )
+# set nz = $#zz
+# set ii = 1
+# set qq = 1000
+# while( $ii < $nz )
+#   ppmquant 127 $zz[$ii] | ppmtogif > ${qq}.gif
+#   @ qq = $qq + 1
+#   @ jj = $ii + 1
+#   pamarith -mean $zz[$ii] $zz[$jj] | pnmsmooth | ppmquant 127 | ppmtogif > ${qq}.gif
+#   @ qq = $qq + 1
+#   set ii = $jj
+# end
+# ppmquant 127 $zz[$nz] | ppmtogif > ${qq}.gif
+# @ qq = $qq + 1
+# pamarith -mean $zz[$nz] $zz[1] | pnmsmooth | ppmquant 127 | ppmtogif > ${qq}.gif
+# whirlgif -loop -time 19 -o afni_faces.gif [1-9]*.gif
+# /bin/rm -f face_*.ppm [1-9]*.gif
+
+#### Make scrolling page
+
+echo "===== Making scrolling page ====="
+
+set zz = ( face_*.jpg )
+set nz = $#zz
+set ii = 0
+
+echo '<html><body><hr /><center><script>'                                    > afni_faces_scroll.html
+echo 'var slideurl=new Array('                                              >> afni_faces_scroll.html
+foreach face ( face_*.jpg )
+  @ ii = $ii + 1
+  if( "$face" == "face_rwcox2.jpg" ) continue ;
+  if( "$face" == "face_rwcox3.jpg" ) continue ;
+  if( $ii < $nz ) then
+    echo '"'${face}'",'                                                     >> afni_faces_scroll.html
+  else
+    echo '"'${face}'"'                                                      >> afni_faces_scroll.html
+  endif
+end
+echo ')'                                                                    >> afni_faces_scroll.html
+cat afni_scroller                                                           >> afni_faces_scroll.html
+
+#### Send to Web server
+
+echo "===== Send to Web server ====="
+
+# scp -q afni_faces.html afni_faces_scroll.html afni_faces.gif face_*.jpg afni:/var/www/html/afni/community/faces/
+scp -q afni_faces.html afni_faces_scroll.html face_*.jpg afni:/var/www/html/afni/community/faces/
+ssh afni chmod ugo+r /var/www/html/afni/community/faces/\*
+
+echo "===== Done ====="

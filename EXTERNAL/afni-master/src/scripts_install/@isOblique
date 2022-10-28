@@ -1,0 +1,35 @@
+#!/bin/tcsh -f
+if ("$1" == '' || "$1" == '-h' || "$1" == '-help') then
+	goto USAGE
+endif
+
+set ans = `3dinfo "$1" |& grep 'Data Axes Tilt:' | cut -d: -f2 `
+if (  "$ans[1]" !~ Oblique* && \
+      "$ans[1]" !~ Plumb* && \
+      "$ans[1]" !~ Unspecified*) then
+   echo "Error: Failed to find Data Axes Tilt string in 3dinfo output"
+   echo "Got: $ans[1]"
+   echo "Make sure $1 is a valid dset."
+   goto ENDALL
+endif
+
+if ( "$ans[1]" == "Oblique") then 
+   echo 1
+else 
+   echo 0
+endif
+
+goto ENDALL
+
+USAGE:
+	echo "Usage: `basename $0` <Name> ....."
+	echo "example: `basename $0` Hello+orig.HEAD"
+	echo "returns 1 if Hello+orig.HEAD is oblique"
+   echo "        0 if Hello+orig.HEAD is plumb." 
+	echo "Ziad Saad (saadz@mail.nih.gov)"
+   echo "SSCC/NIMH/ National Institutes of Health, Bethesda Maryland"
+   echo ""
+   echo "Better rely on the newer: 3dinfo -is_oblique <Name>"
+   echo ""
+	goto ENDALL
+ENDALL:

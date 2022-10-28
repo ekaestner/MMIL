@@ -1,0 +1,1988 @@
+#!/bin/tcsh -f
+
+
+if ($#argv) then
+   ### [PT: June 15, 2021] separating these single lines into multiple
+   ### ones, to avoid possible misinterp on older systems
+   #set na = $#argv; if ($na>10) set na=10; 
+   #@global_parse `basename $0` "$argv[1-$na]" ; if ($status) exit 0 ; 
+   set na = $#argv
+   if ( $na > 10 ) then
+      set na = 10
+   endif
+
+   @global_parse `basename $0` "$argv[1-$na]" 
+   if ( $status ) then
+      exit 0 
+   endif
+endif
+
+set stat = 0
+set idir = "$PWD"
+# allow surface format to change
+set stype = .asc
+
+goto PARSE
+RET_PARSE:
+
+goto SANITY
+RET_SANITY:
+
+AUTOVAR:
+   set fs = `ccalc 1/$TR`
+   set sides = ()
+   set specs = ()
+   if ($spec_left != 'NADA') then
+      set sides = ($sides lh)
+      set specs = ($specs $spec_left)
+   endif
+   if ($spec_right != 'NADA') then
+      set sides = ($sides rh)
+      set specs = ($specs $spec_right)
+   endif
+   set sdir = `dirname "$specs[1]"`
+   cd  "$sdir"
+   set sdir = "$PWD"
+   cd  "$idir"
+   set A2E_opt = ''
+   set AEA_opt = ''
+   
+COPY_SURF_EPI_RUNS:
+if ($SurfInput == 1) then
+   echo "Input time series are already on surface"
+   foreach sd ($sides)   
+      foreach tp ($stim_direc)
+         set u_runs = ()
+         if ($sd == 'lh') then
+            if ($tp == 'ccw') then
+               set u_runs = ($u_lh_runs_ccw) 
+            else if ($tp == 'clw') then
+               set u_runs = ($u_lh_runs_clw)
+            else if ($tp == 'exp') then
+               set u_runs = ($u_lh_runs_exp)
+            else if ($tp == 'con') then 
+               set u_runs = ($u_lh_runs_con)
+            else
+               echo "Bad direction"
+               goto BEND
+            endif
+         else if ($sd == 'rh') then
+            if ($tp == 'ccw') then
+               set u_runs = ($u_rh_runs_ccw) 
+            else if ($tp == 'clw') then
+               set u_runs = ($u_rh_runs_clw)
+            else if ($tp == 'exp') then
+               set u_runs = ($u_rh_runs_exp)
+            else if ($tp == 'con') then 
+               set u_runs = ($u_rh_runs_con)
+            else
+               echo "Bad direction"
+               goto BEND
+            endif
+         endif
+         set i = 1
+         foreach dset ($u_runs) 
+            set pndset = $tp.`printf %02d $i`
+            if ( ! -f $rdir/$pndset.$sd.niml.dset) then
+               echo "Copying "$dset" to $pndset.$sd.niml.dset"
+               ConvertDset $eu -o_niml_bi -input "$dset" \
+                           -prefix $rdir/$pndset.$sd.niml.dset
+            else
+               echo "Reusing $rdir/$pndset.$sd.niml.dset"
+            endif
+            @ i ++ 
+         end #dset
+      end #tp
+   end  #sd
+   echo "Skipping volume processing steps..."
+   goto RETINO_START
+endif
+   
+COPY_EPI_RUNS:
+   set FirstEpi = ''
+   foreach tp ($stim_direc)
+         set noglob
+      if ($tp == 'ccw') then
+         set u_runs = ($u_runs_ccw)
+         set u_runs_orts = ($u_runs_ccw_orts) 
+      else if ($tp == 'clw') then
+         set u_runs = ($u_runs_clw)
+         set u_runs_orts = ($u_runs_clw_orts) 
+      else if ($tp == 'exp') then
+         set u_runs = ($u_runs_exp)
+         set u_runs_orts = ($u_runs_exp_orts) 
+      else if ($tp == 'con') then 
+         set u_runs = ($u_runs_con)
+         set u_runs_orts = ($u_runs_con_orts) 
+      else
+         echo "Bad direction"
+         goto BEND
+      endif
+         unset noglob
+      set i = 1
+      foreach dset ($u_runs)
+         set pndset = $tp.`printf %02d $i`
+         if ( ! -f $rdir/$pndset+orig.HEAD) then
+            if ( $tshift >= 0) then
+         echo "Tshifting and copying epi run$dset\[$Nignore-\] to $rdir/$pndset"
+               3dTshift $eu -tzero $tshift -overwrite \
+                     -prefix $rdir/$pndset+orig \
+                     $dset'['$Nignore'-$]'
+            else
+               echo "Copying epi run $dset\[$Nignore-\] to $rdir/$pndset"
+               3dTcat $eu -prefix $rdir/$pndset+orig $dset'['$Nignore'-$]'
+            endif
+         else
+            echo "Reusing $rdir/$pndset"
+         endif
+         if ($#u_runs_orts != 0) then
+            if ("$u_runs_orts[$i]" != "NONE") then
+               1dcat "$u_runs_orts[$i]" > $rdir/$tp.`printf %02d $i`.ort.1D
+            endif
+         endif
+         if ("$FirstEpi" == "") then
+            set FirstEpi = $pndset+orig.HEAD
+         endif
+         @ i ++
+      end
+   end
+
+COPY_EPI_REF:
+   if ("$u_EpiRef" != '') then
+      echo "Checking number of subbriks in -epi_ref $u_EpiRef"
+      set nsb = `3dnvals "$u_EpiRef"`
+      if ($nsb != 1) then
+         echo "Must have one sub-brick in -epi_ref's $u_EpiRef"
+         goto BEND
+      endif
+      if ( ! -f $rdir/EpiRef+orig.HEAD) then
+         echo "Creating $rdir/EpiRef"
+         3dTcat $eu -prefix $rdir/EpiRef "$u_EpiRef" >& /dev/null
+      else
+         echo "Reusing existing $rdir/EpiRef"
+      endif  
+   else
+      if ( ! -f $rdir/EpiRef+orig.HEAD) then
+         echo "Setting $rdir/EpiRef to be 4th subbrick of $FirstEpi"
+         3dTcat $eu -prefix $rdir/EpiRef $rdir/$FirstEpi'[3]' >& /dev/null
+      else
+         echo "Reusing default $rdir/EpiRef"
+      endif
+   endif
+ 
+COPY_EPI_ANAT_REF:
+   if ("$u_EpiAnatRef" != '') then
+      echo "Checking number of subbriks in -epi_anat_ref $u_EpiAnatRef"
+      set nsb = `3dnvals "$u_EpiAnatRef"`
+      if ($nsb != 1) then
+         echo "Must have one sub-brick in -epi_anat_ref's $u_EpiAnatRef"
+         goto BEND
+      endif
+      #The copying is done later
+   endif
+
+COPY_AVOLS:   
+   if ("$u_AVol" != '') then
+      if ( ! -f $rdir/AVol+orig.HEAD) then
+         echo "Copying ${u_AVol} to $rdir/AVol"
+         3dcopy $eu ${u_AVol}  $rdir/AVol
+      else
+         echo "Reusing $rdir/AVol"
+      endif  
+   endif
+   
+   if ("$u_SVolAtEpi" != '') then
+      if ( ! -f $rdir/SVol@Epi+orig.HEAD) then
+         echo "Copying $u_SVolAtEpi to $rdir/SVol@Epi"
+         3dcopy $eu "$u_SVolAtEpi" $rdir/SVol@Epi  
+      else
+         echo "Reusing $rdir/SVol@Epi"
+      endif  
+   endif
+   
+    if ("$u_AVolAtEpi" != '') then
+      if ( ! -f $rdir/AVol@Epi+orig.HEAD) then
+         echo "Copying $u_AVolAtEpi to $rdir/AVol@Epi"
+         3dcopy $eu "$u_AVolAtEpi" $rdir/AVol@Epi  
+      else
+         echo "Reusing $rdir/AVol@Epi"
+      endif  
+   endif
+   
+REGISTER_EPI_REFS:
+   if ("$u_SVolAtEpi" != '') then
+      echo "Have SurfVol aligned to EPI, skipping EPI Anat reference process"
+      goto REGISTER_TS
+   endif
+   if ("$u_AVolAtEpi" != '') then
+      echo "Have AnatVol aligned to EPI, skipping EPI Anat reference process"
+      goto REGISTER_TS
+   endif   
+   cd $rdir
+   if ("$u_EpiAnatRef" != '') then
+      if ( ! -f EpiAnatRef+orig.HEAD) then
+         if (1) then
+            echo "Registering $idir/$u_EpiAnatRef to EpiRef to create EpiAnatRef"
+            3dvolreg $eu -base EpiRef+orig \
+                     -cubic -overwrite \
+                     -prefix EpiAnatRef   \
+                     -1Dfile EpiAnatRef.1D   \
+                     "$idir/$u_EpiAnatRef"      
+         else
+            echo "Just copying $idir/$u_EpiAnatRef to EpiAnatRef"
+            3dTcat $eu -prefix EpiAnatRef "$idir/$u_EpiAnatRef"
+         endif
+      else
+         echo "Reusing EpiAnatRef"
+      endif  
+   else
+      if ( ! -f EpiAnatRef+orig.HEAD) then
+         echo "Copying EpiRef to EpiAnatRef"
+         3dcopy $eu EpiRef+orig EpiAnatRef+orig
+      else
+         echo "Reusing existing EpiAnatRef"
+      endif
+   endif   
+   cd "$idir"
+   
+REGISTER_TS:
+   cd $rdir
+      if ($noVR == 1) then
+         set vrsets = (???.??+orig.HEAD)
+         set dortsets = ()
+         foreach s ($vrsets)
+            set sp = `@GetAfniPrefix $s`
+            if ( -f ${sp}.ort.1D ) then
+               set dortsets = ( $dortsets ${sp}.ort.1D )
+            else
+               set dortsets = ( $dortsets NONE )
+            endif
+         end
+      else
+         set vrsets = ()
+         set dortsets = ()
+   foreach s (???.??+orig.HEAD)
+      set sp = `@GetAfniPrefix $s`
+      if ( ! -f ${sp}.vr+orig.HEAD) then
+         echo "Registering epi run $s to create ${sp}.vr"
+         3dvolreg $eu -base EpiRef+orig \
+                  -cubic   \
+                  -overwrite \
+                  -prefix ${sp}.vr  \
+                  -1Dfile ${sp}.vr.1D   \
+                  $s
+      else
+         echo "Reusing ${sp}.vr"
+      endif
+      set vrsets = ($vrsets ${sp}.vr+orig.HEAD)
+      if ( -f ${sp}.ort.1D ) then
+         set dortsets = ( $dortsets ${sp}.ort.1D )
+      else
+         set dortsets = ( $dortsets NONE )
+      endif
+   end
+      endif
+   
+   if ($#dortsets != 0 && $#dortsets != $#vrsets) then
+ echo "Mismatch between numbers of ortfiles ($#dortsets) and vrsets ($#vrsets)"
+      goto BEND
+   endif
+   cd "$idir"
+
+ALIGN_EXPANAT_TO_EPI:
+   if ("$u_SVolAtEpi" != '') then
+      echo "Have SurfVol aligned to EPI, skipping Svol alignment to EPI"
+      goto SET_POLORT
+   endif
+   if ("$u_AVolAtEpi" != '') then
+      echo "Have AnatVol aligned to EPI, skipping Avol alignment to EPI"
+      goto ALIGN_SURFVOL_TO_EXPANAT
+   endif
+   cd $rdir
+   if ( ! -f AVol@Epi+orig.HEAD ) then
+      echo "Using align_epi_anat.py to create AVol@Epi"
+      align_epi_anat.py    -anat AVol+orig   \
+                        -epi  EpiAnatRef+orig   \
+                        -AddEdge -anat2epi \
+                        -epi_base 0 ${AEA_opt} \
+                        -suffix RetinoProc 
+      3drename $eu *RetinoProc*HEAD AVol@Epi
+   else
+      echo "AVol@Epi already present"
+   endif
+   cd "$idir"
+   
+ALIGN_SURFVOL_TO_EXPANAT:
+   cd $rdir
+   if ( ! -f SVol@Epi+orig.HEAD ) then
+      @SUMA_AlignToExperiment    $eu -exp_anat AVol@Epi+orig  \
+                                 -surf_anat "$sdir/${u_SVol:t}"  \
+                                 ${A2E_opt} -prefix SVol@Epi \
+                                 -wd   
+      cat_matvec SVol@Epi+orig.HEAD::WARPDRIVE_MATVEC_INV_000000 > SVol2Epi.1D
+   else
+      echo "SVol@Epi already present"
+   endif
+   cd "$idir"
+
+SET_POLORT:
+   cd $rdir
+   set nts_max = 0
+   foreach s ($vrsets)
+      set kk = `3dnvals $s`
+      if ($kk > $nts_max) then
+        set nts_max = $kk
+      endif
+   end
+   set polort = `ccalc -form fint -eval "1 + $TR*$nts_max/150"`
+   set ort_adjust = $polort
+   cd "$idir"
+
+DETREND:
+   cd $rdir
+   set i = 0
+   foreach s ($vrsets)
+      @ i ++
+      set p = `@GetAfniPrefix $s`
+      if ($noVR == 0) then
+        set p = $p:r
+      endif
+      if ( ! -f ${p}.b01+orig.HEAD ) then
+         echo "Detrending $s to create ${p}.b01"
+         if ($noVR == 1) then
+            set vopt = ''
+         else
+            set vopt = "-vector ${p}.vr.1D"
+         endif
+         if ($#dortsets != 0 && "$dortsets[$i]" != "NONE" ) then
+            set vopt = "$vopt -vector $dortsets[$i]"
+         endif
+         3dDetrend   $eu -polort $polort    \
+                     $vopt \
+                     -prefix ${p}.b01  \
+                     $s
+      else
+         echo "Reusing existing detrended version ${p}.b01+orig.HEAD"
+      endif
+      
+      set nvr = 0
+      if ( -f ${p}.vr.1D ) then
+        set nvr = `3dinfo -nv ${p}.vr.1D` 
+      endif
+      if ( $#dortsets != 0 ) then
+         set nplus = `3dinfo -nv $dortsets[$i]`
+         set nvr = `ccalc -i $nvr + $nplus`
+      endif
+      set ort_adjust = `ccalc -form int -eval "$polort+$nvr"`
+   end
+   cd "$idir"
+   
+RETINO_START:
+set sdc = 0
+set DemoVFR = 'NADA'
+set DemoPol = 'NADA'
+set DemoSide = 'NADA'
+set DemoEcc = 'NADA'
+foreach sd ($sides)
+   @ sdc ++ 
+   # determine surface type in spec file
+   set stype = `grep smoothwm\.  ${specs[$sdc]} | \
+			 grep "SurfaceName ="| awk -F. '{print $NF}'`
+   VOL2SURFTS:
+      if ($SurfInput == 0) then
+         #Now map time series to surfaces
+         cd $rdir
+         foreach s (???.??.b01+orig.HEAD)
+            set p = `@GetAfniPrefix $s`
+            set p = $p:r
+            if ( ! -f {$p}.${sd}.niml.dset ) then
+               echo "Mapping $s to surface to create {$p}.${sd}.niml.dset"
+               3dVol2Surf     $eu -spec          ${specs[$sdc]} \
+                              -sv            SVol@Epi+orig   \
+                              -surf_A        ${sd}.smoothwm.${stype} \
+                              -surf_B        ${sd}.pial.${stype}  \
+                              -grid_parent   $s \
+                              -map_func      ave   \
+                              -f_index       nodes \
+                              -f_p1_fr       $LayerSpecs[1]  \
+                              -f_pn_fr       $LayerSpecs[2]  \
+                              -f_steps       $LayerSpecs[3]  \
+                              -oob_value     0     \
+                              -overwrite     \
+                              -out_niml      {$p}.${sd}.niml.dset 
+            else
+               echo "Reusing existing {$p}.${sd}.niml.dset "
+            endif
+         end
+         cd "$idir"
+      else
+         echo "Time series already on surface, skipping 3dVol2Surf"
+      endif
+         
+   AVERAGE:
+      #combine similar runs directions
+      cd $rdir
+      foreach tp (1 2 3 4)
+         if ( -f $stim_direc[$tp].01.${sd}.niml.dset ) then
+            set runcls = ($stim_direc[$tp].??.${sd}.niml.dset )
+            if ($#runcls > 0) then
+               if ( ! -f $stim_direc[$tp].${sd}.niml.dset) then
+            echo "Averaging $#runcls datasets in $stim_direc[$tp] direction"
+                  3dMean   $eu -overwrite    \
+                           -prefix $stim_direc[$tp].${sd}.niml.dset  \
+                           $runcls
+               else
+            echo "Reusing average time series of $stim_direc[$tp] direction"
+               endif
+            else
+               echo "No data of direction $stim_direc[$tp]"
+            endif
+         else
+            echo "No runs for $stim_direc[$tp]"
+         endif
+      end
+      cd "$idir"
+      
+   SMOOTH_IF_DESIRED:
+      cd $rdir
+      foreach tp (1 2 3 4)
+         set dset = $stim_direc[$tp].${sd}.niml.dset
+         if ("$stim_direc[$tp]" == "ccw" || "$stim_direc[$tp]" == "clw") then
+            set sfwhm = $fwhm_pol
+            set class = pol
+            if ( $Nts_pol == 0 && -f $dset ) then
+               set Nts_pol = `3dnvals $dset`
+            endif
+         else if ("$stim_direc[$tp]" == "con" || \
+                  "$stim_direc[$tp]" == "exp") then
+            set sfwhm = $fwhm_ecc
+            set class = ecc
+            if ( $Nts_ecc == 0 && -f $dset ) then
+               set Nts_ecc = `3dnvals $dset`
+            endif
+         else
+            echo "Cannot tell direction of stimulus"
+            goto BEND
+         endif            
+         if (-f $dset) then
+            if (  ! -f $class.sm.SmPar.1D ) then
+         echo "Smoothing $dset to $sfwhm mm FWHM and creating $class.sm.SmPar.1D"
+               SurfSmooth  -spec          ${specs[$sdc]} \
+                           -surf_A        ${sd}.smoothwm.${stype} \
+                           -input         $dset \
+                           -met           HEAT_07   \
+                           -target_fwhm   $sfwhm        \
+                           -blurmaster    $dset \
+                           -detrend_master \
+                           -overwrite     \
+                           -output        $stim_direc[$tp].sm.$sd.niml.dset\
+                           > $class.sm.SmPar.1D
+            else
+               echo "Reusing $class.sm.SmPar.1D"
+            endif
+            if ( ! -f $stim_direc[$tp].sm.$sd.niml.dset ) then
+         echo "Smoothing $dset to $sfwhm mm FWHM per $class.sm.SmPar.1D"
+               set pars = `1dcat $class.sm.SmPar.1D`
+               SurfSmooth  $eu -spec          ${specs[$sdc]} \
+                           -surf_A        ${sd}.smoothwm.${stype} \
+                           -input         $dset \
+                           -met           HEAT_07   \
+                           -Niter         $pars[1]\
+                           -sigma         $pars[2]\
+                           -overwrite     \
+                           -output       $stim_direc[$tp].sm.$sd.niml.dset
+            else
+               echo "Reusing $stim_direc[$tp].sm.$sd.niml.dset"
+            endif
+         else
+            echo "No user data for $class $stim_direc[$tp]" 
+         endif
+      end
+      cd "$idir"
+   
+   MAKE_REFS:
+      cd $rdir
+      if ("$pmeth" == "DELAY") then
+         if ( $on_ecc[1] == 0 && $on_pol[1] == 0 ) then
+            echo "Need -on_ecc and/or -on_pol with -delay"
+            goto END
+         endif
+         echo "Creating ideal 0 latency responses for delay estimation."
+         foreach dr (pol ecc)
+            if ($dr == 'pol') then
+               set mul = $nwedges
+               set pre = `ccalc -i $pre_pol/$TR`
+               set nblk = `ccalc -i "$on_pol[1]*$mul"`
+               set cco = ()
+               foreach oo ($on_pol[2-])
+                  set cco = ($cco `ccalc -i $oo/$TR`)
+               end
+               set T = `ccalc -i $period_pol/$mul/$TR`
+               set ref_ts = POL
+               set nvals = $Nts_pol
+            else 
+               set mul = $nrings
+               set pre = `ccalc -i $pre_ecc/$TR`
+               set nblk = `ccalc -i "$on_ecc[1]*$mul"`
+               set cco = ()
+               foreach oo ($on_ecc[2-])
+                  set cco = ($cco `ccalc -i $oo/$TR`)
+               end
+               set T = `ccalc -i $period_ecc/$mul/$TR`
+               set ref_ts = ECC
+               set nvals = $Nts_ecc
+            endif
+            if ($nvals != 0) then
+               echo '' > $ref_ts.WAVER.log
+               set onv = (`count -digits 1 $cco`)
+               foreach on ($onv) 
+                  set on2 = `printf %02d $on`
+                  set off = `ccalc -i $T - $on`
+                  set kbl = 0
+                  if ($on > 0) then
+                     set com = "waver -TR $TR -GAM -numout $nvals -inline "
+                     if ($pre > 0) then
+                        set com = "$com $pre@0.0"
+                     endif
+                     while ($kbl < $nblk)
+                        set com = "$com $on@1.0 $off@0.0 "
+                        @ kbl ++
+                     end
+                     echo $com >> $ref_ts.WAVER.log
+                     $com > $ref_ts.${on2}.1D
+                  endif
+               end
+               1dcat $ref_ts.??.1D > $ref_ts.1D
+               \rm -f ./$ref_ts.??.1D
+            else
+               echo "No '$dr' timing file"
+            endif
+         end   
+      endif
+      cd "$idir"
+
+   PHASE:
+      cd $rdir
+      foreach sss ( '' '.sm')
+         POLAR_BLOCK:
+         if ("$pmeth" == "DELAY") then
+            set RetOpt = \
+      '-phase_estimate DELAY -multi_ref_ts POL.1D -ort_adjust $ort_adjust'
+         else
+            set RetOpt = '-phase_estimate FFT'
+         endif
+         set cls = ()
+         if ( -f ccw${sss}.$sd.niml.dset) then
+            set cls = ($cls ccw${sss}.$sd.niml.dset) 
+         endif
+         if ( -f clw${sss}.$sd.niml.dset) then
+            set cls = ($cls clw${sss}.$sd.niml.dset) 
+         endif 
+         set cc = `echo $cls | cut -f 1 -d .`
+         if ($#cls == 2) then
+            #Can get field angles  
+            if ( ! -f $ec${sss}.$sd.pol.field.niml.dset) then
+         echo "Estimating ${cc} vis. field angle from two directions ${ec}${sss}"
+               3dRetinoPhase  $eu -$stim_direc[1] $cls[1]  \
+                              -$stim_direc[2] $cls[2]  \
+                              -Tpol $period_pol \
+                              -nwedges $nwedges   \
+                              -pre_stim $pre_pol $RetOpt \
+                              -prefix ${ec}${sss}.$sd.niml.dset
+            else
+         echo "Reusing polar field angle ${ec}${sss}.$sd.pol.field.niml.dset"
+            endif
+         else if ($#cls == 1) then
+            #One direction only
+            set sg = '+'
+            if ($cc == 'ccw' || $cc == 'con') then
+                set sg = '-'
+            endif
+            if ( ! -f $ec${sss}.$sd.pol$sg.niml.dset) then
+               echo "Estimating ${cc} hemodynamic angle from one direction"
+               3dRetinoPhase  $eu -$cc $cls[1]  \
+                              -Tpol $period_pol \
+                              -nwedges $nwedges   \
+                              -pre_stim $pre_pol $RetOpt \
+                              -prefix ${ec}${sss}.$sd.niml.dset
+            else
+               echo "Reusing ${ec}${sss}.$sd.$cc$sg.niml.dset"
+            endif
+         endif
+         ECC_BLOCK:
+         if ("$pmeth" == "DELAY") then
+            set RetOpt = \
+      '-phase_estimate DELAY -multi_ref_ts ECC.1D -ort_adjust $ort_adjust'
+         else
+            set RetOpt = '-phase_estimate FFT'
+         endif
+         set cls = ()
+         if ( -f exp${sss}.$sd.niml.dset) then
+            set cls = ($cls exp${sss}.$sd.niml.dset) 
+         endif
+         if ( -f con${sss}.$sd.niml.dset) then
+            set cls = ($cls con${sss}.$sd.niml.dset) 
+         endif 
+         set cc = `echo $cls | cut -f 1 -d .`
+         if ($#cls == 2) then
+            #Can get field angles  
+            if ( ! -f $ec${sss}.$sd.ecc.field.niml.dset) then
+         echo "Estimating ${cc} vis. field angle from two directions ${ec}${sss}"
+               3dRetinoPhase  $eu -$stim_direc[3] $cls[1]  \
+                              -$stim_direc[4] $cls[2]  \
+                              -Tecc $period_ecc \
+                              -nrings $nrings   \
+                              -pre_stim $pre_ecc $RetOpt \
+                              -prefix ${ec}${sss}.$sd.niml.dset
+            else
+     echo "Reusing eccentricity field angle ${ec}${sss}.$sd.ecc.field.niml.dset"
+            endif
+         else if ($#cls == 1) then
+            #One direction only
+            set sg = '+'
+            if ($cc == 'ccw' || $cc == 'con') then
+                set sg = '-'
+            endif
+            if ( ! -f $ec${sss}.$sd.ecc$sg.niml.dset) then
+               echo "Estimating ${cc} hemodynamic angle from one direction"
+               3dRetinoPhase  $eu -$cc $cls[1]  \
+                              -Tecc $period_ecc \
+                              -nrings $nrings   \
+                              -pre_stim $pre_ecc $RetOpt \
+                              -prefix ${ec}${sss}.$sd.niml.dset
+            else
+               echo "Reusing ${ec}${sss}.$sd.$cc$sg.niml.dset"
+            endif
+         endif
+      end                 
+              
+      cd "$idir"
+   
+   VFR:
+      cd $rdir
+      foreach sss ( '' '.sm')
+         #Decide based on what is available, .field is best 
+         if ( -f $ec${sss}.$sd.pol.field.niml.dset ) then
+            set polin = $ec${sss}.$sd.pol.field.niml.dset
+         else
+            #next best
+            set polin = 'NADA'
+            if (-f $ec${sss}.$sd.pol+.niml.dset) then
+               set polin = $ec${sss}.$sd.pol+.niml.dset
+            else if (-f $ec${sss}.$sd.pol-.niml.dset) then
+               set polin = $ec${sss}.$sd.pol-.niml.dset
+            endif
+         endif
+         if ($sss == '.sm' && $DemoPol == 'NADA'&& -f $polin) then
+               set DemoPol = $polin
+               set DemoSide = $sd
+         endif
+         if ( -f $ec${sss}.$sd.ecc.field.niml.dset ) then
+            set eccin = $ec${sss}.$sd.ecc.field.niml.dset
+         else
+            #next best
+            set eccin = 'NADA'
+            if (-f $ec${sss}.$sd.ecc+.niml.dset) then
+               set eccin = $ec${sss}.$sd.ecc+.niml.dset
+            else if (-f $ec${sss}.$sd.ecc-.niml.dset) then
+               set eccin = $ec${sss}.$sd.ecc-.niml.dset
+            endif
+         endif
+         if ($sss == '.sm' && $DemoEcc == 'NADA' && -f $eccin) then
+               set DemoEcc = $eccin
+               set DemoSide = $sd
+         endif
+         if (! -f $polin) then
+            echo "Need at least one polar angle direction for visual field maps"
+            echo "Skipping VFR"
+            goto END_VFR
+         endif
+         if (! -f $eccin) then
+            echo "Need at least one eccentricity direction for visual field maps"
+            echo "Skipping VFR"
+            goto END_VFR
+         endif
+         if ( ! -f $ec${sss}.vfr.$sd.niml.dset) then
+            echo "Creating $ec${sss}.vfr.$sd.niml.dset"
+            SurfRetinoMap  $eu -spec          ${specs[$sdc]} \
+                           -surf_A   $sd.pial \
+                           -input    $polin $eccin \
+                           -prefix   $ec${sss}.vfr.$sd.niml.dset 
+         else
+            echo "Reusing $ec${sss}.vfr.$sd.niml.dset"
+         endif
+         if ($sss == '.sm' && $DemoVFR == 'NADA') then
+            set DemoVFR = $ec${sss}.vfr.$sd.niml.dset
+            set DemoSide = $sd
+         endif
+      END_VFR:
+      end
+  
+   NEXT_SIDE:
+   cd "$idir"
+   #Finish side loop   
+end
+
+EXAMINE_RESULTS:
+   cd $rdir
+   echo '#\!/bin/tcsh -f' > @ShowResult
+   echo "-----------------------------------------"
+   echo "Close all existing AFNI and SUMA sessions"
+   echo "Launch SUMA and view some results with:"
+   echo "-----------------------------------------"
+   echo "cd $rdir "
+   echo "tcsh @ShowResult"
+   echo ""
+   if ($DemoSide == 'lh') then
+      set sps = $spec_left
+   else if ($DemoSide == 'rh') then
+      set sps = $spec_right
+   else
+      echo "No Demo side ($DemoSide)"
+      goto END
+   endif
+   set svo = ''
+   if (-f SVol@Epi+orig.HEAD) then
+      set svo = '-sv SVol@Epi+orig '
+   endif
+   set spr = `ParseName -cwd "$PWD" -out RelName $sps` 
+   echo "suma -spec $spr $svo -niml &" >> @ShowResult
+   echo "prompt_user -pause 'Wait until SUMA is up then press OK'" \
+               >> @ShowResult
+   set demo_set = ''
+   if ( -f $DemoVFR) then
+      set prm = "Press OK to see VFR result"
+      set demo_set = $DemoVFR
+#      echo "DriveSuma -com  pause $prm -com surf_cont -view_surf_cont y -com surf_cont -load_dset $demo_set -com surf_cont -view_surf_cont n" 
+      echo "DriveSuma -com  pause $prm -com surf_cont -view_surf_cont y -com surf_cont -load_dset $demo_set" \
+               >> @ShowResult
+   endif   
+   if (-f $DemoEcc) then
+      set prm = "Press OK to see Eccentricity result"
+      set demo_set = $DemoEcc
+#      echo "DriveSuma -com  pause $prm -com surf_cont -view_surf_cont y -com surf_cont -load_dset $demo_set -com surf_cont -view_surf_cont n"
+      echo "DriveSuma -com  pause $prm -com surf_cont -view_surf_cont y -com surf_cont -load_dset $demo_set" \
+               >> @ShowResult
+   endif
+   if (-f $DemoPol) then
+      set prm = "Press OK to see Polar angle result"
+      set demo_set = $DemoPol
+#      echo "DriveSuma -com  pause $prm -com surf_cont -view_surf_cont y -com surf_cont -load_dset $demo_set -com surf_cont -view_surf_cont n" 
+      echo "DriveSuma -com  pause $prm -com surf_cont -view_surf_cont y -com surf_cont -load_dset $demo_set" \
+               >> @ShowResult
+   endif
+   if (! -f $DemoVFR && ! -f $DemoEcc && ! -f $DemoPol) then
+      set prm = "Have no dsets to show off"
+      echo "DriveSuma -com  pause $prm " \
+               >> @ShowResult
+      goto END
+   endif
+   echo "" >> @ShowResult
+   
+   chmod u+x @ShowResult
+   
+   cd "$idir"
+
+goto END
+
+
+PARSE:
+
+   
+   #continue parsing for new options
+   set Narg = $#
+   set dorts = ()
+   set noVR = 0
+   set ec = 'ZZ'
+   set rdir = ''
+   set TR = ''
+   set period_ecc = ''
+   set nrings = 1
+   set period_pol = ''
+   set nwedges = 1
+   set on_ecc = (0 0 0 0)
+   set on_pol = (0 0 0 0)
+   set fwhm_pol = 4
+   set fwhm_ecc = 8
+   set tshift = 0
+   set stim_class=(  POL    ECC ) #DO NOT CHANGE ORDER
+   set stim_direc= (ccw clw exp con)  #DO NOT CHANGE ORDER
+   set u_SVol = '' 
+   set u_AVol = ''
+   set u_EpiRef = ''
+   set u_EpiAnatRef = ''
+   set u_runs_ccw = (  )   #ccw, always
+   set u_runs_clw = (  )   #clw, always
+   set u_runs_exp = (  )   #exp, always
+   set u_runs_con = (  )   #con, always
+   set u_runs_ccw_orts = (  )   #ccw, always
+   set u_runs_clw_orts = (  )   #clw, always
+   set u_runs_exp_orts = (  )   #exp, always
+   set u_runs_con_orts = (  )   #con, always
+   set SurfInput = 0
+   set u_lh_runs_ccw = (  )   #ccw, always
+   set u_lh_runs_clw = (  )   #clw, always
+   set u_lh_runs_exp = (  )   #exp, always
+   set u_lh_runs_con = (  )   #con, always
+   set u_rh_runs_ccw = (  )   #ccw, always
+   set u_rh_runs_clw = (  )   #clw, always
+   set u_rh_runs_exp = (  )   #exp, always
+   set u_rh_runs_con = (  )   #con, always
+   set Nignore = 0
+   set sref = ''
+   set u_SVolAtEpi = ''
+   set u_AVolAtEpi = ''
+   set spec_left = 'NADA'
+   set spec_right = 'NADA'
+   set LayerSpecs = ( 0.0 0.0 15) 
+   set pmeth = 'FFT'
+   set Nts_ecc = 0
+   set Nts_pol = 0
+   set install_demo = 0
+   set eu = ''
+   set cnt = 1
+   
+   
+   while ($cnt <= $Narg)
+
+      if ( "$argv[$cnt]" == "-echo") then
+         set echo		
+         goto NEXT		
+      endif
+      
+      if ( "$argv[$cnt]" == "-echo_edu") then
+         set eu = '-echo_edu'		
+         goto NEXT		
+      endif
+      
+      if ("$argv[$cnt]" == "-fetch_demo") then
+         goto DEMO
+      endif
+      
+      if ("$argv[$cnt]" == "-install_demo") then
+         set install_demo = 1
+         goto DEMO
+      endif
+      
+      if ("$argv[$cnt]" == "-no_volreg" || "$argv[$cnt]" == "-noVR") then
+         set noVR = 1
+         goto NEXT
+      endif
+      
+      if ( "$argv[$cnt]" == "-gm") then
+         set LayerSpecs	= ( 0.0 0.0 15)	
+         goto NEXT		
+      endif
+      
+      if ( "$argv[$cnt]" == "-delay") then
+         set pmeth	= 'DELAY'	
+         goto NEXT		
+      endif
+      
+      if ( "$argv[$cnt]" == "-phase") then
+         set pmeth	= 'FFT'	
+         goto NEXT		
+      endif
+      
+      if ( "$argv[$cnt]" == "-wm") then
+         set LayerSpecs	= ( 0.0 -1.0 1)	
+         goto NEXT		
+      endif
+      
+      if ( "$argv[$cnt]" == "-pial") then
+         set LayerSpecs	= ( 1.0 0.0 1)	
+         goto NEXT		
+      endif
+      
+      if ( "$argv[$cnt]" == "-midlayer") then
+         set LayerSpecs	= ( 0.5 -0.5 1)	
+         goto NEXT		
+      endif
+
+      if ( "$argv[$cnt]" == "-layer") then
+         set pLoc = $cnt		
+		   if ($pLoc == $Narg) then
+				echo "Need fraction after -layer"
+            goto END
+			else
+            @ cnt ++
+            set LayerSpecs[1] = `ccalc "$argv[$cnt]"`
+            set LayerSpecs[2] = `ccalc $LayerSpecs[1] -1.0`
+            set LayerSpecs[3] = 1 
+            goto NEXT	
+         endif	
+      endif
+         
+      
+      if ( ("$argv[$cnt]" == "-h" || "$argv[$cnt]" == "-help") ) then
+         goto HELP
+      endif
+            
+      if ( "$argv[$cnt]" == "-sid") then
+         set pLoc = $cnt		
+		   if ($pLoc == $Narg) then
+				echo "Need label after -sid"
+            goto END
+			else
+            @ cnt ++
+            set ec = "$argv[$cnt]"
+            goto NEXT	
+         endif	
+      endif
+      
+      if ( "$argv[$cnt]" == "-dorts") then
+         set pLoc = $cnt		
+		   if ($pLoc == $Narg) then
+				echo "Need 1D file after -dorts"
+            goto END
+			else
+            @ cnt ++
+            set dorts = ("$argv[$cnt]")
+            1dcat "$dorts" > __ORTS.1D
+            if ( ! -f __ORTS.1D ) then
+               echo "Orts file $dorts not found or could not be cat-ed by 1dcat"
+               goto END
+            endif
+            \rm -f __ORTS.1D
+            goto NEXT	
+         endif	
+      endif
+
+      if ( "$argv[$cnt]" == "-ignore") then
+         set pLoc = $cnt		
+		   if ($pLoc == $Narg) then
+				echo "Need number after -ignore"
+            goto END
+			else
+            @ cnt ++
+            set Nignore = `printf '%d' "$argv[$cnt]"`
+            goto NEXT	
+         endif	
+      endif
+      
+       if ( "$argv[$cnt]" == "-surf_vol") then
+         set pLoc = $cnt		
+		   if ($pLoc == $Narg) then
+				echo "Need a volume file after -surf_vol"
+            goto END
+			else
+            @ cnt ++
+            set u_SVol = "$argv[$cnt]"
+            if ( ! -f $u_SVol) then 
+               echo "Note: -surf_vol $u_SVol not found,"
+               echo " looking for ${u_SVol}\*.HEAD instead"
+               set u_SVol = (`ls ${u_SVol}*.HEAD`)
+               if ($#u_SVol != 1) then
+            echo "Found $#u_SVol volumes for $argv[$cnt]. Need exactly  one"
+                  goto BEND
+               endif
+            endif
+            goto NEXT	
+         endif	
+      endif
+      
+      if (  "$argv[$cnt]" == "-surf_vol_alndepi" || \
+            "$argv[$cnt]" == "-surf_vol@epi" ) then
+         set pLoc = $cnt		
+		   if ($pLoc == $Narg) then
+				echo "Need a volume file after -surf_vol@epi (or -surf_vol_alndepi)"
+            goto END
+			else
+            @ cnt ++
+            set u_SVolAtEpi = "$argv[$cnt]"
+            if ( ! -f $u_SVolAtEpi) then 
+              echo "Note: -surf_vol@epi $u_SVolAtEpi not found,"
+              echo " looking for ${u_SVolAtEpi}\*.HEAD instead"
+              set u_SVolAtEpi = (`ls ${u_SVolAtEpi}*.HEAD`)
+               if ($#u_SVolAtEpi != 1) then
+            echo "Found $#u_SVolAtEpi volumes for $argv[$cnt]. Need exactly one"
+                  goto BEND
+               endif
+            endif
+            goto NEXT	
+         endif	
+      endif
+
+      if (  "$argv[$cnt]" == "-anat_vol@epi" ) then
+         set pLoc = $cnt		
+		   if ($pLoc == $Narg) then
+				echo "Need a volume file after -anat_vol@epi"
+            goto END
+			else
+            @ cnt ++
+            set u_AVolAtEpi = "$argv[$cnt]"
+            if ( ! -f $u_AVolAtEpi) then 
+               echo "Note: -anat_vol@epi $u_AVolAtEpi not found, "
+               echo " looking for ${u_AVolAtEpi}\*.HEAD instead"
+               set u_AVolAtEpi = (`ls ${u_AVolAtEpi}*.HEAD`)
+               if ($#u_AVolAtEpi != 1) then
+            echo "Found $#u_AVolAtEpi volumes for $argv[$cnt]. Need exactly one"
+                  goto BEND
+               endif
+            endif
+            goto NEXT	
+         endif	
+      endif
+      
+      if ( "$argv[$cnt]" == "-anat_vol") then
+         set pLoc = $cnt		
+		   if ($pLoc == $Narg) then
+				echo "Need a volume file after -anat_vol"
+            goto END
+			else
+            @ cnt ++
+            set u_AVol = "$argv[$cnt]"
+            if ( ! -f $u_AVol) then 
+         echo "Note: -anat_vol ${u_AVol} not found, looking for ${u_AVol}\*.HEAD"
+               set u_AVol = (`ls ${u_AVol}*.HEAD`)
+               if ($#u_AVol != 1) then
+                  echo "Found $#u_AVol options. Need just one"
+                  goto BEND
+               endif
+            endif
+            goto NEXT	
+         endif	
+      endif
+
+      if ( "$argv[$cnt]" == "-epi_anat_ref") then
+         set pLoc = $cnt		
+		   if ($pLoc == $Narg) then
+				echo "Need a volume file after -epi_anat_ref"
+            goto END
+			else
+            @ cnt ++
+            set u_EpiAnatRef = "$argv[$cnt]"
+            if ( `@CheckForAfniDset "$u_EpiAnatRef"` < 2) then
+               echo "Could not find volume '$u_EpiAnatRef' for -epi_anat_ref"
+            endif
+            goto NEXT	
+         endif	
+      endif
+
+      if ( "$argv[$cnt]" == "-epi_ref") then
+         set pLoc = $cnt		
+		   if ($pLoc == $Narg) then
+				echo "Need a volume file after -epi_ref"
+            goto END
+			else
+            @ cnt ++
+            set u_EpiRef = "$argv[$cnt]"
+            if ( `@CheckForAfniDset "$u_EpiRef"` < 2) then
+               echo "Could not find volume '$u_EpiRef' for -epi_ref"
+            endif
+            goto NEXT	
+         endif	
+      endif
+      
+      if ( "$argv[$cnt]" == "-TR") then
+         set pLoc = $cnt		
+		   if ($pLoc == $Narg) then
+				echo "Need a number  after -TR"
+            goto END
+			else
+            @ cnt ++
+            set TR = `printf '%g' $argv[$cnt]`
+            goto NEXT	
+         endif	
+      endif
+
+      if ( "$argv[$cnt]" == "-pre_stim") then
+         set pLoc = $cnt		
+		   if ($pLoc == $Narg) then
+				echo "Need a number  after -pre_stim"
+            goto END
+			else
+            @ cnt ++
+            set pre_pol = `printf '%f' $argv[$cnt]`
+            set pre_ecc = `printf '%f' $argv[$cnt]`
+            goto NEXT	
+         endif	
+      endif
+      if ( "$argv[$cnt]" == "-pre_pol") then
+         set pLoc = $cnt		
+		   if ($pLoc == $Narg) then
+				echo "Need a number  after -pre_pol"
+            goto END
+			else
+            @ cnt ++
+            set pre_pol = `printf '%f' $argv[$cnt]`
+            goto NEXT	
+         endif	
+      endif
+      if ( "$argv[$cnt]" == "-pre_ecc") then
+         set pLoc = $cnt		
+		   if ($pLoc == $Narg) then
+				echo "Need a number  after -pre_ecc"
+            goto END
+			else
+            @ cnt ++
+            set pre_ecc = `printf '%f' $argv[$cnt]`
+            goto NEXT	
+         endif	
+      endif
+      
+      if ( "$argv[$cnt]" == "-period") then
+         set pLoc = $cnt		
+		   if ($pLoc == $Narg) then
+				echo "Need a number  after -period"
+            goto END
+			else
+            @ cnt ++
+            set period_ecc = `printf '%g' $argv[$cnt]`
+            set period_pol = `printf '%g' $argv[$cnt]`
+            goto NEXT	
+         endif	
+      endif
+
+      if ( "$argv[$cnt]" == "-on") then
+         set pLoc = $cnt		
+		   if ($pLoc == $Narg) then
+				echo "Need 2 numbers  after -on"
+            goto END
+			else
+            @ cnt ++
+            set on_ecc[1] = `printf '%g' $argv[$cnt]` 
+            set on_pol[1] = `printf '%g' $argv[$cnt]`
+            if ($pLoc == $Narg) then
+				   echo "Need 2 numbers  after -on"
+               goto END
+            endif
+            @ cnt ++
+            set on_ecc[2] = `printf '%g' $argv[$cnt]` 
+            set on_pol[2] = `printf '%g' $argv[$cnt]`
+            if (  `ccalc -i "1-ispositive($on_ecc[2])"` || \
+                  `ccalc -i "1-ispositive($on_ecc[1])"` || \
+                  `ccalc -i "ispositive($on_ecc[1]-50)"` ) then
+                  #on_ecc[2] <= 0 or on_ecc[1] <= 0 or on_ecc[1] > 50
+               echo "Something is wrong with -on_ecc $on_ecc[1] $on_ecc[2]"
+               echo "First value should be > 0, second > 0 and < 50 "
+               goto END
+            endif
+            if (  `ccalc -i "1-ispositive($on_pol[2])"` || \
+                  `ccalc -i "1-ispositive($on_pol[1])"` || \
+                  `ccalc -i "ispositive($on_pol[1]-50)"`) then
+               echo "Something is wrong with -on_pol $on_pol[1] $on_pol[2]"
+               echo "First value should be > 0 and < 50, other > 0"
+               goto END
+            endif
+            goto NEXT	
+         endif	
+      endif
+      
+      if ( "$argv[$cnt]" == "-period_ecc") then
+         set pLoc = $cnt		
+		   if ($pLoc == $Narg) then
+				echo "Need a number  after -period_ecc"
+            goto END
+			else
+            @ cnt ++
+            set period_ecc = `printf '%g' $argv[$cnt]`
+            goto NEXT	
+         endif	
+      endif
+      
+      if ( "$argv[$cnt]" == "-period_pol") then
+         set pLoc = $cnt		
+		   if ($pLoc == $Narg) then
+				echo "Need a number  after -period_pol"
+            goto END
+			else
+            @ cnt ++
+            set period_pol = `printf '%g' $argv[$cnt]`
+            goto NEXT	
+         endif	
+      endif
+
+      if (  "$argv[$cnt]" == "-on_ecc" || \
+            "$argv[$cnt]" == "-var_on_ecc" ) then
+         set do4 = 0
+         if ("$argv[$cnt]" == "-var_on_ecc" ) then
+            set do4  = 1
+         endif
+         set pLoc = $cnt		
+		   if ($pLoc == $Narg) then
+				echo "Need 2 numbers  after -on_ecc, 4 after -var_on_ecc"
+            goto END
+			else
+            @ cnt ++
+            set on_ecc[1] = `printf '%g' $argv[$cnt]`
+            if ($pLoc == $Narg) then
+				   echo "Need 2 numbers  after -on_ecc, 4 after -var_on_ecc"
+               goto END
+            endif
+            @ cnt ++
+            set on_ecc[2] = `printf '%g' $argv[$cnt]`
+            if (  `ccalc -i "1-ispositive($on_ecc[2])"` || \
+                  `ccalc -i "1-ispositive($on_ecc[1])"` || \
+                  `ccalc -i "ispositive($on_ecc[1]-50)"`  ) then
+               echo "Something is wrong with -on_ecc $on_ecc[1] $on_ecc[2]"
+               echo "First value should be > 0 and < 50, other > 0"
+               goto END
+            endif
+            if ($do4 == 1) then
+               @ cnt ++
+               set on_ecc[3] = `printf '%g' $argv[$cnt]`
+               @ cnt ++
+               set on_ecc[4] = `printf '%g' $argv[$cnt]`
+               if (  `ccalc -i "1-ispositive($on_ecc[3])"` || \
+                     `ccalc -i "1-ispositive($on_ecc[4])"` ) then
+                  echo "Something is wrong with -var_on_ecc $on_ecc"
+                  echo "First value should be > 0 and < 50, other > 0"
+                  goto END
+               endif
+            endif
+            goto NEXT	
+         endif	
+      endif
+      
+      if ( "$argv[$cnt]" == "-on_pol" || \
+            "$argv[$cnt]" == "-var_on_pol" ) then
+         set do4 = 0
+         if ("$argv[$cnt]" == "-var_on_pol" ) then
+            set do4  = 1
+         endif
+         set pLoc = $cnt		
+		   if ($pLoc == $Narg) then
+				echo "Need 2 numbers  after -on_pol, 4 after -var_on_pol"
+            goto END
+			else
+            @ cnt ++
+            set on_pol[1] = `printf '%g' $argv[$cnt]`
+            if ($pLoc == $Narg) then
+				   echo "Need 2 numbers  after -on_pol, 4 after -var_on_pol"
+               goto END
+            endif
+            @ cnt ++
+            set on_pol[2] = `printf '%g' $argv[$cnt]`
+            if (  `ccalc -i "1-ispositive($on_pol[2])"` || \
+                  `ccalc -i "1-ispositive($on_pol[1])"` || \
+                  `ccalc -i "ispositive($on_pol[1]-50)"` ) then
+               echo "Something is wrong with -on_pol $on_pol[1] $on_pol[2]"
+               echo "First value should be > 0 and < 50, other > 0"
+               goto END
+            endif
+            if ($do4 == 1) then
+               @ cnt ++
+               set on_pol[3] = `printf '%g' $argv[$cnt]`
+               @ cnt ++
+               set on_pol[4] = `printf '%g' $argv[$cnt]`
+               if (  `ccalc -i "1-ispositive($on_pol[3])"` || \
+                     `ccalc -i "1-ispositive($on_pol[4])"` ) then
+                  echo "Something is wrong with -var_on_pol $on_pol"
+                  echo "First value should be > 0 and < 50, other > 0"
+                  goto END
+               endif
+            endif
+            goto NEXT	
+         endif	
+      endif
+
+      if ( "$argv[$cnt]" == "-nwedges") then
+         set pLoc = $cnt		
+		   if ($pLoc == $Narg) then
+				echo "Need a number  after -nwedges"
+            goto END
+			else
+            @ cnt ++
+            set nwedges = `printf '%d' $argv[$cnt]`
+            goto NEXT	
+         endif	
+      endif
+      
+      if ( "$argv[$cnt]" == "-nrings") then
+         set pLoc = $cnt		
+		   if ($pLoc == $Narg) then
+				echo "Need a number  after -nrings"
+            goto END
+			else
+            @ cnt ++
+            set nrings = `printf '%d' $argv[$cnt]`
+            goto NEXT	
+         endif	
+      endif
+      
+      if ( "$argv[$cnt]" == "-out_dir") then
+         set pLoc = $cnt		
+		   if ($pLoc == $Narg) then
+				echo "Need directory name after -out_dir"
+            goto END
+			else
+            @ cnt ++
+            set rdir = "$argv[$cnt]"
+            goto NEXT	
+         endif	
+      endif
+      
+      if ( "$argv[$cnt]" == "-spec_left") then
+         set pLoc = $cnt		
+		   if ($pLoc == $Narg) then
+				echo "Need specfile name after -spec_left"
+            goto END
+			else
+            @ cnt ++
+            set spec_left = "`@FullPath $argv[$cnt]`"
+            if ( ! -f $spec_left) then
+               echo "spec file $spec_left not found"
+               goto BEND
+            endif 
+            goto NEXT	
+         endif	
+      endif
+
+      if ( "$argv[$cnt]" == "-spec_right") then
+         set pLoc = $cnt		
+		   if ($pLoc == $Narg) then
+				echo "Need specfile name after -spec_right"
+            goto END
+			else
+            @ cnt ++
+            set spec_right = "`@FullPath $argv[$cnt]`"
+            if ( ! -f $spec_right) then
+               echo "spec file $spec_right not found"
+               goto BEND
+            endif 
+            goto NEXT	
+         endif	
+      endif
+      
+      if ( "$argv[$cnt]" == "-fwhm") then
+         set pLoc = $cnt		
+		   if ($pLoc == $Narg) then
+				echo "Need argument after -fwhm"
+            goto END
+			else
+            @ cnt ++
+            set ttt = ()
+            while ($cnt < $Narg && "$argv[$cnt]" !~ -*) 
+               set ttt = ($ttt $argv[$cnt])
+               @ cnt ++
+            end
+            if ($#ttt != 1) then
+               echo "Failed to get one and only 1 -fwhm value. Have $#ttt" 
+               goto BEND
+            else
+               if ($cnt < $Narg) @ cnt -- 
+            endif
+            set fwhm_pol = $ttt
+            set fwhm_ecc = $ttt
+            goto NEXT	
+         endif	
+      endif
+      
+      if ( "$argv[$cnt]" == "-fwhm_pol") then
+         set pLoc = $cnt		
+		   if ($pLoc == $Narg) then
+				echo "Need argument after -fwhm_pol"
+            goto END
+			else
+            @ cnt ++
+            set fwhm_pol = $argv[$cnt]
+            goto NEXT	
+         endif	
+      endif
+      
+      if ( "$argv[$cnt]" == "-fwhm_ecc") then
+         set pLoc = $cnt		
+		   if ($pLoc == $Narg) then
+				echo "Need argument after -fwhm_ecc"
+            goto END
+			else
+            @ cnt ++
+            set fwhm_ecc = $argv[$cnt]
+            goto NEXT	
+         endif	
+      endif
+
+      if ( "$argv[$cnt]" == "-A2E_opts") then
+         set pLoc = $cnt		
+		   if ($pLoc == $Narg) then
+				echo "Need argument after -A2E_opts"
+            goto END
+			else
+            @ cnt ++
+            set A2E_opt = $argv[$cnt]
+            goto NEXT	
+         endif	
+      endif
+
+      if ( "$argv[$cnt]" == "-AEA_opts") then
+         set pLoc = $cnt		
+		   if ($pLoc == $Narg) then
+				echo "Need argument after -AEA_opts"
+            goto END
+			else
+            @ cnt ++
+            set AEA_opt = "$argv[$cnt]"
+            goto NEXT	
+         endif	
+      endif
+      
+      if ( \
+            ("$argv[$cnt]" == "-ccw" )  || \
+            ("$argv[$cnt]" == "-cw"  )  || ("$argv[$cnt]" == "-clw"  ) || \
+            ("$argv[$cnt]" == "-exp"  )  || \
+            ("$argv[$cnt]" == "-con")     ||\
+            ("$argv[$cnt]" == "-ccw_orts" )  || \
+            ("$argv[$cnt]" == "-cw_orts"  )  || \
+               ("$argv[$cnt]" == "-clw_orts"  ) || \
+            ("$argv[$cnt]" == "-exp_orts"  )  || \
+            ("$argv[$cnt]" == "-con_orts")     ) then
+         set pLoc = $cnt		
+		   if ($pLoc == $Narg) then
+				echo "Need volumes after -ccw, or -clw, or -exp, or -con"
+            goto END
+			else
+            @ cnt ++
+            set runcls = ()
+            while ($cnt < $Narg && "$argv[$cnt]" !~ '-*') 
+               if ("$argv[$pLoc]" =~ "*_orts" && "$argv[$cnt]" != "NONE") then
+                  set ddd = "$argv[$cnt]"
+                  1dcat "$ddd" > __ORTS.1D
+                  if ( ! -f __ORTS.1D ) then
+              echo "Orts file $ddd not found or could not be cat-ed by 1dcat"
+                  goto END
+                  endif
+                  \rm -f __ORTS.1D
+               endif
+               set noglob
+               set runcls = ($runcls "$argv[$cnt]")
+               unset noglob
+               @ cnt ++
+            end
+            if ($#runcls < 1) then
+               echo "Failed to get -ccw, or -clw, or -exp, or -con volumes" 
+               goto BEND
+            else
+               if ($cnt <= $Narg) @ cnt -- 
+            endif
+               set noglob
+            if ("$argv[$pLoc]" == "-ccw" ) then
+               set u_runs_ccw = ($runcls)
+            else if ("$argv[$pLoc]" == "-cw" || "$argv[$pLoc]" == "-clw") then
+               set u_runs_clw = ($runcls)
+            else if ("$argv[$pLoc]" == "-exp" ) then
+               set u_runs_exp = ($runcls)
+            else if ("$argv[$pLoc]" == "-con" ) then
+               set u_runs_con = ($runcls)
+            else if ("$argv[$pLoc]" == "-ccw_orts" ) then
+               set u_runs_ccw_orts = ($runcls)
+            else if ("$argv[$pLoc]" == "-cw_orts" || \
+                     "$argv[$pLoc]" == "-clw_orts") then
+               set u_runs_clw_orts = ($runcls)
+            else if ("$argv[$pLoc]" == "-exp_orts" ) then
+               set u_runs_exp_orts = ($runcls)
+            else if ("$argv[$pLoc]" == "-con_orts" ) then
+               set u_runs_con_orts = ($runcls)
+            endif
+               unset noglob
+            
+            goto NEXT	
+         endif	
+      endif
+      
+      if ( \
+            ("$argv[$cnt]" == "-lh_ccw" )  || \
+            ("$argv[$cnt]" == "-lh_cw"  )  || ("$argv[$cnt]" == "-lh_clw"  ) || \
+            ("$argv[$cnt]" == "-lh_exp"  )  || \
+            ("$argv[$cnt]" == "-lh_con")     ) then
+         set SurfInput = 1
+         set pLoc = $cnt		
+		   if ($pLoc == $Narg) then
+				echo "Need dsets after -lh_ccw, or -lh_clw, or -lh_exp, or -lh_con"
+            goto END
+			else
+            @ cnt ++
+            set runcls = ()
+            while ($cnt < $Narg && "$argv[$cnt]" !~ '-*') 
+               set runcls = ($runcls $argv[$cnt])
+               @ cnt ++
+            end
+            if ($#runcls < 1) then
+   echo "Failed to get -lh_ccw, or -lh_clw, or -lh_exp, or -lh_con surface datasets" 
+               goto BEND
+            else
+               if ($cnt <= $Narg) @ cnt -- 
+            endif
+            if ("$argv[$pLoc]" == "-lh_ccw" ) then
+               set u_lh_runs_ccw = ($runcls)
+            else if ("$argv[$pLoc]" == "-lh_cw" || \
+                     "$argv[$pLoc]" == "-lh_clw") then
+               set u_lh_runs_clw = ($runcls)
+            else if ("$argv[$pLoc]" == "-lh_exp" ) then
+               set u_lh_runs_exp = ($runcls)
+            else if ("$argv[$pLoc]" == "-lh_con" ) then
+               set u_lh_runs_con = ($runcls)
+            endif
+            goto NEXT	
+         endif	
+      endif
+
+      if ( \
+            ("$argv[$cnt]" == "-rh_ccw" )  || \
+            ("$argv[$cnt]" == "-rh_cw"  )  || ("$argv[$cnt]" == "-rh_clw"  ) || \
+            ("$argv[$cnt]" == "-rh_exp"  )  || \
+            ("$argv[$cnt]" == "-rh_con")     ) then
+         set SurfInput = 1
+         set pLoc = $cnt		
+		   if ($pLoc == $Narg) then
+				echo "Need dsets after -rh_ccw, or -rh_clw, or -rh_exp, or -rh_con"
+            goto END
+			else
+            @ cnt ++
+            set runcls = ()
+            while ($cnt < $Narg && "$argv[$cnt]" !~ '-*') 
+               set runcls = ($runcls $argv[$cnt])
+               @ cnt ++
+            end
+            if ($#runcls < 1) then
+   echo "Failed to get -rh_ccw, or -rh_clw, or -rh_exp, or -rh_con surface datasets" 
+               goto BEND
+            else
+               if ($cnt <= $Narg) @ cnt -- 
+            endif
+            if ("$argv[$pLoc]" == "-rh_ccw" ) then
+               set u_rh_runs_ccw = ($runcls)
+            else if ("$argv[$pLoc]" == "-rh_cw" || \
+                     "$argv[$pLoc]" == "-rh_clw") then
+               set u_rh_runs_clw = ($runcls)
+            else if ("$argv[$pLoc]" == "-rh_exp" ) then
+               set u_rh_runs_exp = ($runcls)
+            else if ("$argv[$pLoc]" == "-rh_con" ) then
+               set u_rh_runs_con = ($runcls)
+            endif
+            goto NEXT	
+         endif	
+      endif
+      
+      if ( "$argv[$cnt]" == "-no_tshift") then
+         set tshift = -1;		
+         goto NEXT		
+      endif
+      
+      if ( "$argv[$cnt]" == "-no_A2E") then
+         set u_AVolAtEpi = "IID"
+         goto NEXT		
+      endif
+      
+      if ( "$argv[$cnt]" == "-keep_tmp") then
+         set cleanup = 0;		
+         goto NEXT		
+      endif
+      
+      #ADD NO NEW OPTIONS BELOW THIS LINE
+      
+      if (1) then
+         echo "Error: Option or parameter '$argv[$cnt]' not understood"
+         apsearch -popt `basename $0` -word $argv[$cnt]
+      endif
+      
+      NEXT:
+		@ cnt ++
+	end
+   if ($Narg < 2) then
+      echo "Too few arguments. Use `basename $0` -help for details."
+      goto BEND
+   endif
+
+   #Make on_ecc and on_pol be fully formed  [#block  on_min on_max on_step]
+   if ($on_ecc[3] == 0) then
+       set on_ecc[3] = $on_ecc[2]
+   endif
+   if ($on_ecc[4] == 0) then
+       set on_ecc[4] = $TR
+   endif
+
+   if ($on_pol[3] == 0) then
+      set on_pol[3] = $on_pol[2]
+   endif
+   if ($on_pol[4] == 0) then
+      set on_pol[4] = $TR
+   endif
+
+   if ($#dorts != 0) then
+      if ($#u_runs_ccw_orts != 0 ||\
+          $#u_runs_clw_orts != 0 ||\
+          $#u_runs_exp_orts != 0 ||\
+          $#u_runs_con_orts != 0) then
+         echo "Should not combine -dorts with -*_orts"
+         goto BEND
+      endif
+      if ($#u_runs_ccw != 0) then
+         foreach kk ($#u_runs_ccw)
+            set u_runs_ccw_orts = ($u_runs_ccw_orts "$dorts")
+         end
+      endif
+      if ($#u_runs_clw != 0) then
+         foreach kk ($#u_runs_clw)
+            set u_runs_clw_orts = ($u_runs_clw_orts "$dorts")
+         end
+      endif
+      if ($#u_runs_exp != 0) then
+         foreach kk ($#u_runs_exp)
+            set u_runs_exp_orts = ($u_runs_exp_orts "$dorts")
+         end
+      endif
+      if ($#u_runs_con != 0) then
+         foreach kk ($#u_runs_con)
+            set u_runs_con_orts = ($u_runs_con_orts "$dorts")
+         end
+      endif
+      set dorts = ()
+   endif
+   
+   if ($#u_runs_ccw_orts != 0 && $#u_runs_ccw_orts != $#u_runs_ccw) then
+      echo "Have $#u_runs_ccw CCW time series but $#u_runs_ccw_orts ort files"
+      goto BEND
+   endif
+   if ($#u_runs_clw_orts != 0 && $#u_runs_clw_orts != $#u_runs_clw) then
+      echo "Have $#u_runs_clw CCW time series but $#u_runs_clw_orts ort files"
+      goto BEND
+   endif
+   if ($#u_runs_con_orts != 0 && $#u_runs_con_orts != $#u_runs_con) then
+      echo "Have $#u_runs_con CCW time series but $#u_runs_con_orts ort files"
+      goto BEND
+   endif
+   if ($#u_runs_exp_orts != 0 && $#u_runs_exp_orts != $#u_runs_exp) then
+      echo "Have $#u_runs_exp CCW time series but $#u_runs_exp_orts ort files"
+      goto BEND
+   endif
+   
+   goto RET_PARSE
+
+SANITY:
+   if ($rdir == '') then
+      set rdir = $ec.retino
+   endif
+   if ( ! -d $rdir ) then
+      \mkdir -p $rdir
+      if ($status) then
+         echo "Could not create $rdir"
+         goto BEND
+      endif
+   endif
+      
+   if ($TR == '') then
+      echo "-TR not specified"
+      goto BEND
+   endif
+   
+   if ($period_ecc == '') then
+      echo "-period_ecc not specified"
+      goto BEND
+   endif
+   if ($period_pol == '') then
+      echo "-period_pol not specified"
+      goto BEND
+   endif
+   
+   if ($spec_left == 'NADA' && $spec_right == 'NADA') then
+      echo "You must specify at least one of -spec_left or -spec_right"
+      goto BEND
+   endif
+   
+   
+   if ($u_AVolAtEpi == 'IID') then
+      set u_AVolAtEpi = $u_AVol
+   endif
+   
+   goto RET_SANITY
+  
+DEMO:
+   if ( ! -f AfniRetinoDemo.tgz) then
+      echo "Fetching afni.nimh.nih.gov/pub/dist/tgz/AfniRetinoDemo.tgz ..."
+      curl -O https://afni.nimh.nih.gov/pub/dist/tgz/AfniRetinoDemo.tgz
+      if ($status) then
+         echo "Bad flag from download."
+         goto BEND
+      endif
+      echo "Download of AfniRetinoDemo.tgz done."
+   else
+      echo "Reusing existing AfniRetinoDemo.tgz"
+   endif
+   if ($install_demo) then
+      if ( -d AfniRetinoDemo) then
+         echo "Reusing existing AfniRetinoDemo"
+      else
+         echo "Unpacking AfniRetinoDemo.tgz"
+         tar xzf AfniRetinoDemo.tgz
+         if ($status) then
+            echo "Failed to untar AfniRetinoDemo.tgz"
+            goto BEND
+         endif
+      endif
+      cd AfniRetinoDemo
+      apsearch -view_text_file README.txt
+      tcsh @Proc.ALL |& tee Proc.ALL.log
+   else
+      echo "To check out the demo run:"
+      echo "   tar xzf AfniRetinoDemo.tgz"
+      echo "   cd AfniRetinoDemo"
+      echo "   apsearch -view_text_file README.txt"
+      echo "   tcsh @Proc.ALL |& tee Proc.ALL.log"
+   endif
+   goto END
+   
+HELP:
+echo ""
+echo "   `basename $0` is a script to process retinotpic FMRI data."
+echo ""
+echo " It estimates visual field angles and visual field maps using AFNI's"
+echo " 3dRetinoPhase, and SurfRetinMap "
+echo ""
+echo "The Options:"
+echo "==========="
+echo "+++ Latency estimation:"
+echo " -phase : Use phase of fundamental frequency to estimate latency (default)"
+echo " -delay : Use delay relative to reference time series to estimate latency"
+echo "          You should be better off using the -delay option, especially in "
+echo "          noisy situations"
+echo "          To graph the reference time series relative to which response"
+echo "          latency is estimated you will need to run @RetinoProc command"
+echo "          first. The reference time series are generated at run time."
+echo "          The reference time series are in ascii files called ECC.1D and"
+echo "          POL.1D. You can easily plot them with 1dplot. You can also get"
+echo "          the commands that generated them (using the program waver) from"
+echo "          files called: ECC.WAVER.log and POL.WAVER.log." 
+echo ""
+echo "+++ Stimulus, and Time Series Parameters:"
+echo " -TR TR: TR, in seconds, of retinotopic scans"
+echo " -period_ecc TECC: Period, in seconds, of eccentricity (rings) and"
+echo " -period_pol TPOL: polar angle (wedges) stimuli, respectively."
+echo "             The period is the duration the stimulus takes to complete"
+echo "             a full cycle. In other terms, if you were to point at one"
+echo "             part of the stimulus and follow that part with your finger, "
+echo "             the period is the duration it takes your finger to get back "
+echo "             to the starting position."
+echo "             The period is independent of the number"
+echo "             of rings/wedges used. For most sane people, TECC"
+echo "             and TPOL have the same value."
+echo " -pre_ecc PREECC: PREECC and PREPOL are the durations, in sec, before the "
+echo " -pre_pol PREPOL: each of the two stimuli began. The duration is relative"
+echo "                  to the beginning of the retinotopic time series, "
+echo "                  after the pre-steadystate images have been removed."
+echo " -on_ecc N_BLOCKS ON_ECC : Number of stimulation blocks in both directions"
+echo " -on_pol N_BLOCKS ON_POL : followed by the duration of stimulation in sec."
+echo "                           per visual location."
+echo " -var_on_ecc N_BLOCKS MIN_ON_ECC MAX_ON_ECC STEP_ON_ECC: Use multiple "
+echo " -var_on_pol N_BLOCKS MIN_ON_POL MAX_ON_POL STEP_ON_POL: on durations "
+echo "                           and create multiple reference time series"
+echo "                           for 3dRetinoPhase. See -multi_ref_ts option"
+echo "                           in 3dRetinoPhase. Leave -var_ options alone"
+echo "                           If you don't know what you're doing with it."
+echo "           All ON_ values are in seconds. STEP_* must be multiple of TR."
+echo ""
+echo "           Options -*on* are only useful if you use -delay."
+echo ""
+echo " -nwedges NWED: Number of wedges in polar stimulus, and number of rings."
+echo " -nrings NRING: in eccentricity stimulus."
+echo ""
+echo " -fwhm_pol FWPOL: Target smoothness, in mm, for the polar and for the "
+echo " -fwhm_ecc FWECC: eccentricity stimuli. "
+echo "                  Note that the script outputs results for both smoothed"
+echo "                  and unsmoothed time series." 
+echo ""
+echo " -ignore IGN: Ignore IGN volumes from the beginning of each time series."
+echo "              When IGN is not 0, make sure that PREECC and PREPOL values"
+echo "              represents the durations AFTER IGN volumes are taken out."
+echo "              This option is useless if you input surface-based "
+echo "              time series such as with option -lh_ccw"
+echo " -no_tshift:  Do not correct for slice timing. Assume it has been done."
+echo "              This option is useless if you input surface-based "
+echo "              time series such as with option -lh_ccw"
+echo ""
+echo "+++ Volumetric input:"
+echo "    Time series datasets"
+echo " -ccw CCW_1 CCW_2 ...: Specify the retinotopic time series for each of the"
+echo " -clw CLW_1 CLW_2 ...: four stimulus types. You can have multiple runs of"
+echo " -exp EXP_1 EXP_2 ...: each type. "
+echo " -con CON_1 CON_2 ...: "
+echo ""
+echo "    Reference and Anatomical Volumes"
+echo " -epi_ref EpiRef: Specify a volume from the EPI time series to which all"
+echo "                EPI volumes are aligned. "
+echo "                Default is the 4th sub-brick of the first epi time series"
+echo "                on the command line."
+echo " -epi_anat_ref EpiAnatRef: Specify a volume from the EPI time series that"
+echo "                is better suited for aligning the T1 to it than EpiRef "
+echo "                might be. EpiAnatRef is usually a pre-steadystate volume"
+echo "                which still shows anatomical contrast. This volume is"
+echo "                first registered to EpiRef, then its registered version"
+echo "                is used as a targe for registering AVol. If not set, "
+echo "                EpiAnatRef is set to be EpiRef."
+echo " -noVR: Skip time series volume registration step. There will be no"
+echo "                regression of motion estimates with this option"
+echo " -no_volreg: Same as -noVR"
+echo " -anat_vol AVol: T1 volume acquired during the same session as the"
+echo "                 retinotopic scans. This volume is assumed to need"
+echo "                 registration to EpiRef volume. The registration"
+echo "                 is carried out automatically by the script, producing"
+echo "                 a dataset we will call AVol@Epi."
+echo " -anat_vol@epi AVol@Epi: Instead of letting the script align AVol"
+echo "                 to your EpiRef, you can supply AVol@Epi directly"
+echo "                 and skip the registration. Of course, you should "
+echo "                 be sure that AVol@Epi is indeed aligned with  EpiRef"
+echo " -surf_vol SVol: SVol is the Surface Volume for the cortical surfaces."
+echo "                 SVol is created when you first run @SUMA_Make_Spec_*"
+echo "                 scripts. This volume is eventually aligned to AVol@Epi"
+echo "                 with @SUMA_AlignToExperiment in order to create SVol@Epi"
+echo " -surf_vol@epi SVol@Epi: SVol that has been aligned to the experiment's"
+echo "                 EPI data. If you use this option, you would be providing"
+echo "                 the output of @SUMA_AlignToExperiment step mentioned "
+echo "                 above, allowing the script to skip running it."
+echo "                 To be sure you have the right volume, you should be sure"
+echo "                 the surfaces align with the EPI data."
+echo "         Check for this with AFNI and SUMA using:"
+echo "         suma -spec SPL -sv SVol@Epi & ; afni -niml &"
+echo "   Note this option used to be called -surf_vol_alndepi"
+echo ""
+echo "+++ Volume --> Surface options"
+echo "    Maps by gray matter intersection:"
+echo "   -gm : Map voxels that intersect gray matter as defined by the bounding"
+echo "         smoothed white matter and pial surfaces. (default)"
+echo ""
+echo "    Maps by single surface intersections:"
+echo "   -wm : Map voxels that intersect the smoothed white matter surface only"
+echo "         This seems to give cleaner maps, perhaps by being less encumbered"
+echo "         by pial voxels that may have aliased sampling." 
+echo "   -pial: Map voxels that intersect the pial surface only"
+echo "   -midlayer: Map voxels that intersect the surface lying midway between "
+echo "              smoothed white matter and pial surfaces"
+echo "   -layer FRAC: Map voxels that intersect the surface that is a fraction "
+echo "                FRAC of the cortical thickness away from the smoothed "
+echo "                white matter surface."
+echo "            In other terms:"
+echo "                -wm       ==  -layer 0.0"
+echo "                -pial     ==  -layer 1.0"
+echo "                -midlayer ==  -layer 0.5" 
+echo ""
+echo "+++ Surface-based input: "
+echo "    Surfaces:"
+echo " -spec_left  SPL: SPL, and SPR are the spec files for the left and"  
+echo " -spec_right SPR: right hemispheres, respectively."
+echo ""
+echo "    Time series datasets: For use when time series have already been "
+echo "                          mapped onto the surface."
+echo " -lh_ccw CCW_1 CCW_2 ...: Specify the datasets containing retinotopic time"
+echo " -lh_clw CLW_1 CLW_2 ...: series that have already been mapped to the "
+echo " -lh_exp EXP_1 EXP_2 ...: surface for each of the four stimulus types. "
+echo " -lh_con CON_1 CON_2 ...: You can have multiple runs of each type. "
+echo "                          The script assumes that nuisance parameters "
+echo "                          have already been regressed out of these time"
+echo "                          series."
+echo "    For the right hemisphere, replace -lh_ in the option names with -rh_"
+echo "    It makes no sense to use these options along with -ccw, -clw, -exp, "
+echo "    or -con."
+echo ""
+echo "+++ Misc Parameters:"
+echo " -dorts ORT1D: Detrend time series using columns in ORT1D file"
+echo "               The length of the time series in ORT1D should match"
+echo "               that of the time series being fed to 3dDetrend"
+echo "               Also, the this option applies to all the time series"
+echo "               being processed so that assumes they all have the same"
+echo "               lengths."
+echo "   Alternately, you can specify a separate ORT file for each dataset on"
+echo "   the command line with:"
+echo " -ccw_orts CCW_1_ORT.1D CCW_2_ORT.1D ...: These options should parallel"
+echo " -clw_orts CLW_1_ORT.1D CLW_2_ORT.1D ...: -ccw, -clw, -exp, -con options"
+echo " -exp_orts EXP_1_ORT.1D EXP_2_ORT.1D ...: from above. "
+echo " -con_orts CON_1_ORT.1D CON_2_ORT.1D ...: "
+echo "       You don't have to specify all or none of *_orts options."
+echo "       However, any *_orts option should have as many ORT files"
+echo "       as its equivalent time series option."
+echo "       For example, if you used:"
+echo "          -ccw       CCW1.nii CCW2.nii CCW3.nii"
+echo "       to specify orts for these three datasets you need:"
+echo "          -ccw_orts   ORT_CCW1.1D ORT_CCW2.1D ORT_CCW3.1D"
+echo "       If for some reason you don't need orts for CCW2.nii, "
+echo "       use the string NONE to indicate that:"
+echo "           -ccw_orts   ORT_CCW1.1D NONE ORT_CCW3.1D"
+echo ""
+echo " -sid SID: SID is a flag identifying the subject"
+echo " -out_dir DIR: Directory where processing results are to be stored"
+echo " -echo: Turn on the command echoing to help with debugging script failure"
+echo " -echo_edu: Turn on command echoing for certain programs only "
+echo "            as opposed to the shell's echoing"
+echo " -A2E_opts 'A2E_OPTS': Pass options A2E_OPTS to @SUMA_AlignToExperiment"
+echo "                       You might use for example,"
+echo "                       -A2E_opts '-strip_skull surf_anat' since SVol"
+echo "                       usually has a skull, but AVol@Epi does not."
+echo "                       This could help with the alignment in certain"
+echo "                       difficult cases"
+echo "           For details on these options see @SUMA_AlignToExperiment -help"
+echo " -AEA_opts 'AEA_OPTS': Pass options AEA_OPTS to align_epi_anat.py, which "
+echo "                       is the tool used to align T1 anat to EPI."
+echo "                       For example if 3dSkullStrip is failing to "
+echo "                       strip the epi and you can add:"
+echo "                       -AEA_opts '-epi_strip 3dAutomask' "
+echo "                       or perhaps:"
+echo "                       -AEA_opts '-epi_strip 3dAutomask -partial_coverage'"
+echo "           For details on these options see align_epi_anat.py -help"
+echo " -fetch_demo: Get the demo archive, do not install it. "
+echo "              (see Sample Data below)"
+echo " -install_demo: Get it, install it, and start processing the 1st example"
+echo ""
+echo "The process:"
+echo "============"
+echo "   The full process consists of the following steps:"
+echo "   - Copy input data in the results directory"
+echo "   - Time shift and register volumetric epi data to EpiRef"
+echo "   - Align EpiAnatRef to EpiRef to produce a NEW EpiAnatRef"
+echo "   - Align AVol to (new) EpiAnatRef to produce AVol@Epi"
+echo "   - Align SVol to AVol@Epi to produce SVol@Epi"
+echo "   - Detrend components of no interest from time series volumes"
+echo "   - Map time series to Surfaces"
+echo "   - Smooth time series on the surfaces"
+echo "   - Run 3dRetinoPhase on time series to produce field angle dataset"
+echo "   - Run SurfRetinoMap on field angle data to produce visual field ratio"
+echo "     datasets."
+echo "   - Create a script to show the results with little pain."
+echo "     The script is named @ShowResult and is stored in DIR/ "
+echo ""
+echo "Sample Data:"
+echo "============"
+echo "You can download a test dataset, generously contributed by Peter J. Kohler"
+echo " and Sergey V. Fogelson from:"
+echo "       afni.nimh.nih.gov/pub/dist/tgz/AfniRetinoDemo.tgz"
+echo "A README file in the archive will point you to sample scripts that "
+echo "illustrate the usage of @RetinoProc."
+echo ""
+echo "You can also use -fetch_demo to have this script get it for you."
+echo ""
+echo "References:"
+echo "==========="
+echo "   [1] RW Cox. AFNI: Software for analysis and visualization of functional"
+echo "                     magnetic resonance neuroimages.  "
+echo "                     Computers and Biomedical Research, 29: 162-173, 1996."
+echo "   [2] Saad Z.S., et al.  SUMA: An Interface For Surface-Based Intra- And"
+echo "                      Inter-Subject Analysis With AFNI."
+echo "     Proc. 2004 IEEE International Symposium on Biomed. Imaging, 1510-1513"
+echo "   [3] Saad, Z.S., et al. Analysis and use of FMRI response delays. "
+echo "         Hum Brain Mapp, 2001. 13(2): p. 74-93."
+echo "   [4] Saad, Z.S., et al., Estimation of FMRI Response Delays."
+echo "         Neuroimage, 2003. 18(2): p. 494-504."
+echo "   [5] Warnking et al. FMRI Retinotopic Mapping - Step by Step."
+echo "         Neuroimage 17, (2002)"
+echo ""
+echo "Acknowledgments:"
+echo "================"
+echo "   Peter J. Kohler, and Sergey V. Fogelson: for feedback and sample data"
+echo "   Michael Beauchamp: for a motivating script and webpage on retintopy"
+echo "   Ikuko Mukai, Masaki Fukunaga, and Li-Wei Kuo: for difficult data and"
+echo "                                    making the case for a -delay option"
+echo "   Jonathan Polimeni: for retinotopy trade secrets"
+echo ""
+echo "Kvetching:"
+echo "============"
+echo "Questions and Comments are best posted to AFNI's message board:"
+echo "   https://afni.nimh.nih.gov/afni/community/board/"
+echo ""
+echo "      Ziad S. Saad      Aug. 2010 "
+echo ""
+   goto END
+   
+BEND:
+   set stat = 1
+   goto END   
+
+END:
+   exit $stat

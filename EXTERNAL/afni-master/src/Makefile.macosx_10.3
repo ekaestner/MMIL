@@ -1,0 +1,71 @@
+# This Makefile is for Mac OSX 10.0 (Darwin)
+
+USE_ZLIB = -DHAVE_ZLIB
+LZLIB    = -lz
+USE_GIFTI = -DHAVE_GIFTI
+LGIFTI    = /sw/lib/libexpat.a
+
+CCDEBS = -DAFNI_DEBUG -DIMSEQ_DEBUG -DDISPLAY_DEBUG -DTHD_DEBUG
+CEXTRA = -Wcomment -Wformat -DUSE_TRACING -DHAVE_XDBE -no-cpp-precomp -DDONT_USE_MCW_MALLOC
+CC     = cc -O2  -DDARWIN $(CEXTRA)
+CCVOL  = cc -O2  -DDARWIN $(CEXTRA)
+CCFAST = cc -O2  -DDARWIN $(CEXTRA)
+CCMIN  = cc
+CCD    = $(CC) $(CCDEBS)
+CCOLD  = $(CC)
+
+IFLAGS = -I. -I/sw/include -I/usr/X11R6/include -I/usr/local/include
+LFLAGS = -L. -L/sw/lib -L/usr/X11R6/lib -L/usr/local/lib -Wl,-x -Wl,-multiply_defined -Wl,warning -Wl,-bind_at_load
+
+CCSVD  = cc -O0 -no-cpp-precomp
+
+PLUGIN_SUFFIX = so
+PLUGIN_LFLAGS = -flat_namespace -bundle -undefined suppress -Wl,-x
+PLUGIN_CC     = $(CC) -dynamic -fno-common
+PLFLAGS       = -dynamic -L. -L/sw/lib -L/usr/X11R6/lib -L/usr/local/lib -Wl,-x -Wl,-multiply_defined -Wl,warning -Wl,-bind_at_load
+
+SPECIAL = -faltivec -framework Accelerate -DUSE_ACCELERATE
+
+AR     = /usr/bin/ar
+RANLIB = /usr/bin/ranlib
+TAR    = /usr/bin/tar
+MKDIR  = /bin/mkdir
+GZIP   = /usr/bin/gzip
+LD     = cc
+
+RM = /bin/rm -f
+MV = /bin/mv -f
+CP = /bin/cp -f
+
+LINT = /usr/bin/lint -a -b -u -v -x $(IFLAGS) $(CCDEFS)
+
+INSTALLDIR = ./macosx_10.3
+LIBDIR = $(INSTALLDIR)
+SYSTEM_NAME = macosx_10.3
+SHOWOFF = -DSHOWOFF=$(SYSTEM_NAME)
+
+INSTALL_PREREQ = suma
+#INSTALL_PREREQ = suma_gts
+EXPROGS = 
+
+LIBDL = libdl.a
+
+# for dynamic linking
+
+LLIBS  = -lmri -lf2c /sw/lib/libXm.a -lXm -lXp -lXpm -lXext -lXmu -lXt -lX11 $(LZLIB) $(LGIFTI) -lm -ldl -lc
+
+# vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+# For suma 
+SUMA_INCLUDE_PATH = -I/sw/include -I/usr/X11R6/include -I./ -I../ -I../niml/ -Igts/src -I/sw/include/glib-2.0 -I/sw/lib/glib-2.0/include -I/usr/local/include
+SUMA_LINK_PATH = -L/usr/lib -L/sw/lib -L/usr/X11R6/lib -L../ -L/usr/local/lib -L/sw/lib
+SUMA_LINK_LIB = /sw/lib/libXm.a -lXm -lGLw -lGLU -lGL -lXmu -lXp -lXt -lXext -lX11 -lmri -lf2c $(LZLIB) $(LGIFTI) -lm -lmx -lglib -bind_at_load
+SUMA_MAKEFILE_NAME = SUMA_Makefile
+SUMA_BIN_ARCHIVE = SUMA_MacOSX.tar
+SUMA_MDEFS = -DSUMA_GL_NO_CHECK_FRAME_BUFFER
+# ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+
+###############################################################
+
+MAKE = make
+include Makefile.INCLUDE

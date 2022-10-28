@@ -1,0 +1,84 @@
+# This Makefile is for Mac OSX 10.4 (Tiger)
+
+# You should install 'fink' before using this, and then use fink to
+# install the packages below:
+#   glib glib2-dev openmotif3
+# The first is needed to compile SUMA; the second for both AFNI and SUMA.
+# Fink can be found at http://fink.sourceforge.net
+
+USE_ZLIB = -DHAVE_ZLIB
+LZLIB    = -lz
+USE_GIFTI = -DHAVE_GIFTI
+LGIFTI    = /usr/X11R6/lib/libexpat.a
+
+CCDEBS = -DAFNI_DEBUG -DIMSEQ_DEBUG -DDISPLAY_DEBUG -DTHD_DEBUG
+CEXTRA = -Wcomment -Wformat -DUSE_TRACING -DHAVE_XDBE -no-cpp-precomp -UDONT_USE_MCW_MALLOC
+CC     = cc -O2  -DDARWIN $(CEXTRA)
+CCVOL  = cc -O2  -DDARWIN $(CEXTRA)
+CCFAST = cc -O2  -DDARWIN $(CEXTRA)
+CCMIN  = cc
+CCD    = $(CC) $(CCDEBS)
+CCOLD  = $(CC)
+
+IFLAGS = -I. -I/sw/include -I/usr/X11R6/include -I/usr/local/include
+LFLAGS = -L. -L/sw/lib -L/usr/X11R6/lib -L/usr/local/lib -Wl,-x -Wl,-multiply_defined -Wl,warning -Wl,-bind_at_load
+
+CCSVD  = cc -O0 -no-cpp-precomp
+
+PLUGIN_SUFFIX = so
+PLUGIN_LFLAGS = -bundle -flat_namespace -undefined suppress -Wl,-x
+PLUGIN_CC     = $(CC) -dynamic -fno-common
+PLFLAGS       = -dynamic -L. -L/sw/lib -L/usr/X11R6/lib -L/usr/local/lib -Wl,-x -Wl,-multiply_defined -Wl,warning -Wl,-bind_at_load
+
+# include the line below if you want to include vector arith in 3dDeconvolve_f
+# SPECIAL = -framework Accelerate -DUSE_ACCELERATE
+
+AR     = /usr/bin/ar
+RANLIB = /usr/bin/ranlib
+TAR    = /usr/bin/tar
+MKDIR  = /bin/mkdir
+GZIP   = /usr/bin/gzip
+LD     = cc
+
+RM = /bin/rm -f
+MV = /bin/mv -f
+CP = /bin/cp -f
+
+LINT = /usr/bin/lint -a -b -u -v -x $(IFLAGS) $(CCDEFS)
+
+INSTALLDIR = macosx_10.4_Intel
+LIBDIR = $(INSTALLDIR)
+SYSTEM_NAME = macosx_10.4_Intel
+SHOWOFF = -DSHOWOFF=$(SYSTEM_NAME)
+
+INSTALL_PREREQ = suma_gts
+#INSTALL_PREREQ = suma
+# uncomment if the Gnu Scientific Library is installed (libgsl, libgslcblas)
+GSLPROGS = balloon
+EXPROGS = $(GSLPROGS)
+
+# for dynamic linking
+
+LLIBS  = -lmri -lf2c /sw/lib/libXm.a -lXm -lXmu -lXp -lXpm -lXext -lXt -lX11 $(LZLIB) $(LGIFTI) -lm -lc
+
+# vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+# For suma
+GLw_IPATH  =
+GLw_LIB = -lGLw
+#uncomment next two lines if you want to use libGLws.a, SUMA's copy of GLw
+GLw_IPATH  = -IGLw_local 
+GLw_LIB = libGLws.a
+
+SUMA_INCLUDE_PATH = $(GLw_IPATH) -I/sw/include -I/usr/X11R6/include -I./ -I../ -I../niml/ -Igts/src -I/sw/include/glib-2.0 -I/sw/lib/glib-2.0/include
+SUMA_LINK_PATH = -L/usr/lib -L/sw/lib -L/usr/X11R6/lib -L../ -L./ -L/usr/local/lib
+SUMA_LINK_LIB = /sw/lib/libXm.a -lXm $(GLw_LIB) -lGLU -lGL -lXmu -lXp -lXt -lXext -lX11 -lmri -lf2c $(LZLIB) $(LGIFTI) -lm -lmx -lglib-2.0 -bind_at_load
+SUMA_MAKEFILE_NAME = SUMA_Makefile
+SUMA_BIN_ARCHIVE = SUMA_MacOSX.tar
+SUMA_MDEFS = -DSUMA_GL_NO_CHECK_FRAME_BUFFER
+# ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+
+###############################################################
+
+MAKE = make
+include Makefile.INCLUDE
