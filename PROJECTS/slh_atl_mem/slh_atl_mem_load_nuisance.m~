@@ -276,14 +276,14 @@ fprintf('CMRR: %i\n',cmr)
 
 %% Categorical Variables
 % Engel Outcomes / # Decliner's
-tbl_typ = { 'count' 'lng_lat'      'L/R/B' 1; ...
-            'count' 'eng_out_smp'  'I/II+' 1  };
+tbl_typ = { 'count'    'lng_lat'                'HC/UCSD/UCSF/Emory' 1; ...
+            'count' 'eng_out_smp'            ''                   1  } ...
 
 % Stats: Fishers
 fld_nme = fieldnames(grp.surgery.pst_cog_dti_slm);
 fsh_var = [find(strcmpi(cln_nui_dta_col,'lng_lat')) find(strcmpi(cln_nui_dta_col,'eng_out_smp'))];
 
-[~, lvl_ind] = ismember(tbl_typ(:,2),cln_nui_dta_col(fsh_var));
+[~, lvl_ind] = ismember(cln_var,fnl_dta_col(col_ind(fsh_var)));
         clear cln_lvl; for iLI = 1:numel(lvl_ind); if lvl_ind(iLI); cln_lvl(lvl_ind(iLI)) = tbl_typ(iLI,3); end; end
 
 fcfg = [];
