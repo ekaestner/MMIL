@@ -81,7 +81,7 @@ end
 
 if isfield(cfg,'ylb'); ylabel(mmil_spec_char(cfg.ylb{1},{'_'},{' '})); end
 
-if isfield(cfg,'ttl'); title(mmil_spec_char(cfg.ttl,{'_'},' ')); end
+if isfield(cfg,'ttl'); title(mmil_spec_char(cfg.ttl,{'_'},{' '})); end
 
 if isfield(cfg,'hln')
     line( get(gca,'xlim') ,[cfg.hln cfg.hln], 'Color', cfg.hln_col);

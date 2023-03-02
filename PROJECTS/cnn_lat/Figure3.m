@@ -198,4 +198,22 @@ plot(1:100,shf_roc_lne,'Color',rgb('dark grey'),'LineWidth',3)
 print( gcf, [ out_plt_dir '/' 'Subplot6_ROC.png' ], '-dpng')
 close all;
 
+%% Subplot 6 Neurology Resubmission: ROC curve average
+figure('Visible','off'); xlim([0 100]); ylim([0 100]); hold on;
 
+plot([0 100],[0 100],'k:','LineWidth',2)
+
+patch( [ 1:100           fliplr(1:100) ], ...
+       [ cnn_roc_top_std fliplr(cnn_roc_dwn_std) ], ...
+       rgb('light purple'), ...
+       'FaceAlpha',0.3,'EdgeColor','none')
+patch( [ 1:100           fliplr(1:100) ], ...
+       [ shf_roc_top_std fliplr(shf_roc_dwn_std) ], ...
+       rgb('light grey'), ...
+       'FaceAlpha',0.3,'EdgeColor','none')
+   
+plot(1:100,cnn_roc_lne,'Color',rgb('dark purple'),'LineWidth',3)
+plot(1:100,shf_roc_lne,'Color',rgb('dark grey'),'LineWidth',3,'LineStyle','--')
+
+print( gcf, [ out_plt_dir '/' 'Subplot6_ROC_dashed.png' ], '-dpng')
+close all;

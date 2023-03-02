@@ -528,11 +528,11 @@ fcfg.out_nme = 'p7_Sex';
 
 ejk_scatter(fcfg)
 
-[~, pvl_hld, ~, stt_hld] = ttest2( scr_num(grp.sex.T.M), scr_num(grp.sex.T.F));
+[~, pvl_hld, ~, stt_hld] = ttest2( scr_hld(grp.sex.T.M), scr_hld(grp.sex.T.F));
     stt_tbl(33,:) = { 'Score: TLE; M vs F' ['t(' num2str(stt_hld.df) ')' 't=' num2str(roundsd(stt_hld.tstat,3)) ';' 'p=' num2str(roundsd(pvl_hld,2))] };
-[~, pvl_hld, ~, stt_hld] = ttest2( scr_num(grp.sex.L.M), scr_num(grp.sex.L.F));
+[~, pvl_hld, ~, stt_hld] = ttest2( scr_hld(grp.sex.L.M), scr_hld(grp.sex.L.F));
     stt_tbl(34,:) = { 'Score: LTLE; M vs F' ['t(' num2str(stt_hld.df) ')' 't=' num2str(roundsd(stt_hld.tstat,3)) ';' 'p=' num2str(roundsd(pvl_hld,2))] };
-[~, pvl_hld, ~, stt_hld] = ttest2( scr_num(grp.sex.R.M), scr_num(grp.sex.R.F));
+[~, pvl_hld, ~, stt_hld] = ttest2( scr_hld(grp.sex.R.M), scr_hld(grp.sex.R.F));
     stt_tbl(35,:) = { 'Score: RTLE; M vs F' ['t(' num2str(stt_hld.df) ')' 't=' num2str(roundsd(stt_hld.tstat,3)) ';' 'p=' num2str(roundsd(pvl_hld,2))] };
 
 %% Plot 8: BarScatter Score -by- Handedness
@@ -563,11 +563,11 @@ fcfg.out_nme = 'p8_Handedness';
 
 ejk_scatter(fcfg)
 
-[~, pvl_hld, ~, stt_hld] = ttest2( scr_num(grp.hand.T.L), scr_num(grp.hand.T.R));
+[~, pvl_hld, ~, stt_hld] = ttest2( scr_hld(grp.hand.T.L), scr_hld(grp.hand.T.R));
     stt_tbl(37,:) = { 'Score: TLE; Handedness' ['t(' num2str(stt_hld.df) ')' 't=' num2str(roundsd(stt_hld.tstat,3)) ';' 'p=' num2str(roundsd(pvl_hld,2))] };
-[~, pvl_hld, ~, stt_hld] = ttest2( scr_num(grp.hand.L.L), scr_num(grp.hand.L.R));
+[~, pvl_hld, ~, stt_hld] = ttest2( scr_hld(grp.hand.L.L), scr_hld(grp.hand.L.R));
     stt_tbl(38,:) = { 'Score: LTLE; Handedness' ['t(' num2str(stt_hld.df) ')' 't=' num2str(roundsd(stt_hld.tstat,3)) ';' 'p=' num2str(roundsd(pvl_hld,2))] };
-[~, pvl_hld, ~, stt_hld] = ttest2( scr_num(grp.hand.R.L), scr_num(grp.hand.R.R));
+[~, pvl_hld, ~, stt_hld] = ttest2( scr_hld(grp.hand.R.L), scr_hld(grp.hand.R.R));
     stt_tbl(39,:) = { 'Score: RTLE; Handedness' ['t(' num2str(stt_hld.df) ')' 't=' num2str(roundsd(stt_hld.tstat,3)) ';' 'p=' num2str(roundsd(pvl_hld,2))] };
     
 %% Plot 9: Scatter Score -by- Education     
@@ -706,11 +706,12 @@ fcfg.out_nme = 'p12_MTSStatus';
 
 ejk_scatter(fcfg)
 
-[~, pvl_hld, ~, stt_hld] = ttest2( scr_num(grp.mts.T.yes), scr_num(grp.mts.T.no));
+[~, pvl_hld, ~, stt_hld] = ttest2( scr_hld(grp.mts.T.yes), scr_hld(grp.mts.T.no));
     stt_tbl(49,:) = { 'Score: TLE; MTS' ['t(' num2str(stt_hld.df) ')' 't=' num2str(roundsd(stt_hld.tstat,3)) ';' 'p=' num2str(roundsd(pvl_hld,2))] };
-[~, pvl_hld, ~, stt_hld] = ttest2( scr_num(grp.mts.L.yes), scr_num(grp.mts.L.no));
+    tot_eff_sze     = (nanmean(scr_hld(grp.mts.T.yes))-nanmean(scr_hld(grp.mts.T.no))) / nanstd(scr_hld([grp.mts.T.yes ; grp.mts.T.no]))
+[~, pvl_hld, ~, stt_hld] = ttest2( scr_hld(grp.mts.L.yes), scr_hld(grp.mts.L.no));
     stt_tbl(50,:) = { 'Score: LTLE; MTS' ['t(' num2str(stt_hld.df) ')' 't=' num2str(roundsd(stt_hld.tstat,3)) ';' 'p=' num2str(roundsd(pvl_hld,2))] };
-[~, pvl_hld, ~, stt_hld] = ttest2( scr_num(grp.mts.R.yes), scr_num(grp.mts.R.no));
+[~, pvl_hld, ~, stt_hld] = ttest2( scr_hld(grp.mts.R.yes), scr_hld(grp.mts.R.no));
     stt_tbl(51,:) = { 'Score: RTLE; MTS' ['t(' num2str(stt_hld.df) ')' 't=' num2str(roundsd(stt_hld.tstat,3)) ';' 'p=' num2str(roundsd(pvl_hld,2))] };  
     
 %% Plot 13: Scatter Score -by- ASMs     
@@ -777,11 +778,11 @@ fcfg.out_nme = 'p14_SurgicalStatus';
 
 ejk_scatter(fcfg)
 
-[~, pvl_hld, ~, stt_hld] = ttest2( scr_num(grp.surgery.T.yes), scr_num(grp.surgery.T.no));
+[~, pvl_hld, ~, stt_hld] = ttest2( scr_hld(grp.surgery.T.yes), scr_hld(grp.surgery.T.no));
     stt_tbl(57,:) = { 'Score: TLE; Surgery' ['t(' num2str(stt_hld.df) ')' 't=' num2str(roundsd(stt_hld.tstat,3)) ';' 'p=' num2str(roundsd(pvl_hld,2))] };
-[~, pvl_hld, ~, stt_hld] = ttest2( scr_num(grp.surgery.L.yes), scr_num(grp.surgery.L.no));
+[~, pvl_hld, ~, stt_hld] = ttest2( scr_hld(grp.surgery.L.yes), scr_hld(grp.surgery.L.no));
     stt_tbl(58,:) = { 'Score: LTLE; Surgery' ['t(' num2str(stt_hld.df) ')' 't=' num2str(roundsd(stt_hld.tstat,3)) ';' 'p=' num2str(roundsd(pvl_hld,2))] };
-[~, pvl_hld, ~, stt_hld] = ttest2( scr_num(grp.surgery.R.yes), scr_num(grp.surgery.R.no));
+[~, pvl_hld, ~, stt_hld] = ttest2( scr_hld(grp.surgery.R.yes), scr_hld(grp.surgery.R.no));
     stt_tbl(59,:) = { 'Score: RTLE; Surgery' ['t(' num2str(stt_hld.df) ')' 't=' num2str(roundsd(stt_hld.tstat,3)) ';' 'p=' num2str(roundsd(pvl_hld,2))] };  
 
 %% Plot 15: BarScatter Score -by- SurgicalOutcome 
@@ -812,13 +813,185 @@ fcfg.out_nme = 'p15_SurgicalOutcome';
 
 ejk_scatter(fcfg)
 
-[~, pvl_hld, ~, stt_hld] = ttest2( scr_num(grp.engel.T.I), scr_num(grp.engel.T.IIplus));
+[~, pvl_hld, ~, stt_hld] = ttest2( scr_hld(grp.engel.T.I), scr_hld(grp.engel.T.IIplus));
     stt_tbl(61,:) = { 'Score: TLE; Surgery' ['t(' num2str(stt_hld.df) ')' 't=' num2str(roundsd(stt_hld.tstat,3)) ';' 'p=' num2str(roundsd(pvl_hld,2))] };
-[~, pvl_hld, ~, stt_hld] = ttest2( scr_num(grp.engel.L.I), scr_num(grp.engel.L.IIplus));
+[~, pvl_hld, ~, stt_hld] = ttest2( scr_hld(grp.engel.L.I), scr_hld(grp.engel.L.IIplus));
     stt_tbl(62,:) = { 'Score: LTLE; Surgery' ['t(' num2str(stt_hld.df) ')' 't=' num2str(roundsd(stt_hld.tstat,3)) ';' 'p=' num2str(roundsd(pvl_hld,2))] };
-[~, pvl_hld, ~, stt_hld] = ttest2( scr_num(grp.engel.R.I), scr_num(grp.engel.R.IIplus));
+[~, pvl_hld, ~, stt_hld] = ttest2( scr_hld(grp.engel.R.I), scr_hld(grp.engel.R.IIplus));
     stt_tbl(63,:) = { 'Score: RTLE; Surgery' ['t(' num2str(stt_hld.df) ')' 't=' num2str(roundsd(stt_hld.tstat,3)) ';' 'p=' num2str(roundsd(pvl_hld,2))] }; 
    
+%% Resubmission 
+fcfg = [];
+
+fcfg.xdt = { 1 2 };
+fcfg.ydt = { 1 1 };
+
+fcfg.fce_col     = { [0/255 84/255 95/255] [163/255 2/255 52/255] };
+fcfg.edg_col     = { [0 0 0]              [0 0 0]             };
+fcfg.box_plt_col = { [0/255 84/255 95/255] [163/255 2/255 52/255] };
+
+fcfg.xlb = { 'L' 'R' };
+fcfg.xlm = [ 0.5 2.5 ];
+fcfg.ylb = {''};
+fcfg.ylm = [ 0.75 1.25 ];
+
+fcfg.mkr_sze = [2000 2000];
+
+fcfg.out_dir = out_plt_dir;
+fcfg.out_nme = 'p0_Legends_resubmission';
+
+ejk_scatter(fcfg)
+
+% p1 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+fcfg = [];
+
+fcfg.xdt = { 1                   2 };
+fcfg.ydt = { scr_hld(grp.side.L) scr_hld(grp.side.R) };
+
+fcfg.fce_col     = { [0/255 84/255 95/255] [163/255 2/255 52/255]  };
+fcfg.edg_col     = { [0 0 0]               [0 0 0]             };
+fcfg.box_plt_col = { [0/255 84/255 95/255] [163/255 2/255 52/255]   };
+
+fcfg.box_plt = ones(1,numel(fcfg.xdt));
+fcfg.xlb = { 'L' 'R' };
+fcfg.xlm = [ 0.5 7.5 ];
+fcfg.ylb = {'Accuracy'};
+fcfg.ylm = [ 0 100 ];
+
+fcfg.mkr_sze = [20 20];
+fcfg.aph_val = 0.45;
+
+fcfg.hln = 0;
+fcfg.hln_col = rgb('black');
+
+
+fcfg.out_dir = out_plt_dir;
+fcfg.out_nme = 'p1_Side_resubmission';
+
+ejk_scatter(fcfg)
+
+% p4 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+fcfg = [];
+
+fcfg.xdt = { hip_dta(grp.side.L,3) hip_dta(grp.side.R,3) };
+fcfg.ydt = { scr_hld(grp.side.L) scr_hld(grp.side.R) };
+
+fcfg.fce_col     = { [0/255 84/255 95/255] [163/255 2/255 52/255]  };
+fcfg.edg_col     = { [0 0 0]               [0 0 0]             };
+fcfg.box_plt_col = { [0/255 84/255 95/255] [163/255 2/255 52/255]   };
+
+fcfg.box_plt = ones(1,numel(fcfg.xdt));
+fcfg.xlb = { 'LI Hippocampal Volume' };
+fcfg.xlm = [ -0.75 0.75 ];
+fcfg.ylb = {'Accuracy'};
+fcfg.ylm = [ 0 100 ];
+
+fcfg.hln = 0;
+fcfg.hln_col = rgb('black');
+
+fcfg.trd_lne = [1 1];
+
+fcfg.out_dir = out_plt_dir;
+fcfg.out_nme = 'p4_Side_by_hippocampus_LI_resubmission';
+
+ejk_scatter(fcfg)
+
+% p12 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+fcfg = [];
+
+fcfg.xdt = { 1                          2                         4                          5 };
+fcfg.ydt = { scr_hld(grp.mts.L.yes) scr_hld(grp.mts.L.no) scr_hld(grp.mts.R.yes) scr_hld(grp.mts.R.no) };
+
+fcfg.fce_col     = { [0/255 47/255 48/255] [86/255 152/255 163/255] [81/255 29/255 36/255] [206/255 128/255 128/255] };
+fcfg.edg_col     = { [0 0 0]               [0 0 0]                  [0 0 0]                [0 0 0]};
+fcfg.box_plt_col = { [0/255 47/255 48/255] [86/255 152/255 163/255] [81/255 29/255 36/255] [206/255 128/255 128/255] };
+
+fcfg.box_plt = ones(1,numel(fcfg.xdt));
+fcfg.xlb = { 'L MTS' 'L Non-MTS' 'R MTS' 'R Non-MTS' };
+fcfg.xlm = [ 0.5 7.5 ];
+fcfg.ylb = {'Accuracy'};
+fcfg.ylm = [ 0 100 ];
+
+fcfg.mkr_sze = [20 20 20 20];
+fcfg.aph_val = 0.45;
+
+fcfg.hln = 0;
+fcfg.hln_col = rgb('black');
+
+fcfg.out_dir = out_plt_dir;
+fcfg.out_nme = 'p12_MTSStatus_resubmission';
+
+ejk_scatter(fcfg)    
+
+% Resubmission numbers %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+tot_mts_chn = computeCohen_d(scr_hld(grp.mts.T.yes),scr_hld(grp.mts.T.no),'independent');
+lft_mts_chn = computeCohen_d(scr_hld(grp.mts.L.yes),scr_hld(grp.mts.L.no),'independent');
+rgh_mts_chn = computeCohen_d(scr_hld(grp.mts.R.yes),scr_hld(grp.mts.R.no),'independent');
+
+%
+rgh_zro_num = sum(scr_hld(grp.side.R)==0);
+rgh_zro_pct = sum(scr_hld(grp.side.R)==0) / numel(scr_hld(grp.side.R));
+
+%
+men_tot_yes = nanmean( scr_hld(grp.mts.T.yes) );
+med_tot_yes = nanmedian( scr_hld(grp.mts.T.yes) );
+std_tot_yes = nanstd( scr_hld(grp.mts.T.yes) );
+
+men_tot_no  = nanmean( scr_hld(grp.mts.T.no) );
+med_tot_no  = nanmedian( scr_hld(grp.mts.T.no) );
+std_tot_no = nanstd( scr_hld(grp.mts.T.no) );
+
+men_lft_yes = nanmean( scr_hld(grp.mts.L.yes) );
+med_lft_yes = nanmedian( scr_hld(grp.mts.L.yes) );
+std_lft_yes = nanstd( scr_hld(grp.mts.L.yes) );
+
+men_lft_no = nanmean( scr_hld(grp.mts.L.no) );
+med_lft_no = nanmedian( scr_hld(grp.mts.L.no) );
+std_lft_no = nanstd( scr_hld(grp.mts.L.no) );
+
+men_rgh_yes = nanmean( scr_hld(grp.mts.R.yes) );
+med_rgh_yes = nanmedian( scr_hld(grp.mts.R.yes) );
+std_rgh_yes = nanstd( scr_hld(grp.mts.R.yes) );
+
+men_rgh_no = nanmean( scr_hld(grp.mts.R.no) );
+med_rgh_no = nanmedian( scr_hld(grp.mts.R.no) );
+std_rgh_no = nanstd( scr_hld(grp.mts.R.no) );
+
+% 
+out_mts = [ {'rgh_zro_num' ' = ' num2str(rgh_zro_num)} ; ...
+            {'rgh_zro_pct' ' = ' num2str(rgh_zro_pct)} ; ...
+            {'men_tot_yes' ' = ' num2str(men_tot_yes)} ; ...
+            {'med_tot_yes' ' = ' num2str(med_tot_yes)} ; ...
+            {'std_tot_yes' ' = ' num2str(std_tot_yes)} ; ...
+            {'men_tot_no ' ' = ' num2str(men_tot_no)} ; ...
+            {'med_tot_no ' ' = ' num2str(med_tot_no)} ; ...
+            {'std_tot_no ' ' = ' num2str(std_tot_no)} ; ...
+            {'men_lft_yes' ' = ' num2str(men_lft_yes)} ; ...
+            {'med_lft_yes' ' = ' num2str(med_lft_yes)} ; ...
+            {'std_lft_yes' ' = ' num2str(std_lft_yes)} ; ...
+            {'men_lft_no ' ' = ' num2str(men_lft_no)} ; ...
+            {'med_lft_no ' ' = ' num2str(med_lft_no)} ; ...
+            {'std_lft_no ' ' = ' num2str(std_lft_no)} ; ...
+            {'men_rgh_yes' ' = ' num2str(men_rgh_yes)} ; ...
+            {'med_rgh_yes' ' = ' num2str(med_rgh_yes)} ; ...
+            {'std_rgh_yes' ' = ' num2str(std_rgh_yes)} ; ...
+            {'men_rgh_no ' ' = ' num2str(men_rgh_no)} ; ...
+            {'med_rgh_no ' ' = ' num2str(med_rgh_no)} ; ...
+            {'std_rgh_no ' ' = ' num2str(std_rgh_no)} ; ...
+            {'tot_mts_chn' ' = ' num2str(tot_mts_chn)} ; ...
+            {'lft_mts_chn' ' = ' num2str(lft_mts_chn)} ; ...
+            {'rgh_mts_chn' ' = ' num2str(rgh_mts_chn)} ];
+cell2csv([ '/home/ekaestner/Dropbox/McDonald Lab/Erik/Projects/Imaging/cnn_lat/submission/2022_09_Neurology/Reviews/Figures/NewPieces' '/' 'out_mts.csv'],out_mts); 
+ 
+%
+cut_off = 50;
+cnn_acc     = cell2mat(mmil_readtext([ dta_loc '/' 'exp_6_scores_test.csv' ]))*100;
+    cnn_acc = cnn_acc(:,cut_off);
+log_acc = cell2mat(mmil_readtext([ dta_loc '/' 'exp_6_scores_log.csv' ]))*100;
+shf_acc = cell2mat(mmil_readtext([ dta_loc '/' 'exp_6_score_test_rand.csv' ]))*100;
+    shf_acc = shf_acc(:,cut_off);
+cell2csv( [ '/home/ekaestner/Dropbox/McDonald Lab/Erik/Projects/Imaging/cnn_lat/submission/2022_09_Neurology/Reviews/Figures/NewPieces' '/' 'scores.csv'],num2cell([ cnn_acc log_acc shf_acc ]) )
+    
 %% Make table of outputs
 tot_tbl = { ''                           'TLE'         'L-TLE'        'R-TLE' ; ...
   'Correct -BY- Number'         stt_tbl{5,2}  stt_tbl{6,2}  stt_tbl{7,2} ; ...

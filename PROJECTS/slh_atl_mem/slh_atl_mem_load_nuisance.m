@@ -27,11 +27,7 @@ fcfg.dta_loc = [ prj_dir '/' prj_nme '/' 'Data' '/' 'Emory' '/' 'Emory_SLAH_Memo
 fcfg.dta_col = 2;
 [ emy_dta, emy_dta_sbj, emy_dta_col] = ejk_dta_frm( fcfg );
 
-% Load Additional Emory data
-fcfg = [];
-fcfg.dta_loc = [ prj_dir '/' prj_nme '/' 'Data' '/' 'Emory' '/' 'emory_additional_variables_forDan_scansequence.csv'];
-fcfg.dta_col = 2;
-[ emy_add_dta, emy_add_dta_sbj, emy_add_dta_col] = ejk_dta_frm( fcfg );
+14/19
 
 %% Fix Groups
 grp_nme = { 'ltle_slah' 'ltle_atl' 'rtle_slah' 'rtle_atl' };
@@ -164,14 +160,26 @@ col_tgh{find(strcmpi(cln_nui_dta_col,'eng_out'))} = { '1A'               'I' ; .
                                                       '4C'               'IV' ; ...
                                                       }; 
 
+
+% Run
+for iC = 1:numel(col_tgh)
+    if ~isempty(col_tgh{iC})
+        for iT = 1:size(col_tgh{iC},1)
+            cln_nui_dta(strcmpi(cln_nui_dta(:,iC),col_tgh{iC}{iT,1}),iC) = {col_tgh{iC}{iT,2}};
+        end
+    end
+end
+
+clear col_tgh
+
 % Simplified Engle Outcome
 cln_nui_dta_col = [ cln_nui_dta_col 'eng_out_smp' ];
 cln_nui_dta = [ cln_nui_dta cln_nui_dta(:,strcmpi(cln_nui_dta_col,'eng_out'))];    
 
 col_tgh{find(strcmpi(cln_nui_dta_col,'eng_out_smp'))} = { 'I'               'I'   ; ...
-                                                          'II'               'II+' ; ...
-                                                          'III'               'II+' ; ...
-                                                          'IV'               'II+' }; 
+                                                          'II'              'II+' ; ...
+                                                          'III'             'II+' ; ...
+                                                          'IV'              'II+' }; 
 
 % Run
 for iC = 1:numel(col_tgh)
@@ -306,7 +314,35 @@ fcfg.dta_two = repmat(grp_typ{1},1,numel(fsh_var));
 fcfg.lbl_two = strcat( 'group_', cln_nui_dta_col(fsh_var));
 fcfg.out_dir = [ prj_dir '/' prj_nme  '/' 'FinalAnalysis_restricted' '/'  'stats' '/' 'Clinical_Fishers' '_' 'NuisanceTest' '/'  ];
 ejk_fisher_test( fcfg );
-        
+
+% Stats: Fishers L-TLE only
+fld_nme = fieldnames(grp.surgery.pst_cog_dti_slm);
+fsh_var = [find(strcmpi(cln_nui_dta_col,'lng_lat')) find(strcmpi(cln_nui_dta_col,'eng_out_smp'))];
+
+[~, lvl_ind] = ismember(tbl_typ(:,2),cln_nui_dta_col(fsh_var));
+        clear cln_lvl; for iLI = 1:numel(lvl_ind); if lvl_ind(iLI); cln_lvl(lvl_ind(iLI)) = tbl_typ(iLI,3); end; end
+
+fcfg = [];
+fcfg.grp     = grp.surgery.pst_cog_dti_slm;
+fcfg.grp_inc = {fld_nme(1:2)};
+fcfg.grp_nme = {fld_nme(1:2)};
+fcfg.dta = cln_nui_dta(:,fsh_var);
+fcfg.sbj = cln_nui_dta_sbj;
+[ grp_dta, grp_typ, grp_sbj ] = ejk_group_create( fcfg );
+
+grp_dta{1}(cellfun(@isempty,grp_dta{1})) = {'N/A'};
+
+fcfg = [];
+fcfg.sbj = grp_sbj{1};
+fcfg.grp_nme = grp_nme{iG};
+fcfg.dta_one = grp_dta{1};
+fcfg.lbl_one = cln_nui_dta_col(fsh_var);
+fcfg.lvl     = cln_lvl;
+fcfg.dta_two = repmat(grp_typ{1},1,numel(fsh_var));
+fcfg.lbl_two = strcat( 'group_', cln_nui_dta_col(fsh_var));
+fcfg.out_dir = [ prj_dir '/' prj_nme  '/' 'FinalAnalysis_restricted' '/'  'stats' '/' 'Clinical_Fishers' '_' 'NuisanceTest' '_' 'Left '/'  ];
+ejk_fisher_test( fcfg );
+
 % Table
 
 
