@@ -3,13 +3,11 @@ clear; clc;
 %% Constants
 prj_dir = '/home/ekaestner/Dropbox/McDonald Lab/Erik/Projects/Imaging/cnn_3dm/';
 
-out_dir = [ prj_dir '/' 'Figures/2023_01_27/' ]; % 2022_12_12
+out_dir = [ prj_dir '/' 'Figures/2023_02_17/' ]; % 2022_12_12
 
-dta_dir = [ prj_dir '/' 'Data/2023_01_27/' ]; % 2022_12_12
+dta_dir = [ prj_dir '/' 'Data/2023_02_17/' ]; % 2022_12_12
 
-dta_grp_fle = 'results_Jan27.csv';
-
-epd_nft_fle = 'ep_SFCNetShallow_vanilla_backprop.nii';
+dta_grp_fle = 'results_Feb17.csv';
 
 %% Load Data
 fcfg = [];
@@ -17,9 +15,9 @@ fcfg.dta_loc = [ dta_dir '/' dta_grp_fle ];
 [ dta_grp_dta, dta_grp_dta_sbj, dta_grp_dta_col ] = ejk_dta_frm(fcfg);
 
 %% Split Data
-mdl_int     = { '3D FCNet (non-harmonized data)' '3D FCNet (harmonized data)' '2D FCNet (non-harmonized data)' };
-mdl_int_nme = { 'ThreeD_5Lay_org'                'ThreeD_5Lay_ComBat'         'TwoD_5Lay_org' };
-mdl_int_col = { rgb('bright teal')                rgb('light green')          rgb('maroon') };     
+mdl_int     = { '3D FCNet (non-harmonized data)' '3D FCNet (harmonized data)' '2D FCNet (non-harmonized data)' '3D FCNet-shuffled labels (non-harmonized data)' };
+mdl_int_nme = { 'ThreeD_5Lay_org'                'ThreeD_5Lay_ComBat'         'TwoD_5Lay_org'                  'ThreeD_5lay_shuffled' };
+mdl_int_col = { rgb('bright teal')                rgb('light green')          rgb('maroon')                    rgb('grey') };     
  
 mes_int     = { 'Accuracy' 'AUC' 'Sensitivity' 'Specificity' 'PPV' 'NPV' };
 mes_int_nme = { 'Accuracy' 'AUC' 'Sensitivity' 'Specificity' 'PPV' 'NPV' };
@@ -29,7 +27,7 @@ num_mdl = zeros(1,numel(mdl_int));
 add_mdl_num = [];
 for iMDL = 1:numel(mdl_int) 
     num_mdl(iMDL) = sum(strcmpi(dta_grp_dta(:,1),mes_int{1}) & strcmpi(dta_grp_dta(:,2),mdl_int{iMDL})); 
-    ttt = repmat(1:num_mdl(1),numel(mes_int_nme),1);
+    ttt = repmat(1:num_mdl(iMDL),numel(mes_int_nme),1);
     add_mdl_num = [ add_mdl_num ; ttt(:)];
 end
 
@@ -65,9 +63,12 @@ mes_int     = [ mes_int 'Precision' 'Recall' 'F1' ];
 mes_int_nme = mes_int ;
 
 %% Preliminary Figures
-plt_nme = { 'Dimensionality' 'Harmonization' 'Figure2' 'Figure3'};
-box_ind = { [ 1 3 ]          [ 1 2 ]         [1 0]     [1 2 0 3]};
-dff_ind = { {[1 3]}          {[1 2] }        []        {[1 2] [] [1 3] }};
+plt_nme = { 'Dimensionality' 'Harmonization' 'Figure2' 'Figure3'            };
+box_ind = { [ 1 3 ]          [ 1 2 ]         [ 1 4]     [1 2 3]            };
+xdt_ind = { [ 1 2 ]          [ 1 2 ]         [ 1 2]     [1 2 4] };
+dff_ind = { {[1 3]}          {[1 2] }        []         {[1 2] [1 3] }    };
+ylm_use = { [ 70 100 ]       [ 70 100 ]      [ 0 100 ] [ 70 100 ] };
+cmp_tbl_ind = [ 1 2 ];
 
 for iPL = 1:numel(plt_nme)
     ejk_chk_dir([ out_dir '/' plt_nme{iPL} '/' ])
@@ -79,13 +80,9 @@ for iPL = 1:numel(plt_nme)
     
     fcfg = [];
     
-    fcfg.xdt = num2cell(1:numel(box_ind{iPL}));
     for iD = 1:numel(box_ind{iPL})
-        if box_ind{iPL}(iD)~=0
-            fcfg.ydt{iD} = cell2mat(dta_hld.(mdl_int_nme{box_ind{iPL}(iD)}).(mes_int_nme{iMES})(:,3));
-        else
-            fcfg.ydt{iD} = [];
-        end
+        fcfg.ydt{iD} = cell2mat(dta_hld.(mdl_int_nme{box_ind{iPL}(iD)}).(mes_int_nme{iMES})(:,3));
+        fcfg.xdt{iD} = xdt_ind{iPL}(iD);
     end
     
     fcfg.fce_col     = { mdl_int_col{box_ind{iPL}} };
@@ -96,7 +93,7 @@ for iPL = 1:numel(plt_nme)
     fcfg.xlb = mdl_int_nme(box_ind{iPL});
     fcfg.xlm = [ 0.5 numel(box_ind{iPL})+5.5 ];
     fcfg.ylb = mes_int_nme(iMES);
-    fcfg.ylm = [ 70 100 ];
+    fcfg.ylm = ylm_use{iPL};
     
     fcfg.mkr_sze = repmat(20,1,numel(box_ind{iPL}));
     fcfg.aph_val = 0.45;
@@ -107,39 +104,39 @@ for iPL = 1:numel(plt_nme)
     ejk_scatter(fcfg)
         
     % Diff plots
-    clear fcfg
-    
-    fcfg = [];
-    
-    fcfg.xdt = num2cell(1:numel(dff_ind{iPL}));
-    for iD = 1:numel(dff_ind{iPL})
-        fcfg.ydt{iD} = cell2mat(dta_hld.(mdl_int_nme{dff_ind{iPL}{iD}(1)}).(mes_int_nme{iMES})(:,3)) - ...
-                       cell2mat(dta_hld.(mdl_int_nme{dff_ind{iPL}{iD}(2)}).(mes_int_nme{iMES})(:,3));
-   
-        fcfg.fce_col{iD}     = mdl_int_col{dff_ind{iPL}{iD}(2)};        
-        fcfg.box_plt_col{iD} = mdl_int_col{dff_ind{iPL}{iD}(2)};
-        fcfg.xlb(iD)         = mdl_int_nme(dff_ind{iPL}{iD}(2));
+    if ~isempty(dff_ind{iPL})
+        clear fcfg
+        
+        fcfg = [];
+        
+        fcfg.xdt = num2cell(1:numel(dff_ind{iPL}));
+        for iD = 1:numel(dff_ind{iPL})
+            fcfg.ydt{iD} = cell2mat(dta_hld.(mdl_int_nme{dff_ind{iPL}{iD}(1)}).(mes_int_nme{iMES})(:,3)) - ...
+                cell2mat(dta_hld.(mdl_int_nme{dff_ind{iPL}{iD}(2)}).(mes_int_nme{iMES})(:,3));
+            
+            fcfg.fce_col{iD}     = mdl_int_col{dff_ind{iPL}{iD}(2)};
+            fcfg.box_plt_col{iD} = mdl_int_col{dff_ind{iPL}{iD}(2)};
+            fcfg.xlb(iD)         = mdl_int_nme(dff_ind{iPL}{iD}(2));
+        end
+        
+        fcfg.edg_col = [ repmat({[0 0 0]},1,numel(dff_ind{iPL})) ];
+        fcfg.box_plt = ones(1,numel(fcfg.xdt));
+        
+        fcfg.xlm = [ 0.5 numel(dff_ind{iPL})+5.5 ];
+        fcfg.ylb = mes_int_nme(iMES);
+        fcfg.mkr_sze = repmat(20,1,numel(dff_ind{iPL}));
+        fcfg.aph_val = 0.45;
+        
+        fcfg.out_dir = [ out_dir '/' plt_nme{iPL} '/' ];
+        fcfg.out_nme = [ 'diff_plot' '_' mes_int_nme{iMES}];
+        
+        fcfg.hln = 0;
+        fcfg.hln_col = rgb('black');
+        
+        ejk_scatter(fcfg)
     end
     
-    fcfg.edg_col = [ repmat({[0 0 0]},1,numel(dff_ind{iPL})) ];
-    fcfg.box_plt = ones(1,numel(fcfg.xdt));
-    
-    fcfg.xlm = [ 0.5 numel(dff_ind{iPL})+5.5 ];
-    fcfg.ylb = mes_int_nme(iMES); 
-    fcfg.mkr_sze = repmat(20,1,numel(dff_ind{iPL}));
-    fcfg.aph_val = 0.45;
-           
-    fcfg.out_dir = [ out_dir '/' plt_nme{iPL} '/' ];
-    fcfg.out_nme = [ 'diff_plot' '_' mes_int_nme{iMES}];
-    
-    fcfg.hln = 0;
-    fcfg.hln_col = rgb('black');
-    
-    ejk_scatter(fcfg)
-    
-    % Diff Table
-    
-    % Line plots
+  % Line plots
     figure('visible','off'); hold on;
     xdt_hld = [];
     for iD = 1:numel(box_ind{iPL})
@@ -148,7 +145,7 @@ for iPL = 1:numel(plt_nme)
               'Color', mdl_int_col{box_ind{iPL}(iD)}, 'LineWidth', 1, 'Marker', 'o', 'MarkerSize', 5, 'MarkerEdgeColor', [0 0 0], 'MarkerFaceColor', mdl_int_col{box_ind{iPL}(iD)});
         xdt_hld = [ xdt_hld ; cell2mat(dta_hld.(mdl_int_nme{box_ind{iPL}(iD)}).(mes_int_nme{iMES})(:,2))];
     end
-    ylim([70 100]); xlim([0.5 max(xdt_hld)+0.5])
+    ylim(ylm_use{iPL}); xlim([0.5 max(xdt_hld)+0.5])
     print([ out_dir '/' plt_nme{iPL} '/'  'line_plot' '_' mes_int_nme{iMES} '.png'],'-dpng')
     close all
     
@@ -175,7 +172,7 @@ cell2csv([ out_dir '/' 'PerformanceTable_mean.csv'],   [ {''}  mes_int_nme; mdl_
 cell2csv([ out_dir '/' 'PerformanceTable_median.csv'], [ {''}  mes_int_nme; mdl_int_nme' med_out_tbl ])
 
 % Diff table
-cmp_grp = cat(1,dff_ind{:});
+cmp_grp = cat(1,dff_ind{cmp_tbl_ind});
 avg_out_tbl = cell(numel(cmp_grp),numel(mes_int_nme));
 med_out_tbl = cell(numel(cmp_grp),numel(mes_int_nme));
 fdc_out_tbl = cell(numel(cmp_grp),numel(mes_int_nme));
@@ -207,19 +204,4 @@ for iC = 1:numel(mes_int_nme)
 end
 cell2csv([ out_dir '/' 'DiffTable_mean.csv'],   [ {''}  mes_int_nme; cmp_nme avg_out_tbl ])
 cell2csv([ out_dir '/' 'DiffTable_median.csv'], [ {''}  mes_int_nme; cmp_nme med_out_tbl ])
-cell2csv([ out_dir '/' 'DiffTable_FDIC.csv'], [ {''}  mes_int_nme; cmp_nme fdc_out_tbl ])
-
-%% Look at visualization
-nft_sal_dta = niftiread([ dta_dir '/' epd_nft_fle ]);
-
-nft_sal_dta_mod = nft_sal_dta;
-nft_sal_dta_mod(nft_sal_dta_mod==0) = NaN;
-nft_sal_dta_mod(nft_sal_dta_mod>-5e-5 & nft_sal_dta_mod<5e-5) = NaN;
-
-hist(nft_sal_dta_mod(:),1000); xlim([-.002 .002 ]);
-
-imagesc(rot90(squeeze(nft_sal_dta_mod(:,90,:))));
-
-
-
-
+cell2csv([ out_dir '/' 'DiffTable_FDIC.csv'],   [ {''}  mes_int_nme; cmp_nme fdc_out_tbl ])

@@ -27,7 +27,10 @@ fcfg.sep     = '|';
 %% Cipher
 % Save out fornix half of cipher
 cell2csv([ ovr_dir '/' 'data' '/' 'cipher_fnx.csv' ],ovr_col)
-            
+
+% Load modified cipher
+
+
 %% Normative scores plotting
 nor_plt = { 'Age_Sex' 'Age_Sex_Education' };
 nor_nme = { { 'T1 (Age,Sex)' 'T2 (Age,Sex)' } {} };

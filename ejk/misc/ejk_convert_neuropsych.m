@@ -34,7 +34,22 @@ switch cfg.typ
                 npy_out(iS) = npy_tbl(sbj_prf_lvl(1),1);
             end
         end
-        
+     case 'ss_to_t'
+        for iS = 1:numel(npy_inp)
+            if ~isnan(npy_inp(iS))
+                sbj_prf_lvl = find(npy_inp(iS)>=npy_tbl(:,1));
+                if isempty(sbj_prf_lvl); sbj_prf_lvl=size(npy_tbl,2); end
+                npy_out(iS) = npy_tbl(sbj_prf_lvl(1),2);
+            end
+        end   
+    case 'z_to_t'
+        for iS = 1:numel(npy_inp)
+            if ~isnan(npy_inp(iS))
+                sbj_prf_lvl = find(npy_inp(iS)>=npy_tbl(:,3));
+                if isempty(sbj_prf_lvl); sbj_prf_lvl=size(npy_tbl,2); end
+                npy_out(iS) = npy_tbl(sbj_prf_lvl(1),2);
+            end
+        end
 end
 
 

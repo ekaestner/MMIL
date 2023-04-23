@@ -27,7 +27,7 @@ fcfg.dta_loc = [ prj_dir '/' prj_nme '/' 'Data' '/' 'Emory' '/' 'Emory_SLAH_Memo
 fcfg.dta_col = 2;
 [ emy_dta, emy_dta_sbj, emy_dta_col] = ejk_dta_frm( fcfg );
 
-14/19
+
 
 %% Fix Groups
 grp_nme = { 'ltle_slah' 'ltle_atl' 'rtle_slah' 'rtle_atl' };

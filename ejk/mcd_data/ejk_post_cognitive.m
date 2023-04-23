@@ -26,15 +26,17 @@ end
 for iFN = 1:numel(pre_nme)
     switch pre_nme{iFN}
         case 'log_mem_raw_scr_one'
-            for iS = 1:numel(cog_dta.log_mem_raw_scr_one)
+            for iS = 1:numel(cog_dta.log_mem_nor_scr_one)
                 pst_cog_scr.rci.log_mem_nor_scr_one_pst(iS,1) = ( ( cog_dta.log_mem_nor_scr_one_pst(iS) - cog_dta.log_mem_nor_scr_one(iS) ) - (12.1-10.2) ) / 2.14;
             end
         case 'log_mem_raw_scr_two'
-            for iS = 1:numel(cog_dta.log_mem_raw_scr_two)
+            for iS = 1:numel(cog_dta.log_mem_nor_scr_two)
                 if strcmpi(cog_dta.wms_ver_log_mem{iS},'III')
                     pst_cog_scr.rci.log_mem_nor_scr_two_pst(iS,1) = ( ( cog_dta.log_mem_nor_scr_two_pst(iS) - cog_dta.log_mem_nor_scr_two(iS) ) - (12.5-10.2) ) / 2.07;
                 elseif strcmpi(cog_dta.wms_ver_log_mem{iS},'IV')
                     pst_cog_scr.rci.log_mem_nor_scr_two_pst(iS,1) = ( ( cog_dta.log_mem_nor_scr_two_pst(iS) - cog_dta.log_mem_nor_scr_two(iS) ) - (12.6-10.3) ) / 2.17;
+                else
+                    pst_cog_scr.rci.log_mem_nor_scr_two_pst(iS,1) = NaN;
                 end
             end
         case 'cvl_lfr_raw_scr'
@@ -53,6 +55,8 @@ for iFN = 1:numel(pre_nme)
                     pst_cog_scr.rci.vp2_nor_scr_pst(iS,1)         = ( ( cog_dta.vp2_nor_scr_pst(iS) - cog_dta.vp2_nor_scr(iS) ) - (11.1-10.5) ) / 1.88;
                 elseif strcmpi(cog_dta.wms_ver_vpa{iS},'IV')
                     pst_cog_scr.rci.vp2_nor_scr_pst(iS,1)         = ( ( cog_dta.vp2_nor_scr_pst(iS) - cog_dta.vp2_nor_scr(iS) ) - (10.8-9.8) ) / 1.98;
+                else
+                    pst_cog_scr.rci.vp2_nor_scr_pst(iS,1) = NaN;
                 end
             end
         case 'bnt_raw_scr'

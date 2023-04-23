@@ -5,6 +5,10 @@ function ejk_scatter(cfg)
 if ~isfield(cfg,'mkr_typ'); cfg.mkr_typ = repmat({'o'},1,numel(cfg.xdt)); end 
 if ~isfield(cfg,'mkr_sze'); cfg.mkr_sze = repmat(48,1,numel(cfg.xdt)); end 
 if ~isfield(cfg,'jtr'); cfg.jtr = 1; end 
+if ~isfield(cfg,'hln_col'); cfg.hln_col = [ 0 0 0 ]; end 
+if ~isfield(cfg,'vln_col'); cfg.vln_col = [ 0 0 0 ]; end 
+if ~isfield(cfg,'jtr_wdt'); cfg.jtr_wdt = 0.15; end 
+if ~isfield(cfg,'box_wdt'); cfg.box_wdt = 0.5; end 
 
 
 if ~isfield(cfg,'sbp')
@@ -16,11 +20,11 @@ if ~isfield(cfg,'sbp')
 end
 hold on;
 
-if isfield(cfg,'box_plt') && all( cellfun( @numel , cfg.xdt(cfg.box_plt) ) == 1 )
+if isfield(cfg,'box_plt') && all( cellfun( @numel , cfg.xdt(logical(cfg.box_plt)) ) == 1 )
     for iL = 1:numel(cfg.box_plt)
         if cfg.box_plt(iL) == 1
             boxchart( repmat(cfg.xdt{iL},1,numel(cfg.ydt{iL})), cfg.ydt{iL}', 'BoxFaceColor', cfg.box_plt_col{iL}, 'BoxFaceAlpha', 0.1, ...
-                      'WhiskerLineColor', cfg.box_plt_col{iL}, 'LineWidth', 2, 'MarkerStyle', 'none' ) 
+                      'WhiskerLineColor', cfg.box_plt_col{iL}, 'LineWidth', 2, 'MarkerStyle', 'none', 'BoxWidth', cfg.box_wdt ) 
         end
     end
 end
@@ -28,8 +32,8 @@ end
 if all( cellfun( @numel , cfg.xdt ) == 1 ) && cfg.jtr
     org_xdt = cfg.xdt;
     for iX = 1:numel(cfg.xdt)
-        min_hld = cfg.xdt{iX} - 0.15;
-        max_hld = cfg.xdt{iX} + 0.15;
+        min_hld = cfg.xdt{iX} - cfg.jtr_wdt;
+        max_hld = cfg.xdt{iX} + cfg.jtr_wdt;
         cfg.xdt{iX} = (max_hld-min_hld) .* rand(numel(cfg.ydt{iX}),1) + min_hld;
     end
 end
