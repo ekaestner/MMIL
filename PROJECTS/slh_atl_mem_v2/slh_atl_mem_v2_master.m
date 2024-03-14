@@ -7,5 +7,23 @@ slh_atl_mem_v2_constants
 %% Load Data
 slh_atl_mem_v2_load_data
 
-%% Groups
+%% Sample & Groups
 slh_atl_mem_v2_create_groups
+
+slh_atl_mem_v2_QC
+
+%% Demographics/Clinical
+slh_atl_mem_v2_table1
+
+%% Cognitive
+slh_atl_mem_v2_table2
+
+%% Correlations
+slh_atl_mem_v2_table3
+
+slh_atl_mem_v2_fig2
+
+slh_atl_mem_v2_table4
+
+%% Investigate
+slh_atl_mem_v2_nuisance

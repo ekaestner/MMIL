@@ -1,11 +1,11 @@
 
 %% Load
 fcfg = [];
-fcfg.dta_loc = [ dem_dir '/' 'Data_forAnees_2022_09_07_TLE.csv' ];
+fcfg.dta_loc = [ dem_dir '/' 'Data_forAnees_3.2.23_MTS_TLE.csv' ];
 [ tle_dem, tle_dem_sbj, tle_dem_col ] = ejk_dta_frm(fcfg);
 
 fcfg = [];
-fcfg.dta_loc = [ dem_dir '/' 'Data_forAnees_2022_09_07_HC.csv' ];
+fcfg.dta_loc = [ dem_dir '/' 'Data_forAnees_3.2.23_MTS_HC.csv' ];
 [ con_dem, con_dem_sbj, con_dem_col ] = ejk_dta_frm(fcfg);
 
 fcfg = [];
@@ -63,10 +63,11 @@ cmb_dta = cmb_dta_use;
 cmb_sbj = prd_dta_sbj;
 
 %% Recode Values
-rcd_nme    = { 'Gender' 'Handedness' 'Side of Epilepsy' };
+rcd_nme    = { 'Gender' 'Handedness' 'Side of Epilepsy' 'MTS Status' };
 rcd_val{1} = { 0 'Male' ; 1 'Female' };
 rcd_val{2} = { 0 'Left' ; 1 'Right'  };
 rcd_val{3} = { 1 'LTLE' ; 2 'RTLE'  };
+rcd_val{4} = { 1 'MRI+' ; 0 'MRI-'  };
 
 fcfg = [];
 

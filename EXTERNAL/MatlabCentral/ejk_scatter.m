@@ -4,7 +4,7 @@ function ejk_scatter(cfg)
 
 if ~isfield(cfg,'mkr_typ'); cfg.mkr_typ = repmat({'o'},1,numel(cfg.xdt)); end 
 if ~isfield(cfg,'mkr_sze'); cfg.mkr_sze = repmat(48,1,numel(cfg.xdt)); end 
-if ~isfield(cfg,'jtr'); cfg.jtr = 1; end 
+if ~isfield(cfg,'jtr'); cfg.jtr = 0; end 
 if ~isfield(cfg,'hln_col'); cfg.hln_col = [ 0 0 0 ]; end 
 if ~isfield(cfg,'vln_col'); cfg.vln_col = [ 0 0 0 ]; end 
 if ~isfield(cfg,'jtr_wdt'); cfg.jtr_wdt = 0.15; end 
@@ -29,12 +29,19 @@ if isfield(cfg,'box_plt') && all( cellfun( @numel , cfg.xdt(logical(cfg.box_plt)
     end
 end
 
-if all( cellfun( @numel , cfg.xdt ) == 1 ) && cfg.jtr
+if all( cellfun( @numel , cfg.xdt ) == 1 )
     org_xdt = cfg.xdt;
     for iX = 1:numel(cfg.xdt)
         min_hld = cfg.xdt{iX} - cfg.jtr_wdt;
         max_hld = cfg.xdt{iX} + cfg.jtr_wdt;
         cfg.xdt{iX} = (max_hld-min_hld) .* rand(numel(cfg.ydt{iX}),1) + min_hld;
+    end
+elseif cfg.jtr
+    org_xdt = cfg.xdt;
+    for iX = 1:numel(cfg.xdt)
+        min_hld = cfg.xdt{iX} - cfg.jtr_wdt;
+        max_hld = cfg.xdt{iX} + cfg.jtr_wdt;
+        cfg.xdt{iX} = [(max_hld-min_hld)' .* rand(numel(cfg.ydt{iX}),1)]' + min_hld;
     end
 end
 
@@ -64,7 +71,7 @@ elseif ~all(xdt_tot==0);
     xlim([ roundsd(min(xdt_tot)-abs(min(xdt_tot)*0.1),2) roundsd(max(xdt_tot)+(max(xdt_tot)*0.1),2)]);
 end
 
-ylm_hld = [ roundsd(min(ydt_tot)-abs(min(ydt_tot)*0.1),2) roundsd(max(ydt_tot)+(max(ydt_tot)*0.1),2)];
+ylm_hld = [ roundsd(min(ydt_tot(:))-abs(min(ydt_tot(:))*0.1),2) roundsd(max(ydt_tot(:))+(max(ydt_tot(:))*0.1),2)];
 if ~isfield(cfg,'ylm') && ~(all(ylm_hld==0)) && ~(all(isnan(ylm_hld)))
     if ~all(ydt_tot==0); ylim(ylm_hld); end
 elseif isfield(cfg,'ylm')

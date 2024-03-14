@@ -3,6 +3,45 @@ load([ dta_dir '/' 'saliency.mat' ])
 
 sal_out_dir = [ out_dir '/' 'Saliency' '/']; ejk_chk_dir(sal_out_dir);
 
+%% Side by Side plots
+slc = 1:2:size(sal_dta.x3d_model_original_data.cn_vs_ep,2);
+
+% iR_one = 38;
+% iR_two = 42;
+% nft_atl_lbl([ iR_one iR_two ],:)
+% [~, cor_ind_one ] = max(sum(squeeze(sum(nft_atl==iR_one,1)),2));
+% [~, cor_ind_two ] = max(sum(squeeze(sum(nft_atl==iR_two,1)),2));
+
+for cor_ind_one = slc   
+    
+    thr_dim_hld = rot90(squeeze(mean(sal_dta.x3d_model_original_data.cn_vs_ep(:,cor_ind_one,:,:),4)));
+    two_dim_hld = rot90(squeeze(mean(sal_dta.x2d_model_original_data.cn_vs_ep(:,cor_ind_one,:,:),4)));
+    
+    imAlpha=ones(size(thr_dim_hld));
+    imAlpha(isnan(thr_dim_hld))=0;
+    
+    figure('Visible','off');
+    subplot(2,2,1)
+    img_one = imagesc(thr_dim_hld,'AlphaData',imAlpha,[-1 4]);
+    set(gca,'color',rgb('bluish grey')+0.40);
+    colorbar
+    axis off;
+    set(gcf, 'InvertHardcopy', 'off')
+    subplot(2,2,2)
+    img_two = imagesc(two_dim_hld,'AlphaData',imAlpha,[-1 4]);
+    set(gca,'color',rgb('bluish grey')+0.40);
+    colorbar
+    axis off;
+    subplot(2,2,3)
+    img_thr = imagesc(thr_dim_hld-two_dim_hld,'AlphaData',imAlpha,[-1 1]);
+    set(gca,'color',rgb('bluish grey')+0.40);
+    colorbar
+    axis off;
+    tightfig;
+    print( [ sal_out_dir '/' '3d_vs_2d' '/' 'slice' '_' num2str(cor_ind_one) '.png'] ,'-dpng')
+    close all
+end
+
 %% Create mega ROIs
 % cell2csv([ atl_dir '/' atl_nme '.csv' ],nft_atl_lbl);
 
@@ -265,6 +304,4 @@ for iM = 1:numel(mes_int)
         
     end
 end
-
-
 

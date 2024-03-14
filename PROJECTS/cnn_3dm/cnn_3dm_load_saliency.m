@@ -35,17 +35,17 @@ for iSA = 1:numel(sal_grp)
             sal_dta.(['x' sal_grp{iSA}]).(cat_nii_nme{iNI})(sal_dta.(['x' sal_grp{iSA}]).(cat_nii_nme{iNI})==0) = NaN;
             
             % Values to play with
-            sal_val_hld = squeeze(sal_dta.(['x' sal_grp{iSA}]).(cat_nii_nme{iNI})(:,:,:,iF));
+%             sal_val_hld = squeeze(sal_dta.(['x' sal_grp{iSA}]).(cat_nii_nme{iNI})(:,:,:,iF));
             
             % Remove lower values
-            low_pct = 75;
-            pct_hld = prctile(sal_val_hld(:),low_pct);
-            sal_val_hld(sal_val_hld<pct_hld) = NaN;
+%             low_pct = 75;
+%             pct_hld = prctile(sal_val_hld(:),low_pct);
+%             sal_val_hld(sal_val_hld<pct_hld) = NaN;
             
             % Minmax            
-            sal_val_max = max(sal_val_hld(:));
-            sal_val_min = min(sal_val_hld(:));
-            sal_val_hld = (sal_val_hld-sal_val_min) ./ (sal_val_max - sal_val_min);
+%             sal_val_max = max(sal_val_hld(:));
+%             sal_val_min = min(sal_val_hld(:));
+%             sal_val_hld = (sal_val_hld-sal_val_min) ./ (sal_val_max - sal_val_min);
            
             % Z-score
 %             sal_val_men = nanmean(sal_val_hld(:));
@@ -53,7 +53,7 @@ for iSA = 1:numel(sal_grp)
 %             sal_val_hld = (sal_val_hld-sal_val_men) ./ sal_val_std;
             
             % Re-assign
-            sal_dta.(['x' sal_grp{iSA}]).(cat_nii_nme{iNI})(:,:,:,iF) = sal_val_hld;
+%             sal_dta.(['x' sal_grp{iSA}]).(cat_nii_nme{iNI})(:,:,:,iF) = sal_val_hld;
             
         end
     end

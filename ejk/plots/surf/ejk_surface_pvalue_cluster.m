@@ -19,6 +19,7 @@ cmd = sprintf('%s --subject %s'          ,cmd, cfg.fsr_sbj);
 cmd = sprintf('%s --hemi %s'             ,cmd, cfg.hms);
 cmd = sprintf('%s --sd %s'               ,cmd, cfg.fsr_dir);
 cmd = sprintf('%s --o %s'                ,cmd, tmp_fle_out);
+cmd = sprintf('%s --sum %s'              ,cmd, [ tmp_fle_out(1:end-2) '.txt' ]);
 cmd = sprintf('%s --minarea %0.6f'       ,cmd, cfg.cls_thr);
 [status,result] = unix(cmd);
 

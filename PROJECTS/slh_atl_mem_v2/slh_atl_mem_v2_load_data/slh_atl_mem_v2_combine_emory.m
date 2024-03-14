@@ -51,9 +51,6 @@ for iR = 1:numel(dem_nme_row)
     end
 end
 
-%% Recode
-
-
 %% Add post-cognitive
 fcfg = [];
 pst_cog_dta = ejk_post_cognitive(fcfg,red_cap_dta.sbj_cog);

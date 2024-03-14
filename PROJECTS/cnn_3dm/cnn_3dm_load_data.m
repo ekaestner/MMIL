@@ -15,7 +15,7 @@ mdl_int_sub_nme     = { 'fcn_3dm_fll'          'fcn_3dm_750'            'fcn_3dm
 mdl_int_sub_col = { rgb('bright teal')     rgb('teal')              rgb('dark teal')         rgb('light maroon')   rgb('maroon')            rgb('dark maroon')      };     
  
 mes_int_sub     = { 'Accuracy' 'AUC' 'Sensitivity' 'Specificity' 'PPV' 'NPV' };
-mes_int_sub_nme = { 'Accuracy' 'AUC' 'Sensitivity' 'Specificity' 'PPV' 'NPV' };
+mes_int_sub_nme = { 'Accuracy' 'AUC' 'Specificity' 'Sensitivity' 'PPV' 'NPV' }; % Flip Sensitivity & Specificity
 
 % Add model number
 num_mdl = zeros(1,numel(mdl_int_sub)); 
@@ -63,7 +63,7 @@ mdl_int_nme = { 'fcn_3dm_org'                    'fcn_3dm_cbt'            'fcn_2
 mdl_int_col = { rgb('bright teal')               rgb('light green')           rgb('maroon')                    rgb('grey') };
 
 mes_int     = { 'Accuracy' 'AUC' 'Sensitivity' 'Specificity' 'PPV' 'NPV' };
-mes_int_nme = { 'Accuracy' 'AUC' 'Sensitivity' 'Specificity' 'PPV' 'NPV' };
+mes_int_nme = { 'Accuracy' 'AUC' 'Specificity' 'Sensitivity' 'PPV' 'NPV' };
 
 % Add model number
 num_mdl = zeros(1,numel(mdl_int)); 
@@ -102,8 +102,6 @@ for iMDL = 1:numel(mdl_int)
     
 end
 
-
-
 %% Save
 % Combine
 mes_int_nme = mes_int_sub_nme;
@@ -111,4 +109,4 @@ mdl_int_nme = fieldnames(dta_hld)';
 mdl_int_col = [ mdl_int_sub_col mdl_int_col ];
 
 % Save
-save([ dta_dir '/' 'performance.mat' ],'dta_hld','mes_int_nme', 'mdl_int_nme', 'mdl_int_col');
+save([ dta_dir '/' 'performance_flip_reihaneh.mat' ],'dta_hld','mes_int_nme', 'mdl_int_nme', 'mdl_int_col');

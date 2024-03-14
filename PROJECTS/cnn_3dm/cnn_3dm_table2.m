@@ -1,6 +1,6 @@
 tbl_out_dir = [ out_dir '/' 'Tables' '/' ]; ejk_chk_dir(tbl_out_dir);
 
-load([ dta_dir '/' 'performance.mat' ])
+load([ dta_dir '/' 'performance_flip_reihaneh.mat' ])
 
 org_mdl = { 'fcn_3dm_org'                  'fcn_3dm_fll'   'fcn_3dm_fll'   'fcn_3dm_750'   'fcn_3dm_300' };
 

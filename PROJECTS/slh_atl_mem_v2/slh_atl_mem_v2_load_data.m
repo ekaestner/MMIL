@@ -10,7 +10,7 @@ fcfg.dta_col = 2;
 fcfg = [];
 fcfg.red_fle = [ dta_dir '/' red_cap_fle ];
 fcfg.sep     = '|';
-[sbj_dem , sbj_sze , sbj_scn , sbj_cog, sbj_emo, sbj_srg] = mmil_load_redcap(fcfg);
+[sbj_dem , sbj_sze , sbj_scn , sbj_cog, sbj_emo, sbj_srg] = ejk_load_redcap(fcfg);
 
 % Reassign
 red_cap_dta.sbj_dem = sbj_dem;
@@ -32,16 +32,14 @@ fcfg.dta_loc = [ dta_dir '/' emy_dem_fle ];
 fcfg.dta_col = 2;
 [ emy_dem_dta, emy_dem_sbj, emy_dem_col] = ejk_dta_frm( fcfg );
 
-%% Combine Data & Recode
+%% Combine Data
 slh_atl_mem_v2_combine_emory
 
 %% Load Imaging Data
 slh_atl_mem_v2_load_neurobio
 
-%% Sub-select subjects for study
-
-
-%% Save
+%% Recode
+slh_atl_mem_v2_recode
 
 
 

@@ -1,7 +1,7 @@
 
 plt_out_dir = [ out_dir '/' 'Figures' '/' 'Figure2' '/']; ejk_chk_dir(plt_out_dir);
 
-load([ dta_dir '/' 'performance.mat' ])
+load([ dta_dir '/' 'performance_flip_reihaneh.mat' ])
 
 %% Box plot
 ylm_hld = { [ 40 100 ] [ 40 100 ] [ 30 100 ] [ 30 100 ] [ 40 100 ] [ 40 100 ] [ 40 100 ] [ 30 100 ] [ 40 100 ] };

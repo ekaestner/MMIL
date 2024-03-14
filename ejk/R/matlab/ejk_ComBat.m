@@ -62,13 +62,13 @@ sve_cmd = sprintf('.libPaths(.libPaths()[2:5])\n');
 sve_cmd = sprintf('%ssource(''/home/ekaestner/gitrep/MMIL/ejk/R/R/ejk_ComBat.r'')\n',sve_cmd);
 
 if ~isfield( cfg, 'cov')
-    sve_cmd = sprintf('%sejk_ComBat( ''%s/dta_var.mat'', ''%s/btc_var.mat'', '''', ''%s'' )', sve_cmd, tmp_out_dir, tmp_out_dir, tmp_out_dir);
+    sve_cmd = sprintf('%sejk_ComBat( ''%s/dta_var.mat'', ''%s/btc_var.mat'', '''', ''%s'' )', sve_cmd, ejk_fix_path(tmp_out_dir), ejk_fix_path(tmp_out_dir), ejk_fix_path(tmp_out_dir));
 else
-    sve_cmd = sprintf('%sejk_ComBat( ''%s/dta_var.mat'', ''%s/btc_var.mat'', ''%s/cov_var.mat'', ''%s'' )', sve_cmd, tmp_out_dir, tmp_out_dir, tmp_out_dir, tmp_out_dir);
+    sve_cmd = sprintf('%sejk_ComBat( ''%s/dta_var.mat'', ''%s/btc_var.mat'', ''%s/cov_var.mat'', ''%s'' )', sve_cmd, ejk_fix_path(tmp_out_dir), ejk_fix_path(tmp_out_dir), ejk_fix_path(tmp_out_dir), ejk_fix_path(tmp_out_dir));
 end
 
 cell2csv( [tmp_out_dir '/example_R_script.r'], {sve_cmd} );
-unix( [ 'Rscript ' tmp_out_dir '/example_R_script.r' ] );
+unix( [ 'Rscript ' ejk_fix_path(tmp_out_dir) '/example_R_script.r' ] );
 
 %% Load and return
 dta_out = mmil_readtext( [ tmp_out_dir '/' 'out_dta.csv' ] );
