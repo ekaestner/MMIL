@@ -3,9 +3,10 @@ function [ dta_out, sbj_out, dta_col_out, msc_out ] = ejk_dta_frm( cfg )
 if ~isfield( cfg, 'dta_col');   cfg.dta_col = 2; end
 if ~isfield( cfg, 'transpose'); cfg.transpose = 0; end
 if ~isfield( cfg, 'all_num');   cfg.all_num = 0; end
+if ~isfield( cfg, 'delim');   cfg.delim = ','; end
 
 %%
-dta_out     = mmil_readtext( cfg.dta_loc );
+dta_out     = mmil_readtext( cfg.dta_loc, cfg.delim);
 if cfg.transpose; dta_out = dta_out'; end
 
 if cfg.dta_col > 2
