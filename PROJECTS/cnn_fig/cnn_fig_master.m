@@ -19,6 +19,8 @@ cnn_tbl_ini
 %% Create Groups
 cnn_fig_grp
 
+cnn_fig_pickle_prep
+
 %% VBM
 cnn_fig_load_nii
 

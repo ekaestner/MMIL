@@ -2,6 +2,8 @@
 %% Overall Project Directory
 prj_dir = '/space/mcdonald-syn01/1/projects/ekaestner/cnn_fig/';
 
+dta_dir = '/space/mcdonald-syn01/1/data/ai/';
+
 bid_dir = '/space/mcdonald-syn01/1/BIDS/';
 
 atl_dir = '/space/mcdonald-syn01/1/projects/ekaestner/resample_test/';
@@ -9,7 +11,7 @@ atl_dir = '/space/mcdonald-syn01/1/projects/ekaestner/resample_test/';
 %% Data locations %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %%   shared directories %%%%%%
-dte_str = '2024_10_18';
+dte_str = '2024_11_22';
 
 new_dta_dir = [ prj_dir '/' 'new_data' '/'];
 
